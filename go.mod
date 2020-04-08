@@ -29,7 +29,5 @@ require (
 	github.com/xdg/stringprep v1.0.0 // indirect
 	github.com/zhgqiang/jsonpath v0.0.0-20171228002920-ff973d0f4099
 	go.mongodb.org/mongo-driver v1.1.2
-	golang.org/x/crypto v0.0.0-20190923035154-9ee001bba392
-	golang.org/x/net v0.0.0-20190923162816-aa69164e4478
 	gopkg.in/resty.v1 v1.12.0
 )

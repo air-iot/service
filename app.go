@@ -6,8 +6,11 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	consulApi "github.com/hashicorp/consul/api"
@@ -48,7 +51,7 @@ func init() {
 }
 
 type App interface {
-	Run() error
+	Run()
 	GetServer() *echo.Echo
 }
 
@@ -100,23 +103,44 @@ func NewApp() App {
 		AllowHeaders:  []string{"Authorization", echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
 	}))
 	e.Use(mw.Recover())
+	e.GET("/check", func(c echo.Context) error {
+		return c.NoContent(http.StatusOK)
+	})
+	tags := strings.Split(serviceTag, ",")
+	tags = append(tags, "traefik.enable=true")
+	tags = append(tags, fmt.Sprintf("traefik.http.routers.%s.rule=PathPrefix(`/%s`)", serviceName, serviceName))
 	a := &app{
 		id:         serviceID,
 		name:       serviceName,
 		host:       serviceHost,
 		port:       servicePort,
-		tags:       strings.Split(serviceTag, ","),
+		tags:       tags,
 		httpServer: e,
 	}
-	if err := a.register(); err != nil {
-		logrus.Panic(err)
+	if viper.GetBool("consul.enable") {
+		if err := a.register(); err != nil {
+			logrus.Panic(err)
+		}
 	}
 	return a
 }
 
-func (p *app) Run() error {
-	defer p.stop()
-	return p.httpServer.Start(net.JoinHostPort(p.host, strconv.Itoa(p.port)))
+func (p *app) Run() {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL)
+	go func() {
+		if err := p.httpServer.Start(net.JoinHostPort(p.host, strconv.Itoa(p.port))); err != nil {
+			logrus.Errorln(err)
+			os.Exit(1)
+		}
+	}()
+	select {
+	case sig := <-ch:
+		p.stop()
+		logrus.Debugln("关闭服务,", sig)
+	}
+	close(ch)
+	os.Exit(0)
 }
 
 func (p *app) GetServer() *echo.Echo {
@@ -130,7 +154,9 @@ func (p *app) stop() {
 	sql.Close()
 	mqtt.Close()
 	rabbit.Close()
-	p.deregister()
+	if viper.GetBool("consul.enable") {
+		p.deregister()
+	}
 }
 
 // Register 服务注册
