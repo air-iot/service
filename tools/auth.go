@@ -39,20 +39,6 @@ func GetPointAndUserCount(ctx context.Context) (map[string]interface{},error) {
 
 // statsCount 统计各个模型的属性点数数据.
 func statsTagCount(ctx context.Context) (*[]bson.M, error) {
-	//query := new(bson.M)
-
-	//query = &bson.M{
-	//	"filter": bson.M{
-	//		"$lookups": primitive.A{
-	//			bson.M{"$project": bson.M{"sizeOfTags": bson.M{"$size": "$device.tags"}, "sizeOfProps": bson.M{"$size": "$computed.tags"}}},
-	//		},
-	//	},
-	//}
-	//result := make([]bson.M, 0)
-	//_, err := p.FindFilter(ctx, idb.Database.Collection(model.MODEL), &result, *query, func(d *bson.M) {})
-	//if err != nil {
-	//	return nil, err
-	//}
 	pipeLine := mongo.Pipeline{
 		bson.D{bson.E{Key: "$project", Value: bson.M{"sizeOfTags": bson.M{"$size": "$device.tags"}, "sizeOfProps": bson.M{"$size": "$computed.tags"}}}},
 	}
@@ -67,20 +53,6 @@ func statsTagCount(ctx context.Context) (*[]bson.M, error) {
 
 // statsNodeCustomTagCount 统计各个资产自定义的属性点数数据.
 func statsNodeCustomTagCount(ctx context.Context) (*[]bson.M, error) {
-	//query := new(bson.M)
-
-	//query = &bson.M{
-	//	"filter": bson.M{
-	//		"$lookups": primitive.A{
-	//			bson.M{"$project": bson.M{"sizeOfTags": bson.M{"$size": "$device.tags"}, "sizeOfProps": bson.M{"$size": "$computed.tags"}}},
-	//		},
-	//	},
-	//}
-	//result := make([]bson.M, 0)
-	//_, err := p.FindFilter(ctx, idb.Database.Collection(model.NODE), &result, *query, func(d *bson.M) {})
-	//if err != nil {
-	//	return nil, err
-	//}
 	pipeLine := mongo.Pipeline{
 		bson.D{bson.E{Key: "$project", Value: bson.M{"sizeOfTags": bson.M{"$size": "$device.tags"}, "sizeOfProps": bson.M{"$size": "$computed.tags"}}}},
 	}
@@ -95,14 +67,6 @@ func statsNodeCustomTagCount(ctx context.Context) (*[]bson.M, error) {
 
 // statsNodeCount 统计各个模型下的资产总和数据.
 func statsNodeCount(ctx context.Context) (*[]bson.M, error) {
-
-	//query = &bson.M{
-	//	"filter": bson.M{
-	//		"$lookups": primitive.A{
-	//			bson.M{"$group": bson.M{"_id": "$model", "count": bson.M{"$sum": 1}}},
-	//		},
-	//	},
-	//}
 	pipeLine := mongo.Pipeline{
 		bson.D{bson.E{Key: "$group", Value: bson.M{"_id": "$model", "count": bson.M{"$sum": 1}}}},
 	}

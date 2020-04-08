@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"github.com/air-iot/service/traefik"
 	"log"
 	"net"
 	"net/http"
@@ -67,6 +68,7 @@ type app struct {
 func NewApp() App {
 	logger.Init()
 	consul.Init()
+	traefik.Init()
 	influx.Init()
 	mongo.Init()
 	redis.Init()

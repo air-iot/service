@@ -5,8 +5,6 @@ import (
 	"encoding/gob"
 )
 
-
-
 func DeepCopy(dst, src interface{}) error {
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(src); err != nil {
