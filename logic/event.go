@@ -9,8 +9,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	imo "common/db/mongo"
-	"common/model"
+	imo "github.com/air-iot/service/db/mongo"
+	"github.com/air-iot/service/model"
 )
 
 var EventLogic = new(eventLogic)

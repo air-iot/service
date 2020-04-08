@@ -1,16 +1,18 @@
 package logic
 
 import (
-	imo "common/db/mongo"
-	"common/model"
-	"common/restful-api"
 	"context"
 	"errors"
+	"sync"
+	"time"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"sync"
-	"time"
+
+	imo "github.com/air-iot/service/db/mongo"
+	"github.com/air-iot/service/model"
+	"github.com/air-iot/service/restful-api"
 )
 
 var UserLogic = new(userLogic)

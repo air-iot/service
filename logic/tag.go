@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"common/model"
+	"github.com/air-iot/service/model"
 )
 
 var TagLogic = new(tagLogic)

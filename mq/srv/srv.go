@@ -1,11 +1,11 @@
 package srv
 
 import (
-	MQTT "github.com/eclipse/paho.mqtt.golang"
-	"github.com/streadway/amqp"
-
 	"github.com/air-iot/service/mq/mqtt"
 	"github.com/air-iot/service/mq/rabbit"
+	MQTT "github.com/eclipse/paho.mqtt.golang"
+	"github.com/spf13/viper"
+	"github.com/streadway/amqp"
 )
 
 type MQService interface {
@@ -131,4 +131,13 @@ func (p *rabbitService) Consume(topic string, handler func(topic string, payload
 		}
 	}()
 	return nil
+}
+
+func DataConsume(handler func(topic string, payload []byte)) error {
+	switch viper.GetString("data.action") {
+	case "rabbit":
+		return NewRabbitService(viper.GetString("service.name"), "data").Consume(rabbit.RoutingKey+"#", handler)
+	default:
+		return NewMqttService().Consume(mqtt.Topic+"#", handler)
+	}
 }

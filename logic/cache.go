@@ -2,6 +2,7 @@ package logic
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"sync"
 
 	MQTT "github.com/eclipse/paho.mqtt.golang"
@@ -56,7 +57,10 @@ type SettingCache struct {
 	Setting model.Setting `json:"setting"`
 }
 
-func init() {
+func Init() {
+	if !viper.GetBool("mqtt.enable") {
+		return
+	}
 	NodeLogic.nodeCache = &sync.Map{}
 	NodeLogic.nodeMapCache = &sync.Map{}
 	NodeLogic.nodeCacheWithModelID = &sync.Map{}

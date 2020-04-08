@@ -3,7 +3,6 @@ package service
 import (
 	"errors"
 	"fmt"
-	"github.com/air-iot/service/traefik"
 	"log"
 	"net"
 	"net/http"
@@ -14,20 +13,22 @@ import (
 	"syscall"
 	"time"
 
-	consulApi "github.com/hashicorp/consul/api"
-	"github.com/labstack/echo/v4"
-	mw "github.com/labstack/echo/v4/middleware"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
-
 	"github.com/air-iot/service/consul"
 	"github.com/air-iot/service/db/influx"
 	"github.com/air-iot/service/db/mongo"
 	"github.com/air-iot/service/db/redis"
 	"github.com/air-iot/service/db/sql"
 	"github.com/air-iot/service/logger"
+	"github.com/air-iot/service/logic"
 	"github.com/air-iot/service/mq/mqtt"
 	"github.com/air-iot/service/mq/rabbit"
+	restfulapi "github.com/air-iot/service/restful-api"
+	"github.com/air-iot/service/traefik"
+	consulApi "github.com/hashicorp/consul/api"
+	"github.com/labstack/echo/v4"
+	mw "github.com/labstack/echo/v4/middleware"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -75,6 +76,7 @@ func NewApp() App {
 	sql.Init()
 	mqtt.Init()
 	rabbit.Init()
+	logic.Init()
 	var (
 		serviceID   = viper.GetString("service.id")
 		serviceName = viper.GetString("service.name")
@@ -105,7 +107,11 @@ func NewApp() App {
 		AllowHeaders:  []string{"Authorization", echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
 	}))
 	e.Use(mw.Recover())
+	e.HTTPErrorHandler = restfulapi.HTTPErrorHandler
 	e.GET("/check", func(c echo.Context) error {
+		return c.NoContent(http.StatusOK)
+	})
+	e.GET(fmt.Sprintf(`/%s/heart`, serviceName), func(c echo.Context) error {
 		return c.NoContent(http.StatusOK)
 	})
 	tags := strings.Split(serviceTag, ",")

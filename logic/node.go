@@ -10,9 +10,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	imo "common/db/mongo"
-	"common/model"
-	"common/restful-api"
+	imo "github.com/air-iot/service/db/mongo"
+	"github.com/air-iot/service/model"
+	"github.com/air-iot/service/restful-api"
 )
 
 var NodeLogic = new(nodeLogic)
