@@ -7,6 +7,7 @@ require (
 	github.com/eclipse/paho.mqtt.golang v1.2.1-0.20191023171711-0bdac0da853d
 	github.com/go-redis/redis v6.15.2+incompatible
 	github.com/golang/snappy v0.0.1 // indirect
+	github.com/google/go-github/v18 v18.2.0 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/consul v1.4.3
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
@@ -29,5 +30,7 @@ require (
 	github.com/xdg/stringprep v1.0.0 // indirect
 	github.com/zhgqiang/jsonpath v0.0.0-20171228002920-ff973d0f4099
 	go.mongodb.org/mongo-driver v1.1.2
+	golang.org/x/crypto v0.0.0-20190923035154-9ee001bba392
+	golang.org/x/net v0.0.0-20190923162816-aa69164e4478
 	gopkg.in/resty.v1 v1.12.0
 )
