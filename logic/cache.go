@@ -58,7 +58,7 @@ type SettingCache struct {
 }
 
 func Init() {
-	if !viper.GetBool("mqtt.enable") {
+	if !viper.GetBool("mqtt.enable") || !viper.GetBool("redis.enable") {
 		return
 	}
 	NodeLogic.nodeCache = &sync.Map{}

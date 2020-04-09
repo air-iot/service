@@ -13,6 +13,12 @@ import (
 	"syscall"
 	"time"
 
+	consulApi "github.com/hashicorp/consul/api"
+	"github.com/labstack/echo/v4"
+	mw "github.com/labstack/echo/v4/middleware"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
+
 	"github.com/air-iot/service/consul"
 	"github.com/air-iot/service/db/influx"
 	"github.com/air-iot/service/db/mongo"
@@ -24,11 +30,6 @@ import (
 	"github.com/air-iot/service/mq/rabbit"
 	restfulapi "github.com/air-iot/service/restful-api"
 	"github.com/air-iot/service/traefik"
-	consulApi "github.com/hashicorp/consul/api"
-	"github.com/labstack/echo/v4"
-	mw "github.com/labstack/echo/v4/middleware"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 var (
