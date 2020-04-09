@@ -58,6 +58,10 @@ func NewRabbitService(queue, exchange string) MQService {
 	}
 }
 
+func DefaultRabbitService() MQService {
+	return &rabbitService{viper.GetString("service.name"), "data"}
+}
+
 func (p *rabbitService) newQueue() (amqp.Queue, error) {
 	return rabbit.Channel.QueueDeclare(
 		p.queue, // name
@@ -81,11 +85,11 @@ func (p *rabbitService) newExchange() error {
 	)
 }
 
-func (*rabbitService) Publish(topic string, payload []byte) error {
+func (p *rabbitService) Publish(topic string, payload []byte) error {
 	return rabbit.Channel.Publish(
-		"data", // exchange
-		topic,  // routing key
-		false,  // mandatory
+		p.exchange, // exchange
+		topic,      // routing key
+		false,      // mandatory
 		false,
 		amqp.Publishing{
 			DeliveryMode: amqp.Transient,
