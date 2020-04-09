@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
-	"github.com/influxdata/influxdb/client/v2"
+	_ "github.com/influxdata/influxdb1-client" // this is important because of the bug in go mod
+	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/zhgqiang/jsonpath"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"

@@ -8,6 +8,15 @@ import (
 	"github.com/streadway/amqp"
 )
 
+func DefaultRealtimeDataHandler(handler func(topic string, payload []byte)) error {
+	switch viper.GetString("data.action") {
+	case "rabbit":
+		return NewRabbitService(viper.GetString("service.name"), "data").Consume(rabbit.RoutingKey+"#", handler)
+	default:
+		return NewMqttService().Consume(mqtt.Topic+"#", handler)
+	}
+}
+
 type MQService interface {
 	Publish(topic string, payload []byte) error
 	Consume(topic string, handler func(topic string, payload []byte)) error
@@ -131,13 +140,4 @@ func (p *rabbitService) Consume(topic string, handler func(topic string, payload
 		}
 	}()
 	return nil
-}
-
-func DataConsume(handler func(topic string, payload []byte)) error {
-	switch viper.GetString("data.action") {
-	case "rabbit":
-		return NewRabbitService(viper.GetString("service.name"), "data").Consume(rabbit.RoutingKey+"#", handler)
-	default:
-		return NewMqttService().Consume(mqtt.Topic+"#", handler)
-	}
 }
