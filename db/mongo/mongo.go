@@ -51,7 +51,7 @@ func Init() {
 		poolSize = 10
 	}
 	var err error
-	opts := options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%s@%s:%s/%s",
+	opts := options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%s@%s:%d/%s",
 		username,
 		password,
 		host,
