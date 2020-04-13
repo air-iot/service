@@ -96,7 +96,7 @@ func NewApp() App {
 		logrus.Panic("服务id不能为空")
 	}
 	var err error
-	serviceHost, err = extract(serviceHost)
+	serviceHost, err = Extract(serviceHost)
 	if err != nil {
 		serviceHost = "127.0.0.1"
 	}
@@ -222,7 +222,7 @@ func (p *app) deregister() {
 }
 
 // extract returns a real ip
-func extract(addr string) (string, error) {
+func Extract(addr string) (string, error) {
 	// if addr specified then its returned
 	if len(addr) > 0 && (addr != "0.0.0.0" && addr != "[::]") {
 		return addr, nil
