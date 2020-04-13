@@ -53,8 +53,13 @@ func init() {
 	}
 }
 
+type Handler interface {
+	Start()
+	Stop()
+}
+
 type App interface {
-	Run(func(), func())
+	Run(Handler)
 	GetServer() *echo.Echo
 }
 
@@ -134,10 +139,10 @@ func NewApp() App {
 	return a
 }
 
-func (p *app) Run(start, stop func()) {
+func (p *app) Run(handler Handler) {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGTERM, syscall.SIGINT, syscall.SIGKILL)
-	start()
+	handler.Start()
 	go func() {
 		if err := p.httpServer.Start(net.JoinHostPort(p.host, strconv.Itoa(p.port))); err != nil {
 			logrus.Errorln(err)
@@ -150,7 +155,7 @@ func (p *app) Run(start, stop func()) {
 		logrus.Debugln("关闭服务,", sig)
 	}
 	close(ch)
-	stop()
+	handler.Stop()
 	os.Exit(0)
 }
 
