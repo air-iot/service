@@ -2,6 +2,7 @@ package rabbit
 
 import (
 	"fmt"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/streadway/amqp"
@@ -22,18 +23,8 @@ func Init() {
 		password = viper.GetString("rabbit.password")
 		vhost    = viper.GetString("rabbit.vhost")
 	)
-	if host == "" {
-		host = "rabbit"
-	}
-	if port == 0 {
-		port = 5672
-	}
-	if username == "" {
-		username = "admin"
-	}
-	if password == "" {
-		password = "public"
-	}
+	RoutingKey = viper.GetString("rabbit.routingKey")
+
 	var err error
 	conn, err = amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%d/%s", username, password, host, port, vhost))
 	if err != nil {

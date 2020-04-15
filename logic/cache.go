@@ -2,12 +2,12 @@ package logic
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
 	"sync"
 
 	MQTT "github.com/eclipse/paho.mqtt.golang"
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/air-iot/service/db/redis"
 	"github.com/air-iot/service/model"
@@ -58,7 +58,7 @@ type SettingCache struct {
 }
 
 func Init() {
-	if !viper.GetBool("mqtt.enable") || !viper.GetBool("redis.enable") {
+	if !viper.GetBool("mqtt.enable") || !viper.GetBool("redis.enable") || !viper.GetBool("cache.enable") {
 		return
 	}
 	NodeLogic.nodeCache = &sync.Map{}

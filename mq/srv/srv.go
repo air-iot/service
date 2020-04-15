@@ -1,11 +1,12 @@
 package srv
 
 import (
-	"github.com/air-iot/service/mq/mqtt"
-	"github.com/air-iot/service/mq/rabbit"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/spf13/viper"
 	"github.com/streadway/amqp"
+
+	"github.com/air-iot/service/mq/mqtt"
+	"github.com/air-iot/service/mq/rabbit"
 )
 
 func DefaultRealtimeDataHandler(handler func(topic string, payload []byte)) error {

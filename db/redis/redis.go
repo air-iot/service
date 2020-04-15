@@ -22,23 +22,13 @@ func Init() {
 		port     = viper.GetInt("redis.port")
 		password = viper.GetString("redis.password")
 		db       = viper.GetInt("redis.db")
-		poolSize = viper.GetInt("redis.poolSize")
+		PoolSize = viper.GetInt("redis.poolSize")
 	)
-	if host == "" {
-		host = "redis"
-	}
-	if port == 0 {
-		port = 6379
-	}
-	if poolSize == 0 {
-		poolSize = 100
-	}
-	PoolSize = poolSize
 	Client = redis.NewClient(&redis.Options{
 		Addr:     net.JoinHostPort(host, strconv.Itoa(port)),
 		Password: password, // no password set
 		DB:       db,       // use default DB
-		PoolSize: poolSize,
+		PoolSize: PoolSize,
 		//MinIdleConns: 10,
 		//PoolTimeout:10*time.Second
 		//IdleTimeout:  2 * time.Second,
