@@ -631,29 +631,31 @@ func (p *APIView) FindFilterDeptQuery(ctx context.Context, col *mongo.Collection
 	//$group 放入 $lookups的$project后面
 	if filter, ok := query["filter"]; ok {
 		if filterMap, ok := filter.(bson.M); ok {
-			if groupMap,ok := filterMap["$group"].(primitive.M);ok{
-				if lookups,ok := filterMap["$lookups"].(primitive.A);ok{
+			if groupMap, ok := query["group"].(primitive.M); ok {
+				groupMap["_id"] = groupMap["id"]
+				delete(groupMap, "id")
+				if lookups, ok := filterMap["$lookups"].(primitive.A); ok {
 					lookupsOtherList := primitive.A{}
-					if len(lookups) != 0{
+					if len(lookups) != 0 {
 						if _, ok := lookups[0].(primitive.M)["$project"]; ok {
-							lookupsOtherList = append(lookupsOtherList,lookups[0])
-							lookupsOtherList = append(lookupsOtherList,bson.M{"$group":groupMap})
-							lookupsOtherList = append(lookupsOtherList,lookups[1:]...)
+							lookupsOtherList = append(lookupsOtherList, lookups[0])
+							lookupsOtherList = append(lookupsOtherList, bson.M{"$group": groupMap})
+							lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
 							lookups = lookupsOtherList
 							filterMap["$lookups"] = lookups
-						}else{
-							lookupsOtherList = append(lookupsOtherList,bson.M{"$group":groupMap})
-							lookupsOtherList = append(lookupsOtherList,lookups[1:]...)
+						} else {
+							lookupsOtherList = append(lookupsOtherList, bson.M{"$group": groupMap})
+							lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
 							lookups = lookupsOtherList
 							filterMap["$lookups"] = lookups
 						}
-					}else{
+					} else {
 						lookups = primitive.A{groupMap}
 					}
-				}else{
+				} else {
 					filterMap["$lookups"] = primitive.A{groupMap}
 				}
-				delete(filterMap,"$group")
+				delete(query, "group")
 			}
 			// }
 		} else {
@@ -843,13 +845,14 @@ func (p *APIView) FindFilterDeptQuery(ctx context.Context, col *mongo.Collection
 	//		return count, errors.New(`filter格式不正确`)
 	//	}
 	//}
-
+	hasRemoveFirst := false
 	if withCount, ok := query["withCount"]; ok {
 		if b, ok := withCount.(bool); ok {
 			if b {
 				newPipeLine := DeepCopy(pipeLine).(mongo.Pipeline)
-				if col.Name() == model.DEPT{
+				if col.Name() == model.DEPT && !hasGroup && len(newPipeLine) > 1 {
 					newPipeLine = newPipeLine[1:]
+					hasRemoveFirst = true
 				}
 				c, err := p.FindCount(ctx, col, newPipeLine)
 				if err != nil {
@@ -919,7 +922,7 @@ func (p *APIView) FindFilterDeptQuery(ctx context.Context, col *mongo.Collection
 	//	pipeLine = append(pipeLine, bson.D{bson.E{Key: "$project", Value: project}})
 	//}
 	//newPipeLine := DeepCopy(pipeLine).(mongo.Pipeline)
-	if col.Name() == model.DEPT{
+	if hasRemoveFirst {
 		pipeLine = pipeLine[1:]
 		//pipeLine = append(pipeLine,newPipeLine[0])
 	}
