@@ -43,7 +43,7 @@ func init() {
 	viper.SetConfigName("config")
 	viper.AddConfigPath("./etc/")
 	if err := viper.ReadInConfig(); err != nil {
-		log.Println("read config", err.Error())
+		log.Println("读取配置错误,", err.Error())
 	}
 
 	for _, b := range []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10"} {
