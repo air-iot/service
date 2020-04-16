@@ -1,7 +1,6 @@
 package restfulapi
 
 import (
-	"common/model"
 	"context"
 	"encoding/json"
 	"errors"
@@ -11,12 +10,15 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
-	"github.com/influxdata/influxdb/client/v2"
+	_ "github.com/influxdata/influxdb1-client" // this is important because of the bug in go mod
+	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/zhgqiang/jsonpath"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	
+	"github.com/air-iot/service/model"
 )
 
 type (
@@ -875,7 +877,7 @@ func (p *APIView) FindFilterDeptQuery(ctx context.Context, col *mongo.Collection
 	//		return count, errors.New(`filter格式不正确`)
 	//	}
 	//}
-    hasRemoveFirst := false
+	hasRemoveFirst := false
 	if withCount, ok := query["withCount"]; ok {
 		if b, ok := withCount.(bool); ok {
 			if b {
