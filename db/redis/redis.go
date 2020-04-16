@@ -22,8 +22,8 @@ func Init() {
 		port     = viper.GetInt("redis.port")
 		password = viper.GetString("redis.password")
 		db       = viper.GetInt("redis.db")
-		PoolSize = viper.GetInt("redis.poolSize")
 	)
+	PoolSize = viper.GetInt("redis.poolSize")
 	Client = redis.NewClient(&redis.Options{
 		Addr:     net.JoinHostPort(host, strconv.Itoa(port)),
 		Password: password, // no password set

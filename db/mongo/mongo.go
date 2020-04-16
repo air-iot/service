@@ -25,11 +25,10 @@ func Init() {
 		password = viper.GetString("mongo.password")
 		host     = viper.GetString("mongo.host")
 		port     = viper.GetInt("mongo.port")
-		DB       = viper.GetString("mongo.db")
 		adminDB  = viper.GetString("mongo.adminDb")
 		poolSize = viper.GetInt("mongo.poolSize")
 	)
-
+	DB = viper.GetString("mongo.db")
 	var err error
 	opts := options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%s@%s:%d/%s",
 		username,
