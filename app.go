@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"log"
 	"net"
 	"net/http"
@@ -37,6 +38,66 @@ var (
 )
 
 func init() {
+	viper.SetDefault("log.level", "ERROR")
+
+	viper.SetDefault("data.action", "mqtt")
+
+	viper.SetDefault("consul.enable", true)
+	viper.SetDefault("consul.host", "consul")
+	viper.SetDefault("consul.port", 8500)
+
+	viper.SetDefault("influx.enable", false)
+	viper.SetDefault("influx.host", "influx")
+	viper.SetDefault("influx.port", 8086)
+	viper.SetDefault("influx.udpPort", 8089)
+	viper.SetDefault("influx.username", "")
+	viper.SetDefault("influx.password", "")
+	viper.SetDefault("influx.mode", "http")
+	viper.SetDefault("influx.db", "tsdb")
+
+	viper.SetDefault("mongo.enable", false)
+	viper.SetDefault("mongo.username", "root")
+	viper.SetDefault("mongo.password", "dell123")
+	viper.SetDefault("mongo.host", "mongo")
+	viper.SetDefault("mongo.port", 27017)
+	viper.SetDefault("mongo.db", "iot")
+	viper.SetDefault("mongo.adminDb", "admin")
+	viper.SetDefault("mongo.poolSize", 10)
+
+	viper.SetDefault("redis.enable", false)
+	viper.SetDefault("redis.host", "redis")
+	viper.SetDefault("redis.port", 6379)
+	viper.SetDefault("redis.password", "")
+	viper.SetDefault("redis.db", 0)
+	viper.SetDefault("redis.poolSize", 100)
+
+	viper.SetDefault("db.enable", false)
+	viper.SetDefault("db.dialect", "")
+	viper.SetDefault("db.url", "")
+	viper.SetDefault("db.maxIdleConn", 10)
+	viper.SetDefault("db.maxOpenConn", 20)
+
+	viper.SetDefault("mqtt.enable", false)
+	viper.SetDefault("mqtt.host", "mqtt")
+	viper.SetDefault("mqtt.port", 1883)
+	viper.SetDefault("mqtt.username", "admin")
+	viper.SetDefault("mqtt.password", "public")
+	viper.SetDefault("mqtt.topic", "data/")
+	viper.SetDefault("mqtt.clientId", uuid.New().String())
+
+	viper.SetDefault("rabbit.enable", false)
+	viper.SetDefault("rabbit.host", "rabbit")
+	viper.SetDefault("rabbit.port", 5672)
+	viper.SetDefault("rabbit.username", "admin")
+	viper.SetDefault("rabbit.password", "public")
+	viper.SetDefault("rabbit.vhost", "")
+	viper.SetDefault("rabbit.routingKey", "data.")
+
+	viper.SetDefault("traefik.host", "traefik")
+	viper.SetDefault("traefik.port", 80)
+
+	viper.SetDefault("cache.enable", true)
+
 	viper.SetConfigType("env")
 	viper.AutomaticEnv()
 	viper.SetConfigType("ini")

@@ -29,24 +29,9 @@ func Init() {
 		udpPort  = viper.GetInt("influx.udpPort")
 		username = viper.GetString("influx.username")
 		password = viper.GetString("influx.password")
-		mode     = viper.GetString("influx.mode")
-		db       = viper.GetString("influx.db")
 	)
-	if mode != "" {
-		Mod = mode
-	}
-	if host == "" {
-		host = "influx"
-	}
-	if port == 0 {
-		port = 8086
-	}
-	if udpPort == 0 {
-		udpPort = 8089
-	}
-	if db != "" {
-		DB = db
-	}
+	Mod = viper.GetString("influx.mode")
+	DB = viper.GetString("influx.db")
 	var err error
 	Client, err = client.NewHTTPClient(client.HTTPConfig{
 		Addr:     fmt.Sprintf("http://%s:%d", host, port),

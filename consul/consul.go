@@ -19,12 +19,6 @@ func Init() {
 		consulHost = viper.GetString("consul.host")
 		consulPort = viper.GetInt("consul.port")
 	)
-	if consulHost == "" {
-		consulHost = "consul"
-	}
-	if consulPort == 0 {
-		consulPort = 8500
-	}
 	cc := consulApi.DefaultConfig()
 	cc.Address = fmt.Sprintf("%s:%d", consulHost, consulPort)
 	var err error

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	MQTT "github.com/eclipse/paho.mqtt.golang"
-	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -22,26 +21,8 @@ func Init() {
 	var port = viper.GetInt("mqtt.port")
 	var username = viper.GetString("mqtt.username")
 	var password = viper.GetString("mqtt.password")
-	var topic = viper.GetString("mqtt.topic")
+	Topic = viper.GetString("mqtt.topic")
 	var clientID = viper.GetString("mqtt.clientId")
-	if clientID == "" {
-		clientID = uuid.New().String()
-	}
-	if host == "" {
-		host = "mqtt"
-	}
-	if port == 0 {
-		port = 1883
-	}
-	if username == "" {
-		username = "admin"
-	}
-	if password == "" {
-		password = "public"
-	}
-	if topic != "" {
-		Topic = topic
-	}
 	opts.AddBroker(fmt.Sprintf("tcp://%s:%d", host, port))
 	opts.SetAutoReconnect(true)
 	opts.SetCleanSession(true)

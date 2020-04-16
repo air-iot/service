@@ -19,12 +19,6 @@ func Init() {
 		maxIdleConn    = viper.GetInt("db.maxIdleConn")
 		maxOpenConn    = viper.GetInt("db.maxOpenConn")
 	)
-	if maxIdleConn == 0 {
-		maxIdleConn = 10
-	}
-	if maxOpenConn == 0 {
-		maxOpenConn = 20
-	}
 	var err error
 	DB, err = sql.Open(driverName, dataSourceName)
 	if err != nil {
@@ -37,7 +31,7 @@ func Init() {
 func Close() {
 	if DB != nil {
 		if err := DB.Close(); err != nil {
-			logrus.Errorln("Conn 关闭错误", err.Error())
+			logrus.Errorln("Conn????", err.Error())
 		}
 	}
 }

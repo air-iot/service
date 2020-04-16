@@ -25,31 +25,11 @@ func Init() {
 		password = viper.GetString("mongo.password")
 		host     = viper.GetString("mongo.host")
 		port     = viper.GetInt("mongo.port")
-		db       = viper.GetString("mongo.db")
+		DB       = viper.GetString("mongo.db")
 		adminDB  = viper.GetString("mongo.adminDb")
 		poolSize = viper.GetInt("mongo.poolSize")
 	)
-	if adminDB == "" {
-		adminDB = "admin"
-	}
-	if db != "" {
-		DB = db
-	}
-	if username == "" {
-		username = "root"
-	}
-	if password == "" {
-		password = "dell123"
-	}
-	if host == "" {
-		host = "mongo"
-	}
-	if port == 0 {
-		port = 27017
-	}
-	if poolSize == 0 {
-		poolSize = 10
-	}
+
 	var err error
 	opts := options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%s@%s:%d/%s",
 		username,
