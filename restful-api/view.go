@@ -1,6 +1,7 @@
 package restfulapi
 
 import (
+	"common/model"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,15 +11,12 @@ import (
 	"time"
 
 	"github.com/go-redis/redis"
-	_ "github.com/influxdata/influxdb1-client" // this is important because of the bug in go mod
-	client "github.com/influxdata/influxdb1-client/v2"
+	"github.com/influxdata/influxdb/client/v2"
 	"github.com/zhgqiang/jsonpath"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-
-	"github.com/air-iot/service/model"
 )
 
 type (
@@ -92,7 +90,6 @@ func (p *APIView) SaveManyWithConvertOID(ctx context.Context, col *mongo.Collect
 	}
 	return col.InsertMany(ctx, rList)
 }
-
 
 // DeleteByID 根据ID删除数据
 // id:主键_id
@@ -326,35 +323,68 @@ func (p *APIView) FindFilter(ctx context.Context, col *mongo.Collection, result 
 	//$group 放入 $lookups的$project后面
 	if filter, ok := query["filter"]; ok {
 		if filterMap, ok := filter.(bson.M); ok {
-			if groupMap,ok := filterMap["$group"].(primitive.M);ok{
-				if lookups,ok := filterMap["$lookups"].(primitive.A);ok{
+			if groupMap, ok := query["group"].(primitive.M); ok {
+				groupMap["_id"] = groupMap["id"]
+				delete(groupMap, "id")
+				if lookups, ok := filterMap["$lookups"].(primitive.A); ok {
 					lookupsOtherList := primitive.A{}
-					if len(lookups) != 0{
+					if len(lookups) != 0 {
 						if _, ok := lookups[0].(primitive.M)["$project"]; ok {
-							lookupsOtherList = append(lookupsOtherList,lookups[0])
-							lookupsOtherList = append(lookupsOtherList,bson.M{"$group":groupMap})
-							lookupsOtherList = append(lookupsOtherList,lookups[1:]...)
+							lookupsOtherList = append(lookupsOtherList, lookups[0])
+							lookupsOtherList = append(lookupsOtherList, bson.M{"$group": groupMap})
+							lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
 							lookups = lookupsOtherList
 							filterMap["$lookups"] = lookups
-						}else{
-							lookupsOtherList = append(lookupsOtherList,bson.M{"$group":groupMap})
-							lookupsOtherList = append(lookupsOtherList,lookups[1:]...)
+						} else {
+							lookupsOtherList = append(lookupsOtherList, bson.M{"$group": groupMap})
+							lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
 							lookups = lookupsOtherList
 							filterMap["$lookups"] = lookups
 						}
-					}else{
+					} else {
 						lookups = primitive.A{groupMap}
 					}
-				}else{
+				} else {
 					filterMap["$lookups"] = primitive.A{groupMap}
 				}
-				delete(filterMap,"$group")
+				delete(query, "group")
 			}
 			// }
 		} else {
 			return 0, errors.New(`filter格式不正确`)
 		}
 	}
+	//if filter, ok := query["filter"]; ok {
+	//	if filterMap, ok := filter.(bson.M); ok {
+	//		if groupMap,ok := filterMap["$group"].(primitive.M);ok{
+	//			if lookups,ok := filterMap["$lookups"].(primitive.A);ok{
+	//				lookupsOtherList := primitive.A{}
+	//				if len(lookups) != 0{
+	//					if _, ok := lookups[0].(primitive.M)["$project"]; ok {
+	//						lookupsOtherList = append(lookupsOtherList,lookups[0])
+	//						lookupsOtherList = append(lookupsOtherList,bson.M{"$group":groupMap})
+	//						lookupsOtherList = append(lookupsOtherList,lookups[1:]...)
+	//						lookups = lookupsOtherList
+	//						filterMap["$lookups"] = lookups
+	//					}else{
+	//						lookupsOtherList = append(lookupsOtherList,bson.M{"$group":groupMap})
+	//						lookupsOtherList = append(lookupsOtherList,lookups[1:]...)
+	//						lookups = lookupsOtherList
+	//						filterMap["$lookups"] = lookups
+	//					}
+	//				}else{
+	//					lookups = primitive.A{groupMap}
+	//				}
+	//			}else{
+	//				filterMap["$lookups"] = primitive.A{groupMap}
+	//			}
+	//			delete(filterMap,"$group")
+	//		}
+	//		// }
+	//	} else {
+	//		return 0, errors.New(`filter格式不正确`)
+	//	}
+	//}
 
 	if filter, ok := query["filter"]; ok {
 		if filterMap, ok := filter.(bson.M); ok {
@@ -845,7 +875,7 @@ func (p *APIView) FindFilterDeptQuery(ctx context.Context, col *mongo.Collection
 	//		return count, errors.New(`filter格式不正确`)
 	//	}
 	//}
-	hasRemoveFirst := false
+    hasRemoveFirst := false
 	if withCount, ok := query["withCount"]; ok {
 		if b, ok := withCount.(bool); ok {
 			if b {
@@ -932,7 +962,6 @@ func (p *APIView) FindFilterDeptQuery(ctx context.Context, col *mongo.Collection
 	return count, nil
 }
 
-
 // FindFilterLimit 根据条件查询数据(先根据条件分页)
 // result:查询结果 query:查询条件
 func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, result *[]bson.M, query bson.M, calc CalcPipelineFunc) (int, error) {
@@ -947,29 +976,31 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 	//$group 放入 $lookups的$project后面
 	if filter, ok := query["filter"]; ok {
 		if filterMap, ok := filter.(bson.M); ok {
-			if groupMap,ok := filterMap["$group"].(primitive.M);ok{
-				if lookups,ok := filterMap["$lookups"].(primitive.A);ok{
+			if groupMap, ok := query["group"].(primitive.M); ok {
+				groupMap["_id"] = groupMap["id"]
+				delete(groupMap, "id")
+				if lookups, ok := filterMap["$lookups"].(primitive.A); ok {
 					lookupsOtherList := primitive.A{}
-					if len(lookups) != 0{
+					if len(lookups) != 0 {
 						if _, ok := lookups[0].(primitive.M)["$project"]; ok {
-							lookupsOtherList = append(lookupsOtherList,lookups[0])
-							lookupsOtherList = append(lookupsOtherList,bson.M{"$group":groupMap})
-							lookupsOtherList = append(lookupsOtherList,lookups[1:]...)
+							lookupsOtherList = append(lookupsOtherList, lookups[0])
+							lookupsOtherList = append(lookupsOtherList, bson.M{"$group": groupMap})
+							lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
 							lookups = lookupsOtherList
 							filterMap["$lookups"] = lookups
-						}else{
-							lookupsOtherList = append(lookupsOtherList,bson.M{"$group":groupMap})
-							lookupsOtherList = append(lookupsOtherList,lookups[1:]...)
+						} else {
+							lookupsOtherList = append(lookupsOtherList, bson.M{"$group": groupMap})
+							lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
 							lookups = lookupsOtherList
 							filterMap["$lookups"] = lookups
 						}
-					}else{
+					} else {
 						lookups = primitive.A{groupMap}
 					}
-				}else{
+				} else {
 					filterMap["$lookups"] = primitive.A{groupMap}
 				}
-				delete(filterMap,"$group")
+				delete(query, "group")
 			}
 			// }
 		} else {
@@ -1835,7 +1866,6 @@ func FindCount(ctx context.Context, col *mongo.Collection, pipeLine mongo.Pipeli
 
 	return count, nil
 }
-
 
 //============Redis==================
 

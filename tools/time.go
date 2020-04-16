@@ -82,6 +82,14 @@ func GetLastServeralHoursFromZero(i int) time.Time {
 	return t
 }
 
+//循环中获取前几分钟时间
+func GetLastServeralMinuteFromZero(i int) time.Time {
+	currentMinute  := time.Now().Minute()
+	oldMinute := currentMinute - i
+	t := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Hour(), oldMinute, 0, 0, time.Local)
+	return t
+}
+
 //前推到几天前0点
 func GetUnixToOldTimeDay(i int) time.Time {
 	day := time.Now().Day()
