@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"github.com/air-iot/service/mq/srv"
 	"github.com/google/uuid"
 	"log"
 	"net"
@@ -152,6 +153,7 @@ func NewApp() App {
 		serviceTag  = viper.GetString("service.tag")
 	)
 
+	srv.DataAction = viper.GetString("data.action")
 	if servicePort == 0 {
 		servicePort = 9000
 	}

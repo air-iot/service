@@ -9,6 +9,8 @@ import (
 	"github.com/air-iot/service/mq/rabbit"
 )
 
+var DataAction = "mqtt"
+
 func DefaultRealtimeDataHandler(handler func(topic string, payload []byte)) error {
 	switch viper.GetString("data.action") {
 	case "rabbit":
