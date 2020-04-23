@@ -9,10 +9,6 @@ import (
 	cmodel "github.com/air-iot/service/model"
 )
 
-type JsonLogicSymbol struct {
-	Symbol string      `json:"symbol"`
-	Value  interface{} `json:"value"`
-}
 
 // RemoveRepByLoop 通过循环过滤重复元素
 func RemoveRepByLoop(slc []string, removeEle string) []string {
@@ -1156,8 +1152,8 @@ func FormatDataInfoList(infoList []map[string]interface{}) string {
 }
 
 // GetJsonLogicSymbol 递归获取jsonlogic中大于小于字段的值组成数组
-func GetJsonLogicSymbol(data primitive.M, varList *[]JsonLogicSymbol) {
-	for k, v := range data {
+func GetJsonLogicSymbol(data *primitive.M, deadArea float64) {
+	for k, v := range *data {
 		//switch k {
 		//case "<", ">", ">=", "<=":
 		//	*varList = AddNonRepByLoop(*varList, k)
@@ -1165,66 +1161,76 @@ func GetJsonLogicSymbol(data primitive.M, varList *[]JsonLogicSymbol) {
 		//}
 		switch val := v.(type) {
 		case primitive.M:
-			convertJsonLogicMapSymbol(varList, k, val)
+			convertJsonLogicMapSymbol(k, &val, deadArea)
 		case primitive.A:
-			convertJsonLogicASymbol(varList, k, val)
+			convertJsonLogicASymbol(k, &val, deadArea)
 		//case string:
 		//	if k == "<" || k == ">" || k == ">=" || k == "<=" {
 		//		*varList = AddNonRepByLoop(*varList, k)
 		//		return
 		//	}
 		case map[string]interface{}:
-			convertJsonLogicMapSymbol(varList, k, val)
+			convertJsonLogicMapSymbol(k, (*primitive.M)(&val), deadArea)
 		case []interface{}:
-			convertJsonLogicASymbol(varList, k, val)
+			convertJsonLogicASymbol(k, (*primitive.A)(&val), deadArea)
 		default:
 		}
 	}
 }
 
 // convertJsonLogicMapSymbol 转换为primitive.M
-func convertJsonLogicMapSymbol(varList *[]JsonLogicSymbol, key string, value primitive.M) {
-	for k, v := range value {
+func convertJsonLogicMapSymbol(key string, value *primitive.M, deadArea float64) {
+	for k, v := range *value {
 		switch val := v.(type) {
 		case primitive.M:
-			convertJsonLogicMapSymbol(varList, k, val)
+			convertJsonLogicMapSymbol(k, &val, deadArea)
 		case primitive.A:
-			convertJsonLogicASymbol(varList, k, val)
+			convertJsonLogicASymbol(k, &val, deadArea)
 		//case string:
 		//	if k == "<" || k == ">" || k == ">=" || k == "<=" {
 		//		*varList = AddNonRepByLoop(*varList, k)
 		//		return
 		//	}
 		case map[string]interface{}:
-			convertJsonLogicMapSymbol(varList, k, val)
+			convertJsonLogicMapSymbol(k, (*primitive.M)(&val), deadArea)
 		case []interface{}:
-			convertJsonLogicASymbol(varList, k, val)
+			convertJsonLogicASymbol(k, (*primitive.A)(&val), deadArea)
 		default:
 		}
 	}
 }
 
 // convertJsonLogicASymbol 转换primitive.A类型数组
-func convertJsonLogicASymbol(varList *[]JsonLogicSymbol, key string, val primitive.A) {
-	for _, outValue := range val {
+func convertJsonLogicASymbol(key string, outValList *primitive.A, deadArea float64) {
+	for i, outValue := range *outValList {
 		switch val := outValue.(type) {
 		case primitive.M:
-			convertJsonLogicMapSymbol(varList, key, val)
+			convertJsonLogicMapSymbol(key, &val, deadArea)
 		case primitive.A:
-			convertJsonLogicASymbol(varList, key, val)
+			convertJsonLogicASymbol(key, &val, deadArea)
 		default:
 			if key == "<" || key == ">" || key == ">=" || key == "<=" {
-				symbol := JsonLogicSymbol{
-					Symbol: key,
-					Value:  val,
+				symbolVal, err := GetFloatNumber(val)
+				if err != nil {
+					return
 				}
-				*varList = append(*varList, symbol)
+				switch key {
+				case "<", "<=":
+					(*outValList)[i] = symbolVal - deadArea
+				case ">", ">=":
+					(*outValList)[i] = symbolVal + deadArea
+				}
+				//symbol := JsonLogicSymbol{
+				//	Symbol: key,
+				//	Value:  val,
+				//}
+				//*varList = append(*varList, symbol)
 				return
 			}
 		case map[string]interface{}:
-			convertJsonLogicMapSymbol(varList, key, val)
+			convertJsonLogicMapSymbol(key, (*primitive.M)(&val), deadArea)
 		case []interface{}:
-			convertJsonLogicASymbol(varList, key, val)
+			convertJsonLogicASymbol(key, (*primitive.A)(&val), deadArea)
 		}
 
 	}
