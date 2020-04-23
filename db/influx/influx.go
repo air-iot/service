@@ -41,11 +41,13 @@ func Init() {
 	if err != nil {
 		logrus.Panic(err)
 	}
-	UDPClient, err = client.NewUDPClient(client.UDPConfig{
-		Addr: net.JoinHostPort(host, strconv.Itoa(udpPort)),
-	})
-	if err != nil {
-		logrus.Panic(err)
+	if Mod == "udp" {
+		UDPClient, err = client.NewUDPClient(client.UDPConfig{
+			Addr: net.JoinHostPort(host, strconv.Itoa(udpPort)),
+		})
+		if err != nil {
+			logrus.Panic(err)
+		}
 	}
 }
 
