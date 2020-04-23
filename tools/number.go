@@ -48,7 +48,12 @@ func GetFloat64NumberFromMongoDB(data primitive.M, key string) (float64, error) 
 		if !ok {
 			numberInDBInt64, ok := data[key].(int64)
 			if !ok {
-				return 0, fmt.Errorf("该字段不是数字")
+				numberInDBInt, ok := data[key].(int)
+				if !ok {
+					return 0, fmt.Errorf("该字段不是数字")
+				} else {
+					number = float64(numberInDBInt)
+				}
 			} else {
 				number = float64(numberInDBInt64)
 			}
