@@ -56,6 +56,8 @@ type Rule struct {
 	Alert       bool                   `json:"alert"`
 	ExtraTags   []ExtraTagForRule      `json:"extraTags"`
 	Delay       float64                `json:"delay"`
+	DeadZone    float64                `json:"deadZone"`
+	Once        bool                   `json:"once"`
 }
 
 type WarningMongo struct {
@@ -75,6 +77,8 @@ type RuleMongo struct {
 	Alert       bool                   `json:"alert"bson:"alert"`
 	ExtraTags   []ExtraTagForRuleMongo `json:"extraTags" bson:"extraTags"`
 	Delay       interface{}            `json:"delay" bson:"delay"`
+	DeadZone    interface{}            `json:"deadZone" bson:"deadZone"`
+	Once        bool                   `json:"once" bson:"once"`
 }
 
 type ComputedMongo struct {
