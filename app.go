@@ -2,9 +2,8 @@ package service
 
 import (
 	"errors"
+	"flag"
 	"fmt"
-	"github.com/air-iot/service/mq/srv"
-	"github.com/google/uuid"
 	"log"
 	"net"
 	"net/http"
@@ -15,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
 	consulApi "github.com/hashicorp/consul/api"
 	"github.com/labstack/echo/v4"
 	mw "github.com/labstack/echo/v4/middleware"
@@ -30,15 +30,20 @@ import (
 	"github.com/air-iot/service/logic"
 	"github.com/air-iot/service/mq/mqtt"
 	"github.com/air-iot/service/mq/rabbit"
+	"github.com/air-iot/service/mq/srv"
 	restfulapi "github.com/air-iot/service/restful-api"
 	"github.com/air-iot/service/traefik"
 )
 
 var (
 	privateBlocks []*net.IPNet
+	configPath    = flag.String("config", "./etc/", "配置文件所属文件夹路径,默认:./etc/")
+	configName    = flag.String("configName", "config", "配置文件名称,默认:config")
+	configSuffix  = flag.String("configSuffix", "ini", "配置文件后缀类型,默认:ini")
 )
 
 func init() {
+	flag.Parse()
 	viper.SetDefault("log.level", "ERROR")
 
 	viper.SetDefault("data.action", "mqtt")
@@ -101,9 +106,9 @@ func init() {
 
 	viper.SetConfigType("env")
 	viper.AutomaticEnv()
-	viper.SetConfigType("ini")
-	viper.SetConfigName("config")
-	viper.AddConfigPath("./etc/")
+	viper.SetConfigType(*configSuffix)
+	viper.SetConfigName(*configName)
+	viper.AddConfigPath(*configPath)
 	if err := viper.ReadInConfig(); err != nil {
 		log.Println("读取配置错误,", err.Error())
 	}
