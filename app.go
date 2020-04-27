@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"google.golang.org/grpc"
 	"log"
 	"net"
 	"net/http"
@@ -40,7 +41,6 @@ var (
 	configPath    = flag.String("config", "./etc/", "配置文件所属文件夹路径,默认:./etc/")
 	configName    = flag.String("configName", "config", "配置文件名称,默认:config")
 	configSuffix  = flag.String("configSuffix", "ini", "配置文件后缀类型,默认:ini")
-	RpcPort       int
 )
 
 func init() {
@@ -104,7 +104,8 @@ func init() {
 	viper.SetDefault("traefik.port", 80)
 
 	viper.SetDefault("service.port", 9000)
-	viper.SetDefault("service.rpcPort", 9001)
+	viper.SetDefault("service.rpcPort", 9010)
+	viper.SetDefault("service.rpcEnable", false)
 
 	viper.SetDefault("cache.enable", true)
 
@@ -132,6 +133,7 @@ type Handler interface {
 type App interface {
 	Run(...Handler)
 	GetServer() *echo.Echo
+	GetRpcServer() *grpc.Server
 }
 
 type app struct {
@@ -139,8 +141,11 @@ type app struct {
 	name       string
 	host       string
 	port       int
+	rpcPort    int
+	rpcEnable  bool
 	tags       []string
 	httpServer *echo.Echo
+	grpcServer *grpc.Server
 }
 
 func NewApp() App {
@@ -160,8 +165,10 @@ func NewApp() App {
 		serviceHost = viper.GetString("service.host")
 		servicePort = viper.GetInt("service.port")
 		serviceTag  = viper.GetString("service.tag")
+		rpcPort     = viper.GetInt("service.rpcPort")
+		rpcEnable   = viper.GetBool("service.rpcEnable")
 	)
-	RpcPort = viper.GetInt("service.rpcPort")
+
 	srv.DataAction = viper.GetString("data.action")
 	if serviceName == "" {
 		logrus.Panic("服务name不能为空")
@@ -192,12 +199,20 @@ func NewApp() App {
 	tags := strings.Split(serviceTag, ",")
 	tags = append(tags, "traefik.enable=true")
 	tags = append(tags, fmt.Sprintf("traefik.http.routers.%s.rule=PathPrefix(`/%s`)", serviceName, serviceName))
+
+	var r *grpc.Server
+	if rpcEnable {
+		r = grpc.NewServer()
+	}
 	a := &app{
 		id:         serviceID,
 		name:       serviceName,
 		host:       serviceHost,
 		port:       servicePort,
+		rpcPort:    rpcPort,
+		rpcEnable:  rpcEnable,
 		tags:       tags,
+		grpcServer: r,
 		httpServer: e,
 	}
 	if viper.GetBool("consul.enable") {
@@ -220,6 +235,23 @@ func (p *app) Run(handlers ...Handler) {
 			os.Exit(1)
 		}
 	}()
+
+	if p.rpcEnable {
+		lis, err := net.Listen("tcp", net.JoinHostPort(p.host, strconv.Itoa(p.rpcPort)))
+		if err != nil {
+			logrus.Errorln(err)
+			os.Exit(1)
+		}
+
+		go func() {
+			if err := p.grpcServer.Serve(lis); err != nil {
+				logrus.Errorln(err)
+				os.Exit(1)
+			}
+			println("Rpc Server Port:", p.rpcPort)
+		}()
+	}
+
 	select {
 	case sig := <-ch:
 		p.stop()
@@ -236,6 +268,10 @@ func (p *app) GetServer() *echo.Echo {
 	return p.httpServer
 }
 
+func (p *app) GetRpcServer() *grpc.Server {
+	return p.grpcServer
+}
+
 func (p *app) stop() {
 	influx.Close()
 	mongo.Close()
@@ -243,6 +279,7 @@ func (p *app) stop() {
 	sql.Close()
 	mqtt.Close()
 	rabbit.Close()
+	p.grpcServer.Stop()
 	if viper.GetBool("consul.enable") {
 		p.deregister()
 	}
