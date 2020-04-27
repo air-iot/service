@@ -1,0 +1,14 @@
+syntax = "proto3";
+package node;
+service NodeData {
+    rpc FindByID(Request) returns (Response){}
+    rpc FindQuery(Request) returns (Response){}
+}
+
+message Request {
+    string query = 1;
+}
+
+message Response {
+    string result = 1;
+}
