@@ -40,6 +40,7 @@ var (
 	configPath    = flag.String("config", "./etc/", "配置文件所属文件夹路径,默认:./etc/")
 	configName    = flag.String("configName", "config", "配置文件名称,默认:config")
 	configSuffix  = flag.String("configSuffix", "ini", "配置文件后缀类型,默认:ini")
+	RpcPort       int
 )
 
 func init() {
@@ -102,6 +103,9 @@ func init() {
 	viper.SetDefault("traefik.host", "traefik")
 	viper.SetDefault("traefik.port", 80)
 
+	viper.SetDefault("service.port", 9000)
+	viper.SetDefault("service.rpcPort", 9001)
+
 	viper.SetDefault("cache.enable", true)
 
 	viper.SetConfigType("env")
@@ -157,11 +161,8 @@ func NewApp() App {
 		servicePort = viper.GetInt("service.port")
 		serviceTag  = viper.GetString("service.tag")
 	)
-
+	RpcPort = viper.GetInt("service.rpcPort")
 	srv.DataAction = viper.GetString("data.action")
-	if servicePort == 0 {
-		servicePort = 9000
-	}
 	if serviceName == "" {
 		logrus.Panic("服务name不能为空")
 	}
