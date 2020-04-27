@@ -10,6 +10,7 @@ require (
 	github.com/eclipse/paho.mqtt.golang v1.2.0
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-redis/redis v6.15.7+incompatible
+	github.com/golang/protobuf v1.4.0 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/hashicorp/consul/api v1.4.0
 	github.com/hashicorp/go-hclog v0.12.2 // indirect
@@ -38,9 +39,11 @@ require (
 	github.com/zhgqiang/jsonpath v0.0.0-20171228002920-ff973d0f4099
 	go.mongodb.org/mongo-driver v1.3.2
 	golang.org/x/crypto v0.0.0-20200406173513-056763e48d71
-	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e
+	golang.org/x/net v0.0.0-20200425230154-ff2c4b7c35a0
 	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a // indirect
-	golang.org/x/sys v0.0.0-20200408040146-ea54a3c99b9b // indirect
+	golang.org/x/sys v0.0.0-20200420163511-1957bb5e6d1f // indirect
+	google.golang.org/genproto v0.0.0-20200424135956-bca184e23272 // indirect
+	google.golang.org/grpc v1.29.1 // indirect
 	gopkg.in/ini.v1 v1.55.0 // indirect
 	gopkg.in/resty.v1 v1.12.0
 )

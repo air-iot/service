@@ -1,0 +1,14 @@
+syntax = "proto3";
+package model;
+service ModelData {
+    rpc FindByID(Request) returns (Response){}
+    rpc FindQuery(Request) returns (Response){}
+}
+
+message Request {
+    string query = 1;
+}
+
+message Response {
+    string result = 1;
+}
