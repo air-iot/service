@@ -8,8 +8,8 @@ It is generated from these files:
 	node.proto
 
 It has these top-level messages:
-	Request
-	Response
+	GrpcRequest
+	GrpcResponse
 */
 package node
 
@@ -33,32 +33,32 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type Request struct {
+type GrpcRequest struct {
 	Query string `protobuf:"bytes,1,opt,name=query" json:"query,omitempty"`
 }
 
-func (m *Request) Reset()                    { *m = Request{} }
-func (m *Request) String() string            { return proto.CompactTextString(m) }
-func (*Request) ProtoMessage()               {}
-func (*Request) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (m *GrpcRequest) Reset()                    { *m = GrpcRequest{} }
+func (m *GrpcRequest) String() string            { return proto.CompactTextString(m) }
+func (*GrpcRequest) ProtoMessage()               {}
+func (*GrpcRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-func (m *Request) GetQuery() string {
+func (m *GrpcRequest) GetQuery() string {
 	if m != nil {
 		return m.Query
 	}
 	return ""
 }
 
-type Response struct {
+type GrpcResponse struct {
 	Result string `protobuf:"bytes,1,opt,name=result" json:"result,omitempty"`
 }
 
-func (m *Response) Reset()                    { *m = Response{} }
-func (m *Response) String() string            { return proto.CompactTextString(m) }
-func (*Response) ProtoMessage()               {}
-func (*Response) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (m *GrpcResponse) Reset()                    { *m = GrpcResponse{} }
+func (m *GrpcResponse) String() string            { return proto.CompactTextString(m) }
+func (*GrpcResponse) ProtoMessage()               {}
+func (*GrpcResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
-func (m *Response) GetResult() string {
+func (m *GrpcResponse) GetResult() string {
 	if m != nil {
 		return m.Result
 	}
@@ -66,8 +66,8 @@ func (m *Response) GetResult() string {
 }
 
 func init() {
-	proto.RegisterType((*Request)(nil), "node.Request")
-	proto.RegisterType((*Response)(nil), "node.Response")
+	proto.RegisterType((*GrpcRequest)(nil), "node.GrpcRequest")
+	proto.RegisterType((*GrpcResponse)(nil), "node.GrpcResponse")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -78,97 +78,97 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// Client API for NodeData service
+// Client API for Node service
 
-type NodeDataClient interface {
-	FindByID(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
-	FindQuery(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
+type NodeClient interface {
+	FindByID(ctx context.Context, in *GrpcRequest, opts ...grpc.CallOption) (*GrpcResponse, error)
+	FindQuery(ctx context.Context, in *GrpcRequest, opts ...grpc.CallOption) (*GrpcResponse, error)
 }
 
-type nodeDataClient struct {
+type nodeClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewNodeDataClient(cc *grpc.ClientConn) NodeDataClient {
-	return &nodeDataClient{cc}
+func NewNodeClient(cc *grpc.ClientConn) NodeClient {
+	return &nodeClient{cc}
 }
 
-func (c *nodeDataClient) FindByID(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
-	out := new(Response)
-	err := grpc.Invoke(ctx, "/node.NodeData/FindByID", in, out, c.cc, opts...)
+func (c *nodeClient) FindByID(ctx context.Context, in *GrpcRequest, opts ...grpc.CallOption) (*GrpcResponse, error) {
+	out := new(GrpcResponse)
+	err := grpc.Invoke(ctx, "/node.Node/FindByID", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *nodeDataClient) FindQuery(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
-	out := new(Response)
-	err := grpc.Invoke(ctx, "/node.NodeData/FindQuery", in, out, c.cc, opts...)
+func (c *nodeClient) FindQuery(ctx context.Context, in *GrpcRequest, opts ...grpc.CallOption) (*GrpcResponse, error) {
+	out := new(GrpcResponse)
+	err := grpc.Invoke(ctx, "/node.Node/FindQuery", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// Server API for NodeData service
+// Server API for Node service
 
-type NodeDataServer interface {
-	FindByID(context.Context, *Request) (*Response, error)
-	FindQuery(context.Context, *Request) (*Response, error)
+type NodeServer interface {
+	FindByID(context.Context, *GrpcRequest) (*GrpcResponse, error)
+	FindQuery(context.Context, *GrpcRequest) (*GrpcResponse, error)
 }
 
-func RegisterNodeDataServer(s *grpc.Server, srv NodeDataServer) {
-	s.RegisterService(&_NodeData_serviceDesc, srv)
+func RegisterNodeServer(s *grpc.Server, srv NodeServer) {
+	s.RegisterService(&_Node_serviceDesc, srv)
 }
 
-func _NodeData_FindByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Request)
+func _Node_FindByID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GrpcRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(NodeDataServer).FindByID(ctx, in)
+		return srv.(NodeServer).FindByID(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/node.NodeData/FindByID",
+		FullMethod: "/node.Node/FindByID",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NodeDataServer).FindByID(ctx, req.(*Request))
+		return srv.(NodeServer).FindByID(ctx, req.(*GrpcRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _NodeData_FindQuery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Request)
+func _Node_FindQuery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GrpcRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(NodeDataServer).FindQuery(ctx, in)
+		return srv.(NodeServer).FindQuery(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/node.NodeData/FindQuery",
+		FullMethod: "/node.Node/FindQuery",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NodeDataServer).FindQuery(ctx, req.(*Request))
+		return srv.(NodeServer).FindQuery(ctx, req.(*GrpcRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-var _NodeData_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "node.NodeData",
-	HandlerType: (*NodeDataServer)(nil),
+var _Node_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "node.Node",
+	HandlerType: (*NodeServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "FindByID",
-			Handler:    _NodeData_FindByID_Handler,
+			Handler:    _Node_FindByID_Handler,
 		},
 		{
 			MethodName: "FindQuery",
-			Handler:    _NodeData_FindQuery_Handler,
+			Handler:    _Node_FindQuery_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -178,15 +178,15 @@ var _NodeData_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("node.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 150 bytes of a gzipped FileDescriptorProto
+	// 151 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0xca, 0xcb, 0x4f, 0x49,
-	0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x01, 0xb1, 0x95, 0xe4, 0xb9, 0xd8, 0x83, 0x52,
-	0x0b, 0x4b, 0x53, 0x8b, 0x4b, 0x84, 0x44, 0xb8, 0x58, 0x0b, 0x4b, 0x53, 0x8b, 0x2a, 0x25, 0x18,
-	0x15, 0x18, 0x35, 0x38, 0x83, 0x20, 0x1c, 0x25, 0x25, 0x2e, 0x8e, 0xa0, 0xd4, 0xe2, 0x82, 0xfc,
-	0xbc, 0xe2, 0x54, 0x21, 0x31, 0x2e, 0xb6, 0xa2, 0xd4, 0xe2, 0xd2, 0x9c, 0x12, 0xa8, 0x12, 0x28,
-	0xcf, 0x28, 0x95, 0x8b, 0xc3, 0x2f, 0x3f, 0x25, 0xd5, 0x25, 0xb1, 0x24, 0x51, 0x48, 0x9b, 0x8b,
-	0xc3, 0x2d, 0x33, 0x2f, 0xc5, 0xa9, 0xd2, 0xd3, 0x45, 0x88, 0x57, 0x0f, 0x6c, 0x1f, 0xd4, 0x02,
-	0x29, 0x3e, 0x18, 0x17, 0x62, 0x9c, 0x12, 0x83, 0x90, 0x0e, 0x17, 0x27, 0x48, 0x71, 0x20, 0xc8,
-	0x26, 0x82, 0xaa, 0x93, 0xd8, 0xc0, 0x0e, 0x37, 0x06, 0x04, 0x00, 0x00, 0xff, 0xff, 0x5f, 0x02,
-	0x1e, 0xd5, 0xc6, 0x00, 0x00, 0x00,
+	0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x01, 0xb1, 0x95, 0x94, 0xb9, 0xb8, 0xdd, 0x8b,
+	0x0a, 0x92, 0x83, 0x52, 0x0b, 0x4b, 0x53, 0x8b, 0x4b, 0x84, 0x44, 0xb8, 0x58, 0x0b, 0x4b, 0x53,
+	0x8b, 0x2a, 0x25, 0x18, 0x15, 0x18, 0x35, 0x38, 0x83, 0x20, 0x1c, 0x25, 0x35, 0x2e, 0x1e, 0x88,
+	0xa2, 0xe2, 0x82, 0xfc, 0xbc, 0xe2, 0x54, 0x21, 0x31, 0x2e, 0xb6, 0xa2, 0xd4, 0xe2, 0xd2, 0x9c,
+	0x12, 0xa8, 0x32, 0x28, 0xcf, 0xa8, 0x90, 0x8b, 0xc5, 0x2f, 0x3f, 0x25, 0x55, 0xc8, 0x98, 0x8b,
+	0xc3, 0x2d, 0x33, 0x2f, 0xc5, 0xa9, 0xd2, 0xd3, 0x45, 0x48, 0x50, 0x0f, 0x6c, 0x27, 0x92, 0x25,
+	0x52, 0x42, 0xc8, 0x42, 0x10, 0x23, 0x95, 0x18, 0x84, 0x4c, 0xb8, 0x38, 0x41, 0x9a, 0x02, 0x41,
+	0x36, 0x12, 0xad, 0x2b, 0x89, 0x0d, 0xec, 0x19, 0x63, 0x40, 0x00, 0x00, 0x00, 0xff, 0xff, 0xd7,
+	0xa9, 0xfd, 0x68, 0xda, 0x00, 0x00, 0x00,
 }

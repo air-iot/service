@@ -1,14 +1,14 @@
 syntax = "proto3";
 package model;
-service ModelData {
-    rpc FindByID(Request) returns (Response){}
-    rpc FindQuery(Request) returns (Response){}
+service Model {
+    rpc FindByID(GrpcRequest) returns (GrpcResponse){}
+    rpc FindQuery(GrpcRequest) returns (GrpcResponse){}
 }
 
-message Request {
+message GrpcRequest {
     string query = 1;
 }
 
-message Response {
+message GrpcResponse {
     string result = 1;
 }
