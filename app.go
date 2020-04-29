@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"google.golang.org/grpc"
 	"log"
 	"net"
 	"net/http"
@@ -21,6 +20,7 @@ import (
 	mw "github.com/labstack/echo/v4/middleware"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"google.golang.org/grpc"
 
 	"github.com/air-iot/service/consul"
 	"github.com/air-iot/service/db/influx"
