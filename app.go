@@ -37,6 +37,8 @@ import (
 )
 
 var (
+	// Version 版本号
+	Version = "2.0"
 	privateBlocks []*net.IPNet
 	configPath    = flag.String("config", "./etc/", "配置文件所属文件夹路径,默认:./etc/")
 	configName    = flag.String("configName", "config", "配置文件名称,默认:config")
