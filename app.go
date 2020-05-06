@@ -279,7 +279,9 @@ func (p *app) stop() {
 	sql.Close()
 	mqtt.Close()
 	rabbit.Close()
-	p.grpcServer.Stop()
+	if p.grpcServer != nil {
+		p.grpcServer.Stop()
+	}
 	if viper.GetBool("consul.enable") {
 		p.deregister()
 	}
