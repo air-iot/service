@@ -285,6 +285,11 @@ func (p *app) stop() {
 	if p.grpcServer != nil {
 		p.grpcServer.Stop()
 	}
+	if p.httpServer != nil {
+		if err := p.httpServer.Close(); err != nil {
+			logrus.Errorln("关闭http错误,", err)
+		}
+	}
 	if viper.GetBool("consul.enable") {
 		p.deregister()
 	}
