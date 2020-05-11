@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/air-iot/service/tools"
 	"log"
 	"net"
 	"net/http"
@@ -176,7 +177,8 @@ func NewApp() App {
 		logrus.Panic("服务name不能为空")
 	}
 	if serviceID == "" {
-		logrus.Panic("服务id不能为空")
+		//logrus.Panic("服务id不能为空")
+		serviceID = fmt.Sprintf("%s_%s", serviceName, tools.GetRandomString(8))
 	}
 	var err error
 	serviceHost, err = Extract(serviceHost)
