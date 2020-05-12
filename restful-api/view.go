@@ -325,13 +325,35 @@ func (p *APIView) FindFilter(ctx context.Context, col *mongo.Collection, result 
 	//$group 放入 $lookups的$project后面
 	if filter, ok := query["filter"]; ok {
 		if filterMap, ok := filter.(bson.M); ok {
+			groupMap := primitive.M{}
+			hasGroupFields := false
+			if groupFieldsMap, ok := query["groupFields"].(primitive.M); ok {
+				groupMap = groupFieldsMap
+				hasGroupFields = true
+				for k := range groupFieldsMap {
+					projectMap[k] = 1
+				}
+				delete(query, "groupFields")
+			}
+			if groupByMap, ok := query["groupBy"].(primitive.M); ok {
+				groupMap["_id"] = groupByMap
+				query["group"] = groupMap
+				delete(query, "groupBy")
+			} else if hasGroupFields {
+				groupMap["_id"] = nil
+				query["group"] = groupMap
+				delete(query, "groupBy")
+			}
 			if groupMap, ok := query["group"].(primitive.M); ok {
-				groupMap["_id"] = groupMap["id"]
+				//groupMap["_id"] = groupMap["id"]
 				delete(groupMap, "id")
 				if lookups, ok := filterMap["$lookups"].(primitive.A); ok {
 					lookupsOtherList := primitive.A{}
 					if len(lookups) != 0 {
-						if _, ok := lookups[0].(primitive.M)["$project"]; ok {
+						if projectM, ok := lookups[0].(primitive.M)["$project"].(primitive.M); ok {
+							for k := range projectMap {
+								projectM[k] = 1
+							}
 							lookupsOtherList = append(lookupsOtherList, lookups[0])
 							lookupsOtherList = append(lookupsOtherList, bson.M{"$group": groupMap})
 							lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
@@ -347,7 +369,7 @@ func (p *APIView) FindFilter(ctx context.Context, col *mongo.Collection, result 
 						lookups = primitive.A{groupMap}
 					}
 				} else {
-					filterMap["$lookups"] = primitive.A{groupMap}
+					filterMap["$lookups"] = primitive.A{bson.M{"$project": projectMap}, groupMap}
 				}
 				delete(query, "group")
 			}
@@ -663,13 +685,35 @@ func (p *APIView) FindFilterDeptQuery(ctx context.Context, col *mongo.Collection
 	//$group 放入 $lookups的$project后面
 	if filter, ok := query["filter"]; ok {
 		if filterMap, ok := filter.(bson.M); ok {
+			groupMap := primitive.M{}
+			hasGroupFields := false
+			if groupFieldsMap, ok := query["groupFields"].(primitive.M); ok {
+				groupMap = groupFieldsMap
+				hasGroupFields = true
+				for k := range groupFieldsMap {
+					projectMap[k] = 1
+				}
+				delete(query, "groupFields")
+			}
+			if groupByMap, ok := query["groupBy"].(primitive.M); ok {
+				groupMap["_id"] = groupByMap
+				query["group"] = groupMap
+				delete(query, "groupBy")
+			} else if hasGroupFields {
+				groupMap["_id"] = nil
+				query["group"] = groupMap
+				delete(query, "groupBy")
+			}
 			if groupMap, ok := query["group"].(primitive.M); ok {
-				groupMap["_id"] = groupMap["id"]
+				//groupMap["_id"] = groupMap["id"]
 				delete(groupMap, "id")
 				if lookups, ok := filterMap["$lookups"].(primitive.A); ok {
 					lookupsOtherList := primitive.A{}
 					if len(lookups) != 0 {
-						if _, ok := lookups[0].(primitive.M)["$project"]; ok {
+						if projectM, ok := lookups[0].(primitive.M)["$project"].(primitive.M); ok {
+							for k := range projectMap {
+								projectM[k] = 1
+							}
 							lookupsOtherList = append(lookupsOtherList, lookups[0])
 							lookupsOtherList = append(lookupsOtherList, bson.M{"$group": groupMap})
 							lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
@@ -685,7 +729,7 @@ func (p *APIView) FindFilterDeptQuery(ctx context.Context, col *mongo.Collection
 						lookups = primitive.A{groupMap}
 					}
 				} else {
-					filterMap["$lookups"] = primitive.A{groupMap}
+					filterMap["$lookups"] = primitive.A{bson.M{"$project": projectMap}, groupMap}
 				}
 				delete(query, "group")
 			}
@@ -978,13 +1022,35 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 	//$group 放入 $lookups的$project后面
 	if filter, ok := query["filter"]; ok {
 		if filterMap, ok := filter.(bson.M); ok {
+			groupMap := primitive.M{}
+			hasGroupFields := false
+			if groupFieldsMap, ok := query["groupFields"].(primitive.M); ok {
+				groupMap = groupFieldsMap
+				hasGroupFields = true
+				for k := range groupFieldsMap {
+					projectMap[k] = 1
+				}
+				delete(query, "groupFields")
+			}
+			if groupByMap, ok := query["groupBy"].(primitive.M); ok {
+				groupMap["_id"] = groupByMap
+				query["group"] = groupMap
+				delete(query, "groupBy")
+			} else if hasGroupFields {
+				groupMap["_id"] = nil
+				query["group"] = groupMap
+				delete(query, "groupBy")
+			}
 			if groupMap, ok := query["group"].(primitive.M); ok {
-				groupMap["_id"] = groupMap["id"]
+				//groupMap["_id"] = groupMap["id"]
 				delete(groupMap, "id")
 				if lookups, ok := filterMap["$lookups"].(primitive.A); ok {
 					lookupsOtherList := primitive.A{}
 					if len(lookups) != 0 {
-						if _, ok := lookups[0].(primitive.M)["$project"]; ok {
+						if projectM, ok := lookups[0].(primitive.M)["$project"].(primitive.M); ok {
+							for k := range projectMap {
+								projectM[k] = 1
+							}
 							lookupsOtherList = append(lookupsOtherList, lookups[0])
 							lookupsOtherList = append(lookupsOtherList, bson.M{"$group": groupMap})
 							lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
@@ -1000,7 +1066,7 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 						lookups = primitive.A{groupMap}
 					}
 				} else {
-					filterMap["$lookups"] = primitive.A{groupMap}
+					filterMap["$lookups"] = primitive.A{bson.M{"$project": projectMap}, groupMap}
 				}
 				delete(query, "group")
 			}
