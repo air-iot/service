@@ -410,6 +410,13 @@ func ConvertKeyID(data *bson.M) error {
 	for k, v := range *data {
 		switch val := v.(type) {
 		case primitive.M:
+			if k == "_id"{
+				for keyIn,valIn := range val{
+					(*data)[keyIn] = valIn
+				}
+				delete(*data,k)
+				continue
+			}
 			value, err := ConvertPrimitiveMapToID(data, k, val)
 			if err != nil {
 				return err
@@ -430,11 +437,11 @@ func ConvertKeyID(data *bson.M) error {
 				delete(*data, k)
 				(*data)["id"] = value
 			}
-		default:
-			if k == "_id"{
-				(*data)["id"] = val
-				delete(*data,k)
-			}
+		//default:
+		//	if k == "_id"{
+		//		(*data)["id"] = val
+		//		delete(*data,k)
+		//	}
 		}
 	}
 
