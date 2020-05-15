@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	MQTT "github.com/eclipse/paho.mqtt.golang"
-	jsoniter "github.com/json-iterator/go"
+	"github.com/json-iterator/go"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
@@ -70,13 +70,15 @@ func Init() {
 	TagLogic.tagCache = &sync.Map{}
 	EventLogic.eventCache = &sync.Map{}
 	EventLogic.eventCacheWithEventID = &sync.Map{}
+	EventHandlerLogic.eventHandlerCache = &sync.Map{}
+	SettingLogic.settingCache = &sync.Map{}
 
 	cache()
 	cacheEvent()
 	cacheEventHandler()
 	cacheDept()
 	cacheUser()
-	//cacheSetting()
+	cacheSetting()
 	if token := mqtt.Client.Subscribe(ConfigCacheChannel, 0, func(client MQTT.Client, message MQTT.Message) {
 		logrus.Debugf("更新缓存:%s", string(message.Payload()))
 		switch string(message.Payload()) {
@@ -115,13 +117,13 @@ func Init() {
 					logrus.Errorf("更新用户缓存错误:%s", err.Error())
 				}
 			}()
-			//case ConfigSettingCache:
-			//	go func() {
-			//		err := cacheSetting()
-			//		if err != nil {
-			//			logrus.Errorf("更新系统配置缓存错误:%s", err.Error())
-			//		}
-			//	}()
+		case ConfigSettingCache:
+			go func() {
+				err := cacheSetting()
+				if err != nil {
+					logrus.Errorf("更新系统配置缓存错误:%s", err.Error())
+				}
+			}()
 		}
 	}); token.Wait() && token.Error() != nil {
 		logrus.Errorf("更新缓存接收消息错误:%s", token.Error().Error())
@@ -212,6 +214,9 @@ func cacheEventHandler() error {
 		for _, n := range result.EventHandler {
 			if n.Event != "" {
 				tools.MergeEventHandlerDataMap(n.Event, n, eventHandlerCacheMapRaw)
+			}
+			if n.Type != "" {
+				tools.MergeEventHandlerDataMap(n.Type, n, eventHandlerCacheMapRaw)
 			}
 		}
 		for k, v := range *eventHandlerCacheMapRaw {

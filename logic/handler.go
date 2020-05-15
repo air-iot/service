@@ -16,11 +16,25 @@ import (
 var EventHandlerLogic = new(eventHandlerLogic)
 
 type eventHandlerLogic struct {
-	eventHandlerCache sync.Map
+	eventHandlerCache *sync.Map
 }
 
 func (p *eventHandlerLogic) FindLocalCache(eventID string) (result *[]model.EventHandler, err error) {
 	a, b := p.eventHandlerCache.Load(eventID)
+	if b {
+		a1, ok := a.([]model.EventHandler)
+		if ok {
+			return &a1, nil
+		} else {
+			return nil, errors.New("结构不正确")
+		}
+	} else {
+		return nil, errors.New("未查询到相关数据")
+	}
+}
+
+func (p *eventHandlerLogic) FindLocalCacheByHandlerType(handlerType string) (result *[]model.EventHandler, err error) {
+	a, b := p.eventHandlerCache.Load(handlerType)
 	if b {
 		a1, ok := a.([]model.EventHandler)
 		if ok {
