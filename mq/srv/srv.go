@@ -61,6 +61,13 @@ func NewRabbitService(queue, exchange string) MQService {
 	}
 }
 
+func NewRabbitEnvService() MQService {
+	return &rabbitService{
+		viper.GetString("service.queue"),
+		"data",
+	}
+}
+
 func DefaultRabbitService() MQService {
 	return &rabbitService{viper.GetString("service.name"), "data"}
 }
