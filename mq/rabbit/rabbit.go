@@ -11,6 +11,7 @@ import (
 var Channel *amqp.Channel
 var conn *amqp.Connection
 var RoutingKey = "data."
+var Queue string
 
 func Init() {
 	if !viper.GetBool("rabbit.enable") {
@@ -23,6 +24,7 @@ func Init() {
 		password = viper.GetString("rabbit.password")
 		vhost    = viper.GetString("rabbit.vhost")
 	)
+	Queue = viper.GetString("rabbit.queue")
 	RoutingKey = viper.GetString("rabbit.routingKey")
 
 	var err error
