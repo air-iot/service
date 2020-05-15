@@ -233,9 +233,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 							if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
 								if nodeID == nodeIDInSettings {
 									data["content"] = content
-									sendMap := map[string]interface{}{
-										"data": data,
-									}
+									sendMap := data
 									b, err := json.Marshal(sendMap)
 									if err != nil {
 										continue
@@ -324,9 +322,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 				}
 				if isValid {
 					data["content"] = content
-					sendMap := map[string]interface{}{
-						"data": data,
-					}
+					sendMap := data
 
 					b, err := json.Marshal(sendMap)
 					if err != nil {

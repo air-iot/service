@@ -185,9 +185,7 @@ func TriggerExecCmd(data map[string]interface{}) error {
 			//		if name, ok := command["name"].(string); ok {
 			//			if commandName == name {
 
-			sendMap := map[string]interface{}{
-				"data": data,
-			}
+			sendMap := data
 			b, err := json.Marshal(sendMap)
 			if err != nil {
 				continue

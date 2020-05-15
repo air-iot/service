@@ -253,24 +253,13 @@ ruleloop:
 				}
 				//生成计算对象并发送
 				sendMap := bson.M{
-					//"data": bson.M{
-					//	"报警时间": time.Now().Format("2006-01-02 15:04:05"),
-					//	//"status": "未处理",
-					//	"部门名称":  tools.FormatKeyInfoList(deptInfoList, "name"),
-					//	"模型名称":  tools.FormatKeyInfo(modelInfo, "name"),
-					//	"资产名称":  tools.FormatKeyInfo(nodeInfo, "name"),
-					//	"资产编号":  tools.FormatKeyInfo(nodeInfo, "uid"),
-					//	"数据点信息": tools.FormatDataInfoList(fields),
-					//},
-					"data": bson.M{
-						"time": tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
-						//"status": "未处理",
-						"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
-						"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
-						"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
-						"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
-						"tagInfo":        tools.FormatDataInfoList(fields),
-					},
+					"time": tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
+					//"status": "未处理",
+					"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
+					"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
+					"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
+					"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
+					"tagInfo":        tools.FormatDataInfoList(fields),
 				}
 				//b, err := json.Marshal(sendMap)
 				//if err != nil {

@@ -98,11 +98,9 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 			"once":  "仅一次",
 		}
 		sendMap := map[string]interface{}{
-			"data": map[string]interface{}{
-				"time":      tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
-				"interval":  scheduleTypeMap[scheduleType],
-				"eventName": eventName,
-			},
+			"time":      tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
+			"interval":  scheduleTypeMap[scheduleType],
+			"eventName": eventName,
 		}
 		b, err := json.Marshal(sendMap)
 		if err != nil {
@@ -151,7 +149,6 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 			},
 		},
 	}
-
 
 	pipeline := mongo.Pipeline{}
 	pipeline = append(pipeline, paramMatch, paramLookup)
@@ -239,11 +236,9 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 						"once":  "仅一次",
 					}
 					sendMap := map[string]interface{}{
-						"data": map[string]interface{}{
-							"time":      tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
-							"interval":  scheduleTypeMap[scheduleType],
-							"eventName": eventName,
-						},
+						"time":      tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
+						"interval":  scheduleTypeMap[scheduleType],
+						"eventName": eventName,
 					}
 					//b, err := json.Marshal(sendMap)
 					//if err != nil {

@@ -111,9 +111,7 @@ func Trigger(eventType EventType, data map[string]interface{}) error {
 			logger.Warnln(eventLog, "handlers字段非数组")
 			continue
 		}
-		sendMap := map[string]interface{}{
-			"data": data,
-		}
+		sendMap := data
 		b, err := json.Marshal(sendMap)
 		if err != nil {
 			continue
