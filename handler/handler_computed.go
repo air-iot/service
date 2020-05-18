@@ -231,8 +231,15 @@ ruleloop:
 			if computeResult {
 				fields := make([]map[string]interface{}, 0)
 				for k, v := range logicMap {
+					tagCache, err := clogic.TagLogic.FindLocalCache(modelID, nodeID, uid, k)
+					if err != nil {
+						logger.Errorf(eventComputeLogicLog, "获取资产(%s)的数据点(%s)缓存失败:%s", nodeID, k, err.Error())
+						continue
+					}
+
 					fields = append(fields, map[string]interface{}{
-						"key":   k,
+						"id":    k,
+						"name":  tagCache.Name,
 						"value": v,
 					})
 				}
@@ -260,6 +267,7 @@ ruleloop:
 					"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
 					"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
 					"tagInfo":        tools.FormatDataInfoList(fields),
+					"fields":         fieldsMap,
 				}
 				//b, err := json.Marshal(sendMap)
 				//if err != nil {

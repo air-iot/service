@@ -1136,11 +1136,11 @@ func FormatDataInfoList(infoList []map[string]interface{}) string {
 	result := ""
 	for _, info := range infoList {
 		if result == "" {
-			result = "数据点标识："
+			result = "数据点名称："
 		} else {
-			result = result + "；数据点标识："
+			result = result + "；数据点名称："
 		}
-		if key, ok := info["key"].(string); ok {
+		if key, ok := info["name"].(string); ok {
 			result = result + key
 		}
 		result = result + "，数值："
