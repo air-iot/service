@@ -186,7 +186,7 @@ ruleloop:
 					}
 					if cmdList[resultIndex].Err() != nil {
 						logger.Errorf(eventAlarmLog, "Redis批量查询中查询条件为%+v的查询结果出现错误", cmdList[resultIndex].Args())
-						return fmt.Errorf("Redis批量查询中查询条件为%+v的查询结果出现错误", cmdList[resultIndex].Args())
+						continue ruleloop
 					} else {
 						if _, ok := fieldsMap[tagIDInList]; ok {
 							continue
@@ -200,7 +200,7 @@ ruleloop:
 						//if err != nil {
 						//	return
 						//}
-						testAbnormalVal := cmdList[resultIndex].String()
+						testAbnormalVal := cmdList[resultIndex].Val()
 						if !tools.IsNumber(testAbnormalVal) {
 							logger.Errorf(eventAlarmLog, "Redis批量查询中查询条件为%+v的查询结果不是合法数字(%s)", cmdList[resultIndex].Args(), testAbnormalVal)
 							continue ruleloop
@@ -208,7 +208,7 @@ ruleloop:
 						resVal, err := cmdList[resultIndex].Float64()
 						if err != nil {
 							logger.Errorf(eventAlarmLog, "Redis批量查询中查询条件为%+v的查询结果数值类型不为float64", cmdList[resultIndex].Args())
-							return fmt.Errorf("Redis批量查询中查询条件为%+v的查询结果数值类型不为float64", cmdList[resultIndex].Args())
+							continue ruleloop
 						}
 						logicMap[tagIDInList] = resVal
 						resultIndex++
