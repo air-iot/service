@@ -72,6 +72,7 @@ func Init() {
 	EventLogic.eventCacheWithEventID = &sync.Map{}
 	EventHandlerLogic.eventHandlerCache = &sync.Map{}
 	SettingLogic.settingCache = &sync.Map{}
+	SettingLogic.warnTypeMap = &sync.Map{}
 
 	cache()
 	cacheEvent()
