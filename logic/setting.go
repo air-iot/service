@@ -18,7 +18,8 @@ import (
 var SettingLogic = new(settingLogic)
 
 type settingLogic struct {
-	settingCache    *sync.Map
+	settingCache *sync.Map
+	warnTypeMap  *sync.Map
 }
 
 func (p *settingLogic) FindLocalCache() (result *model.Setting, err error) {
@@ -32,6 +33,20 @@ func (p *settingLogic) FindLocalCache() (result *model.Setting, err error) {
 		}
 	} else {
 		return nil, errors.New("未查询到相关数据")
+	}
+}
+
+func (p *settingLogic) FindLocalWarnTypeMapCache(id string) (result string, err error) {
+	a, b := p.warnTypeMap.Load(id)
+	if b {
+		a1, ok := a.(string)
+		if ok {
+			return a1, nil
+		} else {
+			return "", errors.New("结构不正确")
+		}
+	} else {
+		return "", errors.New("未查询到相关数据")
 	}
 }
 

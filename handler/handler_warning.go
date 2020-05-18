@@ -96,7 +96,13 @@ ruleloop:
 				logger.Warnf(eventAlarmLog, "资产(%s)的报警规则的报警等级字段不存在或类型错误", nodeID)
 			}
 			if typeEle, ok := ruleMap["type"].(string); ok {
-				warningType = typeEle
+				typeCharacter, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(typeEle)
+				if err != nil {
+					logger.Warnf(eventAlarmLog, "获取系统配置报警类型(%s)的文字映射失败", typeEle)
+					warningType = typeEle
+				} else {
+					warningType = typeCharacter
+				}
 			} else {
 				logger.Warnf(eventAlarmLog, "资产(%s)的报警规则的报警类型字段不存在或类型错误", nodeID)
 			}

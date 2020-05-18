@@ -270,6 +270,14 @@ func cacheSetting() error {
 		}
 
 		SettingLogic.settingCache.Store("setting", *result)
+
+		for _, warnKind := range result.Setting.Warning.WarningKind {
+			if warnKind.ID != "" {
+				SettingLogic.warnTypeMap.Store(warnKind.ID, warnKind.Name)
+			}
+		}
+
 	}
 	return nil
 }
+
