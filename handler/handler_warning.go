@@ -257,6 +257,7 @@ ruleloop:
 				if computeResult {
 					fields := make([]map[string]interface{}, 0)
 					for k, v := range logicMap {
+						fieldsMap[k] = v
 						tagCache, err := clogic.TagLogic.FindLocalCache(modelID, nodeID, uid, k)
 						if err != nil {
 							logger.Errorf(eventAlarmLog, "获取资产(%s)的数据点(%s)缓存失败:%s", nodeID, k, err.Error())
