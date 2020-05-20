@@ -83,3 +83,15 @@ func MergeEventHandlerDataMap(key string, value model.EventHandler, dataMap *map
 		(*dataMap)[key] = []model.EventHandler{value}
 	}
 }
+
+// MergeUserDataMap 融合映射Map
+func MergeUserDataMap(key string, value model.User, dataMap *map[string][]model.User) {
+	if key == "" {
+		return
+	}
+	if dataVal, ok := (*dataMap)[key]; ok {
+		(*dataMap)[key] = append(dataVal, value)
+	} else {
+		(*dataMap)[key] = []model.User{value}
+	}
+}

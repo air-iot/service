@@ -8,7 +8,7 @@ import (
 var DeptLogic = new(deptLogic)
 
 type deptLogic struct {
-	deptMapCache sync.Map
+	deptMapCache *sync.Map
 }
 
 func (p *deptLogic) FindLocalCacheList(deptIDs []string) (result []map[string]interface{}, err error) {

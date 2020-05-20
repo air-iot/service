@@ -300,6 +300,10 @@ ruleloop:
 						"fields":         fieldsMap,
 						"isWarning":      true,
 					}
+					for k,v := range fieldsMap{
+						sendMap[k] =v
+					}
+
 					//b, err := json.Marshal(sendMap)
 					//if err != nil {
 					//	logger.Errorf(eventComputeLogicLog, "要发送到事件处理器的数据消息序列化失败:%s", err.Error())

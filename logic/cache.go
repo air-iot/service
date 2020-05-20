@@ -50,7 +50,8 @@ type DeptCacheM struct {
 }
 
 type UserCacheM struct {
-	User []map[string]interface{} `json:"user"`
+	User       []map[string]interface{} `json:"user"`
+	UserStruct []model.User             `json:"userStruct"`
 }
 
 type SettingCache struct {
@@ -73,6 +74,11 @@ func Init() {
 	EventHandlerLogic.eventHandlerCache = &sync.Map{}
 	SettingLogic.settingCache = &sync.Map{}
 	SettingLogic.warnTypeMap = &sync.Map{}
+	DeptLogic.deptMapCache = &sync.Map{}
+	UserLogic.userCache = &sync.Map{}
+	UserLogic.userMapCache = &sync.Map{}
+	UserLogic.userDeptUserCache = &sync.Map{}
+	UserLogic.userRoleUserCache = &sync.Map{}
 
 	cache()
 	cacheEvent()
@@ -258,6 +264,23 @@ func cacheUser() error {
 			}
 		}
 
+		userDeptMapRaw := &map[string][]model.User{}
+		userRoleMapRaw := &map[string][]model.User{}
+		for _, n := range resultMap.UserStruct {
+			for _, dept := range n.Department {
+				tools.MergeUserDataMap(dept, n, userDeptMapRaw)
+			}
+			for _, role := range n.Roles {
+				tools.MergeUserDataMap(role, n, userRoleMapRaw)
+			}
+		}
+		for k, v := range *userDeptMapRaw {
+			UserLogic.userDeptUserCache.Store(k, v)
+		}
+		for k, v := range *userRoleMapRaw {
+			UserLogic.userRoleUserCache.Store(k, v)
+		}
+
 	}
 	return nil
 }
@@ -281,4 +304,3 @@ func cacheSetting() error {
 	}
 	return nil
 }
-
