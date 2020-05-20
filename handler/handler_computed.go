@@ -33,11 +33,6 @@ func TriggerComputed(data cmodel.DataMessage) error {
 		return fmt.Errorf("数据消息中modelId字段不存在或类型错误")
 	}
 
-	nodeUIDInData := data.Uid
-	if nodeUIDInData == "" {
-		logger.Errorf(eventComputeLogicLog, fmt.Sprintf("数据消息中uid字段不存在或类型错误"))
-		return fmt.Errorf("数据消息中uid字段不存在或类型错误")
-	}
 
 	inputMap := data.InputMap
 
@@ -54,11 +49,18 @@ func TriggerComputed(data cmodel.DataMessage) error {
 		return fmt.Errorf("获取当前模型(%s)的计算逻辑事件失败:%s", modelID, err.Error())
 	}
 
-	//nodeInfo, err := clogic.NodeLogic.FindLocalMapCache(nodeID)
-	//if err != nil {
-	//	logger.Errorf(eventComputeLogicLog, fmt.Sprintf("获取当前模型(%s)的资产(%s)失败:%s", modelID, nodeID, err.Error()))
-	//	return fmt.Errorf("获取当前模型(%s)的资产(%s)失败:%s", modelID, nodeID, err.Error())
-	//}
+	nodeInfo, err := clogic.NodeLogic.FindLocalCache(nodeID)
+	if err != nil {
+		logger.Errorf(eventComputeLogicLog, fmt.Sprintf("获取当前模型(%s)的资产(%s)失败:%s", modelID, nodeID, err.Error()))
+		return fmt.Errorf("获取当前模型(%s)的资产(%s)失败:%s", modelID, nodeID, err.Error())
+	}
+
+	data.Uid = nodeInfo.Uid
+	nodeUIDInData := data.Uid
+	if nodeUIDInData == "" {
+		logger.Errorf(eventComputeLogicLog, fmt.Sprintf("数据消息中uid字段不存在或类型错误"))
+		return fmt.Errorf("数据消息中uid字段不存在或类型错误")
+	}
 	//
 	//modelInfo, err := clogic.ModelLogic.FindLocalMapCache(modelID)
 	//if err != nil {
