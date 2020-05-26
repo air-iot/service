@@ -2025,7 +2025,7 @@ func (p *APIView) FindInfluxBySQL(cli client.Client, database, cmd string) (res 
 	return res, nil
 }
 
-// InfluxResultConvertMap InfluxDB的查询结果[]client.Result转换成map[string]interface{}
+// InfluxResultConvertMap InfluxDB的查询结果[]api.Result转换成map[string]interface{}
 func (p *APIView) InfluxResultConvertMap(results []client.Result) (map[string]interface{}, error) {
 	newResultMap := map[string]interface{}{}
 	newResults := make([]map[string]interface{}, 0)
@@ -2045,7 +2045,7 @@ func (p *APIView) InfluxResultConvertMap(results []client.Result) (map[string]in
 
 }
 
-// influxResultConvert InfluxDB的查询结果[]client.Result转换成[][]map[string]interface{}
+// influxResultConvert InfluxDB的查询结果[]api.Result转换成[][]map[string]interface{}
 func (p *APIView) InfluxResultConvert(results []client.Result) ([][]map[string]interface{}, error) {
 	newResults := make([][]map[string]interface{}, 0)
 	for _, v := range results {
@@ -2078,7 +2078,7 @@ func (p *APIView) InfluxResultConvert(results []client.Result) ([][]map[string]i
 
 }
 
-// influxResultConvert InfluxDB的查询结果[]client.Result转换成[][]map[string]interface{}
+// influxResultConvert InfluxDB的查询结果[]api.Result转换成[][]map[string]interface{}
 func (p *APIView) influxResultConvert(results []client.Result) ([][]map[string]interface{}, error) {
 	newResults := make([][]map[string]interface{}, 0)
 	for _, v := range results {
