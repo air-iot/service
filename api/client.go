@@ -4,44 +4,58 @@ import (
 	"fmt"
 	"errors"
 	"encoding/json"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/resty.v1"
+	"net"
+	"net/url"
+	"strconv"
 
 	"github.com/air-iot/service/model"
 	"github.com/air-iot/service/traefik"
 )
 
 // 根据 app appkey和appsecret 获取token
-func FindToken() (string, error) {
-	// 生成要访问的url 5c934c87839a5547624eae7c
+func FindToken() string {
 	if traefik.AppKey == "" || traefik.AppSecret == "" {
-		return "", errors.New("app key或者secret为空")
+		logrus.Warn("app key或者secret为空")
+		return ""
 	}
+	// 生成要访问的url
+	u := url.URL{Host: net.JoinHostPort(traefik.Host, strconv.Itoa(traefik.Port)), Path: "core/auth/token"}
+	v := url.Values{}
+	v.Set("appkey", traefik.AppKey)
+	v.Set("appsecret", traefik.AppSecret)
+	u.Scheme = traefik.Proto
+	u.RawQuery = v.Encode()
+	auth := new(model.Auth)
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
-		Get(fmt.Sprintf(`http://%s:%d/core/auth/token?appkey=%s&appsecret=%s`, traefik.Host, traefik.Port, traefik.AppKey, traefik.AppSecret))
+		SetResult(auth).
+		Get(u.String())
 	if err != nil {
-		return "", err
+		logrus.Warnf("token查询错误,", err.Error())
+		return ""
 	}
 	if resp.StatusCode() != 200 {
-		return "", errors.New(resp.String())
+		logrus.Warnf("token查询错误,状态:%d,信息:%s", resp.StatusCode(), resp.String())
+		return ""
 	}
-	auth := new(model.Auth)
-	if err := json.Unmarshal(resp.Body(), auth); err != nil {
-		return "", err
-	}
-	return auth.Token, nil
+	return auth.Token
 }
 
-func Get(url, token string, query, result interface{}, ) error {
+func Get(url1 url.URL, token string, query, result interface{}) error {
 	b, err := json.Marshal(query)
 	if err != nil {
 		return err
 	}
+	v := url.Values{}
+	v.Set("query", string(b))
+	url1.RawQuery = v.Encode()
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", token).
 		SetResult(result).
-		Get(fmt.Sprintf(`%s?query=%s`, url, string(b)))
+		Get(url1.String())
 
 	if err != nil {
 		return err
@@ -54,17 +68,13 @@ func Get(url, token string, query, result interface{}, ) error {
 	return nil
 }
 
-func Post(url, token string, data, result interface{}) error {
-	//d, err := json.Marshal(data)
-	//if err != nil {
-	//	return err
-	//}
+func Post(url url.URL, token string, data, result interface{}) error {
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", token).
 		SetResult(result).
 		SetBody(data).
-		Post(url)
+		Post(url.String())
 	if err != nil {
 		return err
 	}
@@ -74,12 +84,12 @@ func Post(url, token string, data, result interface{}) error {
 	return json.Unmarshal(resp.Body(), result)
 }
 
-func Delete(url, token, id string, result interface{}) error {
+func Delete(url url.URL, token, id string, result interface{}) error {
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", token).
 		SetResult(result).
-		Delete(fmt.Sprintf(`%s/%s`, url, id))
+		Delete(fmt.Sprintf(`%s/%s`, url.String(), id))
 	if err != nil {
 		return err
 	}
@@ -89,13 +99,13 @@ func Delete(url, token, id string, result interface{}) error {
 	return json.Unmarshal(resp.Body(), result)
 }
 
-func Put(url, token, id string, data, result interface{}) error {
+func Put(url url.URL, token, id string, data, result interface{}) error {
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", token).
 		SetResult(result).
 		SetBody(data).
-		Put(fmt.Sprintf(`%s/%s`, url, id))
+		Put(fmt.Sprintf(`%s/%s`, url.String(), id))
 	if err != nil {
 		return err
 	}
@@ -105,13 +115,13 @@ func Put(url, token, id string, data, result interface{}) error {
 	return json.Unmarshal(resp.Body(), result)
 }
 
-func Patch(url, token, id string, data, result interface{}) error {
+func Patch(url url.URL, token, id string, data, result interface{}) error {
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", token).
 		SetResult(result).
 		SetBody(data).
-		Patch(fmt.Sprintf(`%s/%s`, url, id))
+		Patch(fmt.Sprintf(`%s/%s`, url.String(), id))
 	if err != nil {
 		return err
 	}

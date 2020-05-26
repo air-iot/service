@@ -1,7 +1,9 @@
 package model
 
 import (
-	"fmt"
+	"net"
+	"net/url"
+	"strconv"
 
 	jsoniter "github.com/json-iterator/go"
 
@@ -20,23 +22,23 @@ type ModelClient interface {
 }
 
 type modelClient struct {
-	url   string
+	url   url.URL
 	token string
 }
 
-func NewModelClient() (ModelClient, error) {
+func NewModelClient() ModelClient {
 	cli := new(modelClient)
 	if traefik.Enable {
-		cli.url = fmt.Sprintf(`http://%s:%d/core/model`, traefik.Host, traefik.Port)
-		token, err := api.FindToken()
-		if err != nil {
-			return nil, err
-		}
-		cli.token = token
+		u := url.URL{Host: net.JoinHostPort(traefik.Host, strconv.Itoa(traefik.Port)), Path: "core/model"}
+		u.Scheme = traefik.Proto
+		cli.url = u
+		cli.token = api.FindToken()
 	} else {
-		cli.url = `http://core:9000/core/model`
+		u := url.URL{Host: "core:9000", Path: "core/model"}
+		u.Scheme = traefik.Proto
+		cli.url = u
 	}
-	return cli, nil
+	return cli
 }
 func (p *modelClient) FindQuery(query, result interface{}) error {
 	return api.Get(p.url, p.token, query, result)

@@ -106,6 +106,7 @@ func init() {
 	viper.SetDefault("traefik.host", "traefik")
 	viper.SetDefault("traefik.port", 80)
 	viper.SetDefault("traefik.enable", false)
+	viper.SetDefault("traefik.schema", "http")
 
 	viper.SetDefault("service.port", 9000)
 	viper.SetDefault("service.rpcPort", 9010)

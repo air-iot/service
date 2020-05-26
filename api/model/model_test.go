@@ -14,15 +14,12 @@ func init() {
 }
 
 func TestModelClient_FindQuery(t *testing.T) {
-	cli, err := NewModelClient()
-	if err != nil {
-		t.Fatal(err)
-	}
+	cli := NewModelClient()
 	var r = make([]map[string]interface{}, 0)
 	query := `{"filter":{"device.driver":"test","$lookups":[{"from":"node","localField":"_id","foreignField":"model","as":"devices"},{"from":"node","localField":"devices.parent","foreignField":"_id","as":"devicesParent"},{"from":"model","localField":"devicesParent.model","foreignField":"_id","as":"devicesParentModel"}]},"project":{"device":1,"devices":1,"devicesParent":1,"devicesParentModel":1}}`
 
 	queryMap := make(map[string]interface{})
-	err = json.Unmarshal([]byte(query), &queryMap)
+	err := json.Unmarshal([]byte(query), &queryMap)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,15 +31,13 @@ func TestModelClient_FindQuery(t *testing.T) {
 }
 
 func TestModelClient_Save(t *testing.T) {
-	cli, err := NewModelClient()
-	if err != nil {
-		t.Fatal(err)
-	}
+	cli:= NewModelClient()
+
 	var r = make(map[string]interface{})
 
 	data := `{"name":"SDK1","kind":"7c6b7a0f-998e-445d-ab00-fd9cd69ee051","device":{"driver":"test","settings":{"interval":3,"network":{}},"tags":[{"name":"数据点A","rules":{"high":1},"unit":"m","id":"SJD1"},{"id":"SJD2","name":"数据点B","unit":"c"},{"id":"SJD3","name":"数据C"},{"id":"SJD4","name":"数据点D"},{"id":"SJD5","name":"数据点E"},{"id":"SJD6","name":"数据点F"},{"name":"数据点G","id":"SJD7"},{"id":"SJD8","name":"数据点H"},{"id":"SJD9","name":"数据点I"},{"name":"数据点J","id":"SJD10"}]},"type":[],"computed":{"tags":[]},"order":212,"statusList":[{"focus":false,"user":"5c74edbc6f553e4fca5df9c6"}],"table":{"colors":{"timeout":"#8e7cc3","offline":"#e69138","warning1":"#4c2f0a","warning2":"#ff6347","warning3":"#f00","bg":"transparent","normal":"#000"},"fields":[{"key":"uid","title":"编号"},{"key":"param-SJD1","title":"数据点A"},{"key":"param-SJD2","title":"数据点B"}]}}`
 	dataMap := make(map[string]interface{})
-	err = json.Unmarshal([]byte(data), &dataMap)
+	err := json.Unmarshal([]byte(data), &dataMap)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,19 +49,16 @@ func TestModelClient_Save(t *testing.T) {
 }
 
 func TestModelClient_ReplaceById(t *testing.T) {
-	cli, err := NewModelClient()
-	if err != nil {
-		t.Fatal(err)
-	}
+	cli := NewModelClient()
 	var r = make(map[string]interface{})
 
 	data := `{"name":"SDK2","kind":"7c6b7a0f-998e-445d-ab00-fd9cd69ee051","device":{"driver":"test","settings":{"interval":3,"network":{}},"tags":[{"name":"数据点A","rules":{"high":1},"unit":"m","id":"SJD1"},{"id":"SJD2","name":"数据点B","unit":"c"},{"id":"SJD3","name":"数据C"},{"id":"SJD4","name":"数据点D"},{"id":"SJD5","name":"数据点E"},{"id":"SJD6","name":"数据点F"},{"name":"数据点G","id":"SJD7"},{"id":"SJD8","name":"数据点H"},{"id":"SJD9","name":"数据点I"},{"name":"数据点J","id":"SJD10"}]},"type":[],"computed":{"tags":[]},"order":212,"statusList":[{"focus":false,"user":"5c74edbc6f553e4fca5df9c6"}],"table":{"colors":{"timeout":"#8e7cc3","offline":"#e69138","warning1":"#4c2f0a","warning2":"#ff6347","warning3":"#f00","bg":"transparent","normal":"#000"},"fields":[{"key":"uid","title":"编号"},{"key":"param-SJD1","title":"数据点A"},{"key":"param-SJD2","title":"数据点B"}]}}`
 	dataMap := make(map[string]interface{})
-	err = json.Unmarshal([]byte(data), &dataMap)
+	err := json.Unmarshal([]byte(data), &dataMap)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = cli.ReplaceById("5ecce62292f324ef6ff71423", data, &r)
+	err = cli.ReplaceById("5ecd339992f324ef6ff7142b", data, &r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,19 +66,17 @@ func TestModelClient_ReplaceById(t *testing.T) {
 }
 
 func TestModelClient_UpdateById(t *testing.T) {
-	cli, err := NewModelClient()
-	if err != nil {
-		t.Fatal(err)
-	}
+	cli := NewModelClient()
+
 	var r = make(map[string]interface{})
 
 	data := `{"name":"SDK3"}`
 	dataMap := make(map[string]interface{})
-	err = json.Unmarshal([]byte(data), &dataMap)
+	err := json.Unmarshal([]byte(data), &dataMap)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = cli.UpdateById("5ecce62292f324ef6ff71423", data, &r)
+	err = cli.UpdateById("5ecd339992f324ef6ff7142b", data, &r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,12 +84,9 @@ func TestModelClient_UpdateById(t *testing.T) {
 }
 
 func TestModelClient_DelById(t *testing.T) {
-	cli, err := NewModelClient()
-	if err != nil {
-		t.Fatal(err)
-	}
+	cli := NewModelClient()
 	var r = make(map[string]interface{})
-	err = cli.DelById("5ecce62292f324ef6ff71423", &r)
+	err := cli.DelById("5ecd339992f324ef6ff7142b", &r)
 	if err != nil {
 		t.Fatal(err)
 	}

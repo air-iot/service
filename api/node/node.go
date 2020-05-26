@@ -1,7 +1,9 @@
 package node
 
 import (
-	"fmt"
+	"net"
+	"net/url"
+	"strconv"
 
 	jsoniter "github.com/json-iterator/go"
 
@@ -20,21 +22,21 @@ type NodeClient interface {
 }
 
 type nodeClient struct {
-	url   string
+	url   url.URL
 	token string
 }
 
-func NewNodeClient() (*nodeClient, error) {
+func NewNodeClient() NodeClient {
 	cli := new(nodeClient)
 	if traefik.Enable {
-		cli.url = fmt.Sprintf(`http://%s:%d/core/node`, traefik.Host, traefik.Port)
-		token, err := api.FindToken()
-		if err != nil {
-			return nil, err
-		}
-		cli.token = token
+		u := url.URL{Host: net.JoinHostPort(traefik.Host, strconv.Itoa(traefik.Port)), Path: "core/node"}
+		u.Scheme = traefik.Proto
+		cli.url = u
+		cli.token = api.FindToken()
 	} else {
-		cli.url = `http://core:9000/core/node`
+		u := url.URL{Host: "core:9000", Path: "core/node"}
+		u.Scheme = traefik.Proto
+		cli.url = u
 	}
 	return cli, nil
 }
