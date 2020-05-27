@@ -51,13 +51,13 @@ func Get(url1 url.URL, token string, query, result interface{}) error {
 	}
 	v := url.Values{}
 	v.Set("query", string(b))
-	url1.RawQuery = v.Encode()
+
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", token).
 		SetHeader("Request-Type", "service").
 		SetResult(result).
-		Get(url1.String())
+		Get(fmt.Sprintf(`%s?%s`, url1.String(), v.Encode()))
 
 	if err != nil {
 		return err
@@ -84,7 +84,7 @@ func Post(url url.URL, token string, data, result interface{}) error {
 	if resp.StatusCode() != 200 {
 		return errors.New(resp.String())
 	}
-	return json.Unmarshal(resp.Body(), result)
+	return nil
 }
 
 func Delete(url url.URL, token, id string, result interface{}) error {
@@ -100,7 +100,7 @@ func Delete(url url.URL, token, id string, result interface{}) error {
 	if resp.StatusCode() != 200 {
 		return errors.New(resp.String())
 	}
-	return json.Unmarshal(resp.Body(), result)
+	return nil
 }
 
 func Put(url url.URL, token, id string, data, result interface{}) error {
@@ -117,7 +117,7 @@ func Put(url url.URL, token, id string, data, result interface{}) error {
 	if resp.StatusCode() != 200 {
 		return errors.New(resp.String())
 	}
-	return json.Unmarshal(resp.Body(), result)
+	return nil
 }
 
 func Patch(url url.URL, token, id string, data, result interface{}) error {
@@ -134,5 +134,5 @@ func Patch(url url.URL, token, id string, data, result interface{}) error {
 	if resp.StatusCode() != 200 {
 		return errors.New(resp.String())
 	}
-	return json.Unmarshal(resp.Body(), result)
+	return nil
 }

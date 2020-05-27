@@ -58,7 +58,7 @@ func TestModelClient_ReplaceById(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = cli.ReplaceById("5ecd339992f324ef6ff7142b", data, &r)
+	err = cli.ReplaceById("5ece2b44e1fe4ebf858a778c", data, &r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestModelClient_UpdateById(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = cli.UpdateById("5ecd339992f324ef6ff7142b", data, &r)
+	err = cli.UpdateById("5ece2b44e1fe4ebf858a778c", data, &r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestModelClient_UpdateById(t *testing.T) {
 func TestModelClient_DelById(t *testing.T) {
 	cli := NewModelClient()
 	var r = make(map[string]interface{})
-	err := cli.DelById("5ecd339992f324ef6ff7142b", &r)
+	err := cli.DelById("5ece2b44e1fe4ebf858a778c", &r)
 	if err != nil {
 		t.Fatal(err)
 	}
