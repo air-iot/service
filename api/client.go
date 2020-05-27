@@ -30,6 +30,7 @@ func FindToken() string {
 	auth := new(model.Auth)
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
+		SetHeader("Request-Type", "service").
 		SetResult(auth).
 		Get(u.String())
 	if err != nil {
@@ -54,6 +55,7 @@ func Get(url1 url.URL, token string, query, result interface{}) error {
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", token).
+		SetHeader("Request-Type", "service").
 		SetResult(result).
 		Get(url1.String())
 
@@ -72,6 +74,7 @@ func Post(url url.URL, token string, data, result interface{}) error {
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", token).
+		SetHeader("Request-Type", "service").
 		SetResult(result).
 		SetBody(data).
 		Post(url.String())
@@ -88,6 +91,7 @@ func Delete(url url.URL, token, id string, result interface{}) error {
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", token).
+		SetHeader("Request-Type", "service").
 		SetResult(result).
 		Delete(fmt.Sprintf(`%s/%s`, url.String(), id))
 	if err != nil {
@@ -103,6 +107,7 @@ func Put(url url.URL, token, id string, data, result interface{}) error {
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", token).
+		SetHeader("Request-Type", "service").
 		SetResult(result).
 		SetBody(data).
 		Put(fmt.Sprintf(`%s/%s`, url.String(), id))
@@ -119,6 +124,7 @@ func Patch(url url.URL, token, id string, data, result interface{}) error {
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", token).
+		SetHeader("Request-Type", "service").
 		SetResult(result).
 		SetBody(data).
 		Patch(fmt.Sprintf(`%s/%s`, url.String(), id))

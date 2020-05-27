@@ -57,6 +57,7 @@ func (p *extClient) SaveMany(data, result interface{}) error {
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", p.token).
+		SetHeader("Request-Type", "service").
 		SetResult(result).
 		SetBody(data).
 		Post(fmt.Sprintf(`%s/many`, p.url.String()))
