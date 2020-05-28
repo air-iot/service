@@ -38,6 +38,14 @@ func TriggerComputed(data cmodel.DataMessage) error {
 
 	inputMap := data.InputMap
 
+	timeInData := data.Time
+	nowTimeString := ""
+	if timeInData == 0 {
+		nowTimeString = tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
+	} else {
+		nowTimeString = tools.GetLocalTimeNow(time.Unix(timeInData, 0)).Format("2006-01-02 15:04:05")
+	}
+
 	fieldsMap := data.Fields
 	if len(fieldsMap) == 0 {
 		logger.Errorf(eventComputeLogicLog, fmt.Sprintf("数据消息中fields字段不存在或类型错误"))
@@ -255,7 +263,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 									}
 
 									dataMap := map[string]interface{}{
-										"time": tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
+										"time": nowTimeString,
 										//"status": "未处理",
 										"modelId": nodeUIDModelMap[uidInMap],
 										"nodeId":  nodeUIDNodeMap[uidInMap],
@@ -422,7 +430,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 								}
 
 								dataMap := map[string]interface{}{
-									"time": tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
+									"time": nowTimeString,
 									//"status": "未处理",
 									"modelId": nodeUIDModelMap[uidInMap],
 									"nodeId":  nodeUIDNodeMap[uidInMap],

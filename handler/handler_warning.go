@@ -35,6 +35,8 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 		return fmt.Errorf("数据消息中modelId字段不存在或类型错误")
 	}
 
+	nowTimeString := tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
+
 	//fieldsMap := data.Fields
 	//if len(fieldsMap) == 0 {
 	//	logger.Errorf(eventAlarmLog, fmt.Sprintf("数据消息中fields字段不存在或类型错误"))
@@ -171,8 +173,8 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 				}
 				//生成报警对象并发送
 				sendMap := bson.M{
-					"time": tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
-					"type": data.Type,
+					"time":           nowTimeString,
+					"type":           data.Type,
 					"status":         data.Status,
 					"processed":      data.Processed,
 					"desc":           data.Desc,
@@ -252,8 +254,8 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 				}
 				//生成报警对象并发送
 				sendMap := bson.M{
-					"time": tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
-					"type": data.Type,
+					"time":           nowTimeString,
+					"type":           data.Type,
 					"status":         data.Status,
 					"processed":      data.Processed,
 					"desc":           data.Desc,
@@ -340,8 +342,8 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 				}
 				//生成报警对象并发送
 				sendMap := bson.M{
-					"time": tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
-					"type": data.Type,
+					"time":           nowTimeString,
+					"type":           data.Type,
 					"status":         data.Status,
 					"processed":      data.Processed,
 					"desc":           data.Desc,
@@ -447,7 +449,7 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 				}
 				//生成报警对象并发送
 				sendMap := bson.M{
-					"time":           tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
+					"time":           nowTimeString,
 					"type":           data.Type,
 					"status":         data.Status,
 					"processed":      data.Processed,
