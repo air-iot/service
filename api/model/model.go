@@ -15,6 +15,7 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type ModelClient interface {
 	FindQuery(query, result interface{}) error
+	FindById(id string, result interface{}) error
 	Save(data, result interface{}) error
 	DelById(id string, result interface{}) error
 	UpdateById(id string, data, result interface{}) error
@@ -40,8 +41,13 @@ func NewModelClient() ModelClient {
 	}
 	return cli
 }
+
 func (p *modelClient) FindQuery(query, result interface{}) error {
 	return api.Get(p.url, p.token, query, result)
+}
+
+func (p *modelClient) FindById(id string, result interface{}) error {
+	return api.GetById(p.url, p.token, id, result)
 }
 
 func (p *modelClient) Save(data, result interface{}) error {

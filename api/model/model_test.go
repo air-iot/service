@@ -30,6 +30,16 @@ func TestModelClient_FindQuery(t *testing.T) {
 	t.Log(r)
 }
 
+func TestModelClient_FindById(t *testing.T) {
+	cli := NewModelClient()
+	var r = make(map[string]interface{})
+	err := cli.FindById("5ecf1f423e951ef12218381d",&r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(r)
+}
+
 func TestModelClient_Save(t *testing.T) {
 	cli:= NewModelClient()
 
