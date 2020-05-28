@@ -70,6 +70,22 @@ func Get(url1 url.URL, token string, query, result interface{}) error {
 	return nil
 }
 
+func GetById(url url.URL, token, id string, result interface{}) error {
+	resp, err := resty.R().
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Authorization", token).
+		SetHeader("Request-Type", "service").
+		SetResult(result).
+		Get(fmt.Sprintf(`%s/%s`, url.String(), id))
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode() != 200 {
+		return errors.New(resp.String())
+	}
+	return nil
+}
+
 func Post(url url.URL, token string, data, result interface{}) error {
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").

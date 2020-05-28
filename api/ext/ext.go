@@ -18,6 +18,7 @@ var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type ExtClient interface {
 	FindQuery(query, result interface{}) error
+	FindById(id string, result interface{}) error
 	Save(data, result interface{}) error
 	SaveMany(data, result interface{}) error
 	DelById(id string, result interface{}) error
@@ -68,6 +69,10 @@ func (p *extClient) SaveMany(data, result interface{}) error {
 		return errors.New(resp.String())
 	}
 	return json.Unmarshal(resp.Body(), result)
+}
+
+func (p *extClient) FindById(id string, result interface{}) error {
+	return api.GetById(p.url, p.token, id, result)
 }
 
 func (p *extClient) DelById(id string, result interface{}) error {
