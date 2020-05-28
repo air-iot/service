@@ -193,6 +193,7 @@ func cacheEvent() error {
 		}
 
 		eventCacheMapRaw := &map[string][]model.Event{}
+		eventCacheMapType := &map[string][]model.Event{}
 		for _, n := range result.Event {
 			EventLogic.eventCacheWithEventID.Store(n.ID, n)
 
@@ -201,8 +202,14 @@ func cacheEvent() error {
 					tools.MergeEventDataMap(modelID+"|"+n.Type, n, eventCacheMapRaw)
 				}
 			}
+			if n.Type != ""{
+				tools.MergeEventDataMap(n.Type, n, eventCacheMapType)
+			}
 		}
 		for k, v := range *eventCacheMapRaw {
+			EventLogic.eventCache.Store(k, v)
+		}
+		for k, v := range *eventCacheMapType {
 			EventLogic.eventCache.Store(k, v)
 		}
 	}

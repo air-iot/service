@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/air-iot/service/restful-api"
 	"time"
 
+	idb "github.com/air-iot/service/db/mongo"
 	iredis "github.com/air-iot/service/db/redis"
 	"github.com/air-iot/service/logger"
 	clogic "github.com/air-iot/service/logic"
@@ -15,7 +18,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-var eventComputeLogicLog = map[string]interface{}{"name": "计算逻辑事件触发"}
+var eventComputeLogicLog = map[string]interface{}{"name": "数据事件触发"}
 
 func TriggerComputed(data cmodel.DataMessage) error {
 	//logger.Debugf(eventComputeLogicLog, "开始执行计算事件触发器")
@@ -33,7 +36,6 @@ func TriggerComputed(data cmodel.DataMessage) error {
 		return fmt.Errorf("数据消息中modelId字段不存在或类型错误")
 	}
 
-
 	inputMap := data.InputMap
 
 	fieldsMap := data.Fields
@@ -41,12 +43,12 @@ func TriggerComputed(data cmodel.DataMessage) error {
 		logger.Errorf(eventComputeLogicLog, fmt.Sprintf("数据消息中fields字段不存在或类型错误"))
 		return fmt.Errorf("数据消息中fields字段不存在或类型错误")
 	}
-	//logger.Debugf(eventComputeLogicLog, "开始获取当前模型的计算逻辑事件")
-	//获取当前模型的计算逻辑事件=============================================
-	eventInfoList, err := clogic.EventLogic.FindLocalCache(modelID + "|" + string(ComputeLogic))
+	//logger.Debugf(eventComputeLogicLog, "开始获取当前模型的数据事件")
+	//获取当前模型的数据事件=============================================
+	eventInfoList, err := clogic.EventLogic.FindLocalCacheByType(string(ComputeLogic))
 	if err != nil {
-		logger.Debugf(eventComputeLogicLog, fmt.Sprintf("获取当前模型(%s)的计算逻辑事件失败:%s", modelID, err.Error()))
-		return fmt.Errorf("获取当前模型(%s)的计算逻辑事件失败:%s", modelID, err.Error())
+		logger.Debugf(eventComputeLogicLog, fmt.Sprintf("获取当前模型(%s)的数据事件失败:%s", modelID, err.Error()))
+		return fmt.Errorf("获取当前模型(%s)的数据事件失败:%s", modelID, err.Error())
 	}
 
 	nodeInfo, err := clogic.NodeLogic.FindLocalCache(nodeID)
@@ -79,26 +81,80 @@ func TriggerComputed(data cmodel.DataMessage) error {
 		eventID := eventInfo.ID
 		settings := eventInfo.Settings
 
+		//判断是否已经失效
+		invalid := eventInfo.Invalid
+		if invalid {
+			logger.Warnln(eventComputeLogicLog, "事件(%s)已经失效", eventID)
+			continue
+		}
+
+		//判断禁用
+		if disable, ok := settings["disable"].(bool); ok {
+			if disable {
+				logger.Warnln(eventComputeLogicLog, "事件(%s)已经被禁用", eventID)
+				continue
+			}
+		}
+
+		rangeDefine := ""
+		validTime, ok := settings["validTime"].(string)
+		if ok {
+			if validTime == "timeLimit" {
+				if rangeDefine, ok = settings["range"].(string); ok {
+					if rangeDefine != "once" {
+						//判断有效期
+						if startTime, ok := settings["startTime"].(time.Time); ok {
+							if tools.GetLocalTimeNow(time.Now()).Unix() < startTime.Unix() {
+								logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
+								continue
+							}
+						}
+
+						if endTime, ok := settings["endTime"].(time.Time); ok {
+							if tools.GetLocalTimeNow(time.Now()).Unix() >= endTime.Unix() {
+								logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
+								//修改事件为失效
+								updateMap := bson.M{"invalid": true}
+								_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+								if err != nil {
+									logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
+									return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		//判断事件是否已经触发
+		hasExecute := false
+
 		if computeType, ok := settings["type"].(string); ok {
 			switch computeType {
 			case "model":
-				//if tags, ok := settings["tags"].([]interface{}); ok {
-				nodeUIDFieldsMap := map[string][]string{}
-				nodeUIDModelMap := map[string]string{}
-				nodeUIDNodeMap := map[string]string{}
-				//for _, tag := range tags {
-				if tagMap, ok := settings["tags"].(map[string]interface{}); ok {
-					if fields, ok := tagMap["fields"].([]interface{}); ok {
-						fieldsList := tools.InterfaceListToStringList(fields)
-						nodeUIDFieldsMap[nodeUIDInData] = fieldsList
-					}
-					if modelInfoInMap, ok := tagMap["model"].(map[string]interface{}); ok {
-						if modelIDInInfo, ok := modelInfoInMap["id"].(string); ok {
-							nodeUIDModelMap[nodeUIDInData] = modelIDInInfo
+				if tags, ok := settings["tags"].([]interface{}); ok {
+					nodeUIDFieldsMap := map[string][]string{}
+					nodeUIDModelMap := map[string]string{}
+					nodeUIDNodeMap := map[string]string{}
+					nodeUIDNodeMap[nodeUIDInData] = nodeID
+					for _, tag := range tags {
+						//if tagMap, ok := settings["tags"].(map[string]interface{}); ok {
+						if tagMap, ok := tag.(map[string]interface{}); ok {
+							//if fields, ok := tagMap["fields"].([]interface{}); ok {
+							//	fieldsList := tools.InterfaceListToStringList(fields)
+							//	nodeUIDFieldsMap[nodeUIDInData] = fieldsList
+							//}
+							if tagIDInMap, ok := tagMap["id"].(string); ok {
+								tools.MergeDataMap(nodeUIDInData,tagIDInMap,&nodeUIDFieldsMap)
+							}
+							if modelInfoInMap, ok := tagMap["model"].(map[string]interface{}); ok {
+								if modelIDInInfo, ok := modelInfoInMap["id"].(string); ok {
+									nodeUIDModelMap[nodeUIDInData] = modelIDInInfo
+								}
+							}
 						}
 					}
-					//}
-					//}
 					if modelID == nodeUIDModelMap[nodeUIDInData] {
 						if fields, ok := nodeUIDFieldsMap[data.Uid]; ok {
 							hasField := false
@@ -217,6 +273,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 								} else {
 									logger.Debugf(eventComputeLogicLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
 								}
+								hasExecute = true
 							}
 						}
 					}
@@ -230,18 +287,28 @@ func TriggerComputed(data cmodel.DataMessage) error {
 						if tagMap, ok := tag.(map[string]interface{}); ok {
 							if nodeInfoInMap, ok := tagMap["node"].(map[string]interface{}); ok {
 								if nodeUID, ok := nodeInfoInMap["uid"].(string); ok {
-									if fields, ok := tagMap["fields"].([]interface{}); ok {
-										fieldsList := tools.InterfaceListToStringList(fields)
-										nodeUIDFieldsMap[nodeUID] = fieldsList
+									//if fields, ok := tagMap["fields"].([]interface{}); ok {
+									//	fieldsList := tools.InterfaceListToStringList(fields)
+									//	nodeUIDFieldsMap[nodeUID] = fieldsList
+									//}
+									if tagIDInMap, ok := tagMap["id"].(string); ok {
+										tools.MergeDataMap(nodeUID,tagIDInMap,&nodeUIDFieldsMap)
 									}
 									if nodeIDInInfo, ok := nodeInfoInMap["id"].(string); ok {
 										nodeUIDNodeMap[nodeUID] = nodeIDInInfo
-									}
-									if modelInfoInMap, ok := tagMap["model"].(map[string]interface{}); ok {
-										if modelIDInInfo, ok := modelInfoInMap["id"].(string); ok {
-											nodeUIDModelMap[nodeUID] = modelIDInInfo
+										nodeInfo, err := clogic.NodeLogic.FindLocalCache(nodeIDInInfo)
+										if err != nil {
+											logger.Errorf(eventComputeLogicLog, fmt.Sprintf("获取当前资产(%s)详情失败:%s", nodeID, err.Error()))
+											return fmt.Errorf("获取当前资产(%s)详情失败:%s", nodeID, err.Error())
 										}
+										nodeUIDModelMap[nodeUID] = nodeInfo.Model
 									}
+									//
+									//if modelInfoInMap, ok := tagMap["model"].(map[string]interface{}); ok {
+									//	if modelIDInInfo, ok := modelInfoInMap["id"].(string); ok {
+									//		nodeUIDModelMap[nodeUID] = modelIDInInfo
+									//	}
+									//}
 								}
 							}
 						}
@@ -383,8 +450,23 @@ func TriggerComputed(data cmodel.DataMessage) error {
 							} else {
 								logger.Debugf(eventComputeLogicLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
 							}
+							hasExecute = true
 						}
 					}
+				}
+			}
+		}
+
+		//对只能执行一次的事件进行失效
+		if validTime == "timeLimit" {
+			if rangeDefine == "once" && hasExecute {
+				logger.Warnln(eventComputeLogicLog, "事件(%s)为只执行一次的事件", eventID)
+				//修改事件为失效
+				updateMap := bson.M{"invalid": true}
+				_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+				if err != nil {
+					logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
+					return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
 				}
 			}
 		}

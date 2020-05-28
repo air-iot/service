@@ -48,6 +48,21 @@ func (p *eventLogic) FindLocalCacheByEventID(eventID string) (result *model.Even
 	}
 }
 
+func (p *eventLogic) FindLocalCacheByType(eventType string) (result *[]model.Event, err error) {
+	a, b := p.eventCache.Load(eventType)
+	if b {
+		a1, ok := a.([]model.Event)
+		if ok {
+			return &a1, nil
+		} else {
+			return nil, errors.New("结构不正确")
+		}
+	} else {
+		return nil, errors.New("未查询到相关数据")
+	}
+}
+
+
 func (p *eventLogic) FindByPipeline(pipeLine mongo.Pipeline) (result []model.EventMongo, err error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

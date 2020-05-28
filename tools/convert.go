@@ -95,3 +95,15 @@ func MergeUserDataMap(key string, value model.User, dataMap *map[string][]model.
 		(*dataMap)[key] = []model.User{value}
 	}
 }
+
+// MergeDataMap 融合映射Map
+func MergeDataMap(key, value string, dataMap *map[string][]string) {
+	if key == "" {
+		return
+	}
+	if dataVal, ok := (*dataMap)[key]; ok {
+		(*dataMap)[key] = append(dataVal, value)
+	} else {
+		(*dataMap)[key] = []string{value}
+	}
+}

@@ -44,4 +44,13 @@ type (
 		Uid     string      `json:"uid"`
 		MsgType string      `json:"msgType"`
 	}
+
+	DataMessageWithWarnInterface struct {
+		ModelID string      `json:"modelId"`
+		NodeID  string      `json:"nodeId"`
+		Fields  interface{} `json:"fields"`
+		Uid     string      `json:"uid"`
+		MsgType string      `json:"msgType"`
+		WarnID  string      `json:"warnId"`
+	}
 )

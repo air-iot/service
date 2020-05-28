@@ -1,16 +1,18 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/air-iot/service/restful-api"
 	"time"
 
+	idb "github.com/air-iot/service/db/mongo"
 	"github.com/air-iot/service/logger"
+	clogic "github.com/air-iot/service/logic"
 	imqtt "github.com/air-iot/service/mq/mqtt"
 	"github.com/air-iot/service/tools"
 	"go.mongodb.org/mongo-driver/bson"
-
-	clogic "github.com/air-iot/service/logic"
 )
 
 var eventExecCmdLog = map[string]interface{}{"name": "执行指令事件触发"}
@@ -39,6 +41,12 @@ func TriggerExecCmd(data map[string]interface{}) error {
 		return fmt.Errorf("数据消息中command对象中name字段不存在或类型错误")
 	}
 
+	cmdStatus, ok := data["cmdStatus"].(string)
+	if !ok {
+		return fmt.Errorf("数据消息中cmdStatus字段不存在或类型错误")
+	}
+
+
 	//modelObjectID, err := primitive.ObjectIDFromHex(modelID)
 	//if err != nil {
 	//	return fmt.Errorf("数据消息中modelId转ObjectID失败")
@@ -46,7 +54,7 @@ func TriggerExecCmd(data map[string]interface{}) error {
 
 	//logger.Debugf(eventExecCmdLog, "开始获取当前模型的执行指令逻辑事件")
 	//获取当前模型的执行指令逻辑事件=============================================
-	eventInfoList, err := clogic.EventLogic.FindLocalCache(modelID + "|" + string(ExecCmd))
+	eventInfoList, err := clogic.EventLogic.FindLocalCache(string(ExecCmd))
 	if err != nil {
 		return fmt.Errorf("获取当前模型(%s)的执行指令逻辑事件失败:%s", modelID, err.Error())
 	}
@@ -79,6 +87,7 @@ func TriggerExecCmd(data map[string]interface{}) error {
 		}
 	}
 
+
 	//logger.Debugf(eventExecCmdLog, "开始遍历事件列表")
 	for _, eventInfo := range *eventInfoList {
 		logger.Debugf(eventExecCmdLog, "事件信息为:%+v", eventInfo)
@@ -90,28 +99,128 @@ func TriggerExecCmd(data map[string]interface{}) error {
 		eventID := eventInfo.ID
 		settings := eventInfo.Settings
 
+		//判断是否已经失效
+		invalid := eventInfo.Invalid
+		if invalid {
+			logger.Warnln(eventComputeLogicLog, "事件(%s)已经失效", eventID)
+			continue
+		}
+
+		//判断禁用
+		if disable, ok := settings["disable"].(bool); ok {
+			if disable {
+				logger.Warnln(eventComputeLogicLog, "事件(%s)已经被禁用", eventID)
+				continue
+			}
+		}
+
+		rangeDefine := ""
+		validTime, ok := settings["validTime"].(string)
+		if ok {
+			if validTime == "timeLimit" {
+				if rangeDefine, ok = settings["range"].(string); ok {
+					if rangeDefine != "once" {
+						//判断有效期
+						if startTime, ok := settings["startTime"].(time.Time); ok {
+							if tools.GetLocalTimeNow(time.Now()).Unix() < startTime.Unix() {
+								logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
+								continue
+							}
+						}
+
+						if endTime, ok := settings["endTime"].(time.Time); ok {
+							if tools.GetLocalTimeNow(time.Now()).Unix() >= endTime.Unix() {
+								logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
+								//修改事件为失效
+								updateMap := bson.M{"invalid": true}
+								_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+								if err != nil {
+									logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
+									return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		//判断事件是否已经触发
+		hasExecute := false
 		logger.Debugf(eventExecCmdLog, "开始分析事件")
-		if command, ok := settings["command"].(map[string]interface{}); ok {
-			if name, ok := command["name"].(string); ok {
-				if commandName == name {
-					sendMap := bson.M{
-						"time":           tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
-						"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
-						"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
-						"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
-						"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
-						"commandName":    commandName,
+		isValidCmd := false
+		//判断该事件是否指定了特定资产
+		if nodeMap, ok := settings["node"].(map[string]interface{}); ok {
+			if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
+				if nodeID == nodeIDInSettings {
+					isValidCmd = true
+				}
+			}
+		} else if modelMap, ok := settings["model"].(map[string]interface{}); ok {
+			if modelIDInSettings, ok := modelMap["id"].(string); ok {
+				if modelID == modelIDInSettings {
+					isValidCmd = true
+				}
+			}
+		}
+
+		if !isValidCmd {
+			continue
+		}
+
+		isValidStatus := false
+		if cmdStatusInSetting, ok := settings["cmdStatus"].(string); ok {
+           if cmdStatus == cmdStatusInSetting{
+			   isValidStatus = true
+		   }
+		}
+
+		if !isValidStatus {
+			continue
+		}
+
+		if commandList, ok := settings["command"].([]interface{}); ok {
+			for _, commandRaw := range commandList {
+				if command, ok := commandRaw.(map[string]interface{}); ok {
+					if name, ok := command["name"].(string); ok {
+						if commandName == name {
+							sendMap := bson.M{
+								"time":           tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
+								"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
+								"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
+								"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
+								"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
+								"commandName":    commandName,
+							}
+							b, err := json.Marshal(sendMap)
+							if err != nil {
+								continue
+							}
+							err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
+							if err != nil {
+								logger.Warnf(eventExecCmdLog, "发送事件(%s)错误:%s", eventID, err.Error())
+							} else {
+								logger.Debugf(eventExecCmdLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
+							}
+
+							hasExecute = true
+							break
+						}
 					}
-					b, err := json.Marshal(sendMap)
-					if err != nil {
-						continue
-					}
-					err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
-					if err != nil {
-						logger.Warnf(eventExecCmdLog, "发送事件(%s)错误:%s", eventID, err.Error())
-					} else {
-						logger.Debugf(eventExecCmdLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
-					}
+				}
+			}
+		}
+
+		//对只能执行一次的事件进行失效
+		if validTime == "timeLimit" {
+			if rangeDefine == "once" && hasExecute {
+				logger.Warnln(eventComputeLogicLog, "事件(%s)为只执行一次的事件", eventID)
+				//修改事件为失效
+				updateMap := bson.M{"invalid": true}
+				_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+				if err != nil {
+					logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
+					return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
 				}
 			}
 		}

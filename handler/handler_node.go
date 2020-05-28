@@ -137,80 +137,80 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 			continue
 		}
 
-		paramMatch = bson.D{
-			bson.E{
-				Key: "$match",
-				Value: bson.M{
-					"_id": nodeObjectID,
-				},
-			},
-		}
-		paramLookup = bson.D{
-			bson.E{
-				Key: "$lookup",
-				Value: bson.M{
-					"from":         "dept",
-					"localField":   "department",
-					"foreignField": "_id",
-					"as":           "department",
-				},
-			},
-		}
-		paramLookupModel := bson.D{
-			bson.E{
-				Key: "$lookup",
-				Value: bson.M{
-					"from":         "model",
-					"localField":   "model",
-					"foreignField": "_id",
-					"as":           "model",
-				},
-			},
-		}
-		pipeline = mongo.Pipeline{}
-		pipeline = append(pipeline, paramMatch, paramLookup, paramLookupModel)
-		nodeInfoList := make([]bson.M, 0)
-		err = restfulapi.FindPipeline(ctx, idb.Database.Collection("node"), &nodeInfoList, pipeline, nil)
-		if err != nil {
-			return fmt.Errorf("获取当前资产(%s)的详情失败:%s", nodeID, err.Error())
-		}
-
-		if len(nodeInfoList) == 0 {
-			return fmt.Errorf("当前查询的资产(%s)不存在", nodeID)
-		}
-
-		nodeInfo := nodeInfoList[0]
-
-		departmentList, ok := nodeInfo["department"].(primitive.A)
-		if !ok {
-			logger.Warnln(eventExecCmdLog, "资产(%s)的department字段不存在或类型错误", nodeID)
-			continue
-		}
-		departmentMList := make([]bson.M, 0)
-		for _, department := range departmentList {
-			if departmentMap, ok := department.(bson.M); ok {
-				departmentMList = append(departmentMList, departmentMap)
-			}
-		}
-
-		data["departmentName"] = tools.FormatKeyInfoList(departmentMList, "name")
-
-		modelList, ok := nodeInfo["model"].(primitive.A)
-		if !ok {
-			logger.Warnln(eventExecCmdLog, "资产(%s)的model字段不存在或类型错误", nodeID)
-			continue
-		}
-		modelMList := make([]bson.M, 0)
-		for _, model := range modelList {
-			if modelMap, ok := model.(bson.M); ok {
-				modelMList = append(modelMList, modelMap)
-			}
-		}
-
-		data["modelName"] = tools.FormatKeyInfoList(modelMList, "name")
-		data["nodeName"] = tools.FormatKeyInfo(nodeInfo, "name")
-		data["nodeUid"] = tools.FormatKeyInfo(nodeInfo, "uid")
-		data["time"] = tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
+		//paramMatch = bson.D{
+		//	bson.E{
+		//		Key: "$match",
+		//		Value: bson.M{
+		//			"_id": nodeObjectID,
+		//		},
+		//	},
+		//}
+		//paramLookup = bson.D{
+		//	bson.E{
+		//		Key: "$lookup",
+		//		Value: bson.M{
+		//			"from":         "dept",
+		//			"localField":   "department",
+		//			"foreignField": "_id",
+		//			"as":           "department",
+		//		},
+		//	},
+		//}
+		//paramLookupModel := bson.D{
+		//	bson.E{
+		//		Key: "$lookup",
+		//		Value: bson.M{
+		//			"from":         "model",
+		//			"localField":   "model",
+		//			"foreignField": "_id",
+		//			"as":           "model",
+		//		},
+		//	},
+		//}
+		//pipeline = mongo.Pipeline{}
+		//pipeline = append(pipeline, paramMatch, paramLookup, paramLookupModel)
+		//nodeInfoList := make([]bson.M, 0)
+		//err = restfulapi.FindPipeline(ctx, idb.Database.Collection("node"), &nodeInfoList, pipeline, nil)
+		//if err != nil {
+		//	return fmt.Errorf("获取当前资产(%s)的详情失败:%s", nodeID, err.Error())
+		//}
+		//
+		//if len(nodeInfoList) == 0 {
+		//	return fmt.Errorf("当前查询的资产(%s)不存在", nodeID)
+		//}
+		//
+		//nodeInfo := nodeInfoList[0]
+		//
+		//departmentList, ok := nodeInfo["department"].(primitive.A)
+		//if !ok {
+		//	logger.Warnln(eventExecCmdLog, "资产(%s)的department字段不存在或类型错误", nodeID)
+		//	continue
+		//}
+		//departmentMList := make([]bson.M, 0)
+		//for _, department := range departmentList {
+		//	if departmentMap, ok := department.(bson.M); ok {
+		//		departmentMList = append(departmentMList, departmentMap)
+		//	}
+		//}
+		//
+		//data["departmentName"] = tools.FormatKeyInfoList(departmentMList, "name")
+		//
+		//modelList, ok := nodeInfo["model"].(primitive.A)
+		//if !ok {
+		//	logger.Warnln(eventExecCmdLog, "资产(%s)的model字段不存在或类型错误", nodeID)
+		//	continue
+		//}
+		//modelMList := make([]bson.M, 0)
+		//for _, model := range modelList {
+		//	if modelMap, ok := model.(bson.M); ok {
+		//		modelMList = append(modelMList, modelMap)
+		//	}
+		//}
+		//
+		//data["modelName"] = tools.FormatKeyInfoList(modelMList, "name")
+		//data["nodeName"] = tools.FormatKeyInfo(nodeInfo, "name")
+		//data["nodeUid"] = tools.FormatKeyInfo(nodeInfo, "uid")
+		//data["time"] = tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
 		//fmt.Println("data:", data)
 		//break
@@ -218,6 +218,59 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 		logger.Debugf(eventDeviceModifyLog, "开始分析事件")
 		if eventID, ok := eventInfo["id"].(primitive.ObjectID); ok {
 			if settings, ok := eventInfo["settings"].(primitive.M); ok {
+
+
+				//判断是否已经失效
+				if invalid, ok := eventInfo["invalid"].(bool); ok {
+					if invalid {
+						logger.Warnln(eventComputeLogicLog, "事件(%s)已经失效", eventID.Hex())
+						continue
+					}
+				}
+
+				//判断禁用
+				if disable, ok := settings["disable"].(bool); ok {
+					if disable {
+						logger.Warnln(eventComputeLogicLog, "事件(%s)已经被禁用", eventID.Hex())
+						continue
+					}
+				}
+
+				rangeDefine := ""
+				validTime, ok := settings["validTime"].(string)
+				if ok {
+					if validTime == "timeLimit" {
+						if rangeDefine, ok = settings["range"].(string); ok {
+							if rangeDefine != "once" {
+								//判断有效期
+								if startTime, ok := settings["startTime"].(primitive.DateTime); ok {
+									startTimeInt := int64(startTime / 1e3)
+									if tools.GetLocalTimeNow(time.Now()).Unix() < startTimeInt {
+										logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务开始时间未到，不执行", eventID.Hex())
+										continue
+									}
+								}
+
+								if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
+									endTimeInt := int64(endTime / 1e3)
+									if tools.GetLocalTimeNow(time.Now()).Unix() >= endTimeInt {
+										logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务结束时间已到，不执行", eventID.Hex())
+										//修改事件为失效
+										updateMap := bson.M{"invalid": true}
+										_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+										if err != nil {
+											logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+											return fmt.Errorf("失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+
+				//判断事件是否已经触发
+				hasExecute := false
 				//departmentConditionList := make([]string, 0)
 				//modelConditionList := make([]string, 0)
 				departmentListInSettings := make([]primitive.ObjectID, 0)
@@ -321,6 +374,84 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 					continue
 				}
 				if isValid {
+					paramMatch = bson.D{
+						bson.E{
+							Key: "$match",
+							Value: bson.M{
+								"_id": nodeObjectID,
+							},
+						},
+					}
+					paramLookup = bson.D{
+						bson.E{
+							Key: "$lookup",
+							Value: bson.M{
+								"from":         "dept",
+								"localField":   "department",
+								"foreignField": "_id",
+								"as":           "department",
+							},
+						},
+					}
+					paramLookupModel := bson.D{
+						bson.E{
+							Key: "$lookup",
+							Value: bson.M{
+								"from":         "model",
+								"localField":   "model",
+								"foreignField": "_id",
+								"as":           "model",
+							},
+						},
+					}
+					pipeline = mongo.Pipeline{}
+					pipeline = append(pipeline, paramMatch, paramLookup, paramLookupModel)
+					nodeInfoList := make([]bson.M, 0)
+					err = restfulapi.FindPipeline(ctx, idb.Database.Collection("node"), &nodeInfoList, pipeline, nil)
+					if err != nil {
+						return fmt.Errorf("获取当前资产(%s)的详情失败:%s", nodeID, err.Error())
+					}
+
+					if len(nodeInfoList) == 0 {
+						return fmt.Errorf("当前查询的资产(%s)不存在", nodeID)
+					}
+
+					nodeInfo := nodeInfoList[0]
+
+					departmentList, ok := nodeInfo["department"].(primitive.A)
+					if !ok {
+						logger.Warnln(eventExecCmdLog, "资产(%s)的department字段不存在或类型错误", nodeID)
+						continue
+					}
+					departmentMList := make([]bson.M, 0)
+					for _, department := range departmentList {
+						if departmentMap, ok := department.(bson.M); ok {
+							departmentMList = append(departmentMList, departmentMap)
+						}
+					}
+
+					data["departmentName"] = tools.FormatKeyInfoList(departmentMList, "name")
+
+					modelList, ok := nodeInfo["model"].(primitive.A)
+					if !ok {
+						logger.Warnln(eventExecCmdLog, "资产(%s)的model字段不存在或类型错误", nodeID)
+						continue
+					}
+					modelMList := make([]bson.M, 0)
+					for _, model := range modelList {
+						if modelMap, ok := model.(bson.M); ok {
+							modelMList = append(modelMList, modelMap)
+						}
+					}
+
+					data["modelName"] = tools.FormatKeyInfoList(modelMList, "name")
+					data["nodeName"] = tools.FormatKeyInfo(nodeInfo, "name")
+					data["nodeUid"] = tools.FormatKeyInfo(nodeInfo, "uid")
+					data["time"] = tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
+
+
+
+
 					data["content"] = content
 					sendMap := data
 
@@ -333,6 +464,22 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 						logger.Warnf(eventDeviceModifyLog, "发送事件(%s)错误:%s", eventID.Hex(), err.Error())
 					} else {
 						logger.Debugf(eventDeviceModifyLog, "发送事件成功:%s,数据为:%+v", eventID.Hex(), sendMap)
+					}
+
+					hasExecute = true
+				}
+
+				//对只能执行一次的事件进行失效
+				if validTime == "timeLimit" {
+					if rangeDefine == "once" && hasExecute {
+						logger.Warnln(eventComputeLogicLog, "事件(%s)为只执行一次的事件", eventID.Hex())
+						//修改事件为失效
+						updateMap := bson.M{"invalid": true}
+						_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+						if err != nil {
+							logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+							return fmt.Errorf("失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+						}
 					}
 				}
 			}

@@ -10,6 +10,7 @@ type Event struct {
 	Settings map[string]interface{} `json:"settings"`
 	Type     string                 `json:"type"`
 	Handlers []interface{}          `json:"handlers"`
+	Invalid  bool                   `json:"invalid"`
 }
 
 // EventMongo
@@ -20,4 +21,5 @@ type EventMongo struct {
 	Settings primitive.M        `json:"settings" bson:"settings"`
 	Type     string             `json:"type" bson:"type"`
 	Handlers primitive.A        `json:"handlers" bson:"handlers"`
+	Invalid  bool               `json:"invalid" bson:"invalid"`
 }

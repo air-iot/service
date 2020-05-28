@@ -4,23 +4,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/air-iot/service/restful-api"
+	"github.com/air-iot/service/tools"
+	"go.mongodb.org/mongo-driver/bson"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-
-	idb "github.com/air-iot/service/db/mongo"
 	"github.com/air-iot/service/logger"
 	imqtt "github.com/air-iot/service/mq/mqtt"
-	"github.com/air-iot/service/restful-api"
+	idb "github.com/air-iot/service/db/mongo"
+	clogic "github.com/air-iot/service/logic"
 )
 
 type EventType string
 type EventHandlerType string
 
 const (
-	ComputeLogic EventType = "计算逻辑事件"
+	ComputeLogic EventType = "数据事件"
 	Alarm        EventType = "报警事件"
 	Startup      EventType = "启动系统"
 	ShutDown     EventType = "关闭系统"
@@ -53,74 +52,96 @@ var eventLog = map[string]interface{}{"name": "通用事件触发"}
 
 // Trigger 事件触发
 func Trigger(eventType EventType, data map[string]interface{}) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	pipeLine := mongo.Pipeline{
-		bson.D{
-			bson.E{
-				Key: "$match",
-				Value: bson.M{
-					"type": eventType,
-				},
-			},
-		},
-		bson.D{
-			bson.E{
-				Key: "$lookup",
-				Value: bson.M{
-					"from":         "eventhandler",
-					"localField":   "_id",
-					"foreignField": "event",
-					"as":           "handlers",
-				},
-			},
-		},
-	}
-
-	result := make([]bson.M, 0)
-	err := restfulapi.FindPipeline(ctx, idb.Database.Collection("event"), &result, pipeLine, nil)
-
+	result, err := clogic.EventLogic.FindLocalCacheByType(string(eventType))
 	if err != nil {
 		logger.Errorf(eventLog, "查询数据库错误:%s", err.Error())
 		return err
 	}
 
+	for _, eventInfo := range *result {
+		if eventInfo.Handlers == nil || len(eventInfo.Handlers) == 0 {
+			logger.Warnln(eventAlarmLog, "handlers字段数组长度为0")
+			continue
+		}
+		logger.Debugf(eventAlarmLog, "开始分析事件")
+		eventID := eventInfo.ID
+		settings := eventInfo.Settings
 
-	for _, event := range result {
-		id, ok := event["id"]
-		if !ok {
-			logger.Warnln(eventLog, "未找到id字段")
+		//判断是否已经失效
+		invalid := eventInfo.Invalid
+		if invalid {
+			logger.Warnln(eventComputeLogicLog, "事件(%s)已经失效", eventID)
 			continue
 		}
-		oid, ok := id.(primitive.ObjectID)
-		if !ok {
-			logger.Warnln(eventLog, "id字段非字符串")
-			continue
+
+		//判断禁用
+		if disable, ok := settings["disable"].(bool); ok {
+			if disable {
+				logger.Warnln(eventComputeLogicLog, "事件(%s)已经被禁用", eventID)
+				continue
+			}
 		}
-		handlers, ok := event["handlers"]
-		if !ok {
-			logger.Warnln(eventLog, "未找到handlers字段")
-			continue
+
+		rangeDefine := ""
+		validTime, ok := settings["validTime"].(string)
+		if ok {
+			if validTime == "timeLimit" {
+				if rangeDefine, ok = settings["range"].(string); ok {
+					if rangeDefine != "once" {
+						//判断有效期
+						if startTime, ok := settings["startTime"].(time.Time); ok {
+							if tools.GetLocalTimeNow(time.Now()).Unix() < startTime.Unix() {
+								logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
+								continue
+							}
+						}
+
+						if endTime, ok := settings["endTime"].(time.Time); ok {
+							if tools.GetLocalTimeNow(time.Now()).Unix() >= endTime.Unix() {
+								logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
+								//修改事件为失效
+								updateMap := bson.M{"invalid": true}
+								_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+								if err != nil {
+									logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
+									return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
+								}
+							}
+						}
+					}
+				}
+			}
 		}
-		handler, ok := handlers.(primitive.A)
-		if !ok {
-			logger.Warnln(eventLog, "handlers字段转数组错误")
-			continue
-		}
-		if len(handler) == 0 {
-			logger.Warnln(eventLog, "handlers字段非数组")
-			continue
-		}
+
+		//判断事件是否已经触发
+		hasExecute := false
+
 		sendMap := data
 		b, err := json.Marshal(sendMap)
 		if err != nil {
 			continue
 		}
-		err = imqtt.Send(fmt.Sprintf("event/%s", oid.Hex()), b)
+		err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
 		if err != nil {
-			logger.Warnf(eventLog, "发送事件(%s)错误:%s", id, err.Error())
+			logger.Warnf(eventLog, "发送事件(%s)错误:%s", eventID, err.Error())
 		} else {
-			logger.Debugf(eventLog, "发送事件成功:%s,数据为:%+v", id, sendMap)
+			logger.Debugf(eventLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
+		}
+
+		hasExecute = true
+
+		//对只能执行一次的事件进行失效
+		if validTime == "timeLimit" {
+			if rangeDefine == "once" && hasExecute {
+				logger.Warnln(eventComputeLogicLog, "事件(%s)为只执行一次的事件", eventID)
+				//修改事件为失效
+				updateMap := bson.M{"invalid": true}
+				_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+				if err != nil {
+					logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
+					return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
+				}
+			}
 		}
 	}
 	return nil
