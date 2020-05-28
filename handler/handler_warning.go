@@ -188,7 +188,7 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 				fieldsInSendMap := map[string]interface{}{}
 				for _, fieldsMap := range data.Fields {
 					for k, v := range fieldsMap {
-						sendMap[k] = v
+						//sendMap[k] = v
 						fieldsInSendMap[k] = v
 					}
 				}
@@ -269,7 +269,7 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 				fieldsInSendMap := map[string]interface{}{}
 				for _, fieldsMap := range data.Fields {
 					for k, v := range fieldsMap {
-						sendMap[k] = v
+						//sendMap[k] = v
 						fieldsInSendMap[k] = v
 					}
 				}
@@ -357,7 +357,7 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 				fieldsInSendMap := map[string]interface{}{}
 				for _, fieldsMap := range data.Fields {
 					for k, v := range fieldsMap {
-						sendMap[k] = v
+						//sendMap[k] = v
 						fieldsInSendMap[k] = v
 					}
 				}
@@ -464,7 +464,7 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 				fieldsInSendMap := map[string]interface{}{}
 				for _, fieldsMap := range data.Fields {
 					for k, v := range fieldsMap {
-						sendMap[k] = v
+						//sendMap[k] = v
 						fieldsInSendMap[k] = v
 					}
 				}

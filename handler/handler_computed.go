@@ -146,7 +146,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 							//	nodeUIDFieldsMap[nodeUIDInData] = fieldsList
 							//}
 							if tagIDInMap, ok := tagMap["id"].(string); ok {
-								tools.MergeDataMap(nodeUIDInData,tagIDInMap,&nodeUIDFieldsMap)
+								tools.MergeDataMap(nodeUIDInData, tagIDInMap, &nodeUIDFieldsMap)
 							}
 							if modelInfoInMap, ok := tagMap["model"].(map[string]interface{}); ok {
 								if modelIDInInfo, ok := modelInfoInMap["id"].(string); ok {
@@ -184,18 +184,24 @@ func TriggerComputed(data cmodel.DataMessage) error {
 									pipe := iredis.Client.Pipeline()
 									for _, tagIDInList := range tagIDList {
 										//不在fieldsMap中的tagId就去查redis
-										if fieldsVal, ok := fieldsMap[tagIDInList]; !ok {
-											//如果公式中的该参数为输入值类型则不用查Redis，直接套用
-											if inputVal, ok := inputMap[tagIDInList]; ok {
-												computeFieldsMap[tagIDInList] = inputVal
-												continue
-											} else {
-												hashKey := uidInMap + "_" + tagIDInList
-												cmd := pipe.HGet(hashKey, "value")
-												cmdList = append(cmdList, cmd)
-											}
+										if nodeUIDNodeMap[uidInMap] != nodeID {
+											hashKey := uidInMap + "_" + tagIDInList
+											cmd := pipe.HGet(hashKey, "value")
+											cmdList = append(cmdList, cmd)
 										} else {
-											computeFieldsMap[tagIDInList] = fieldsVal
+											if fieldsVal, ok := fieldsMap[tagIDInList]; !ok {
+												//如果公式中的该参数为输入值类型则不用查Redis，直接套用
+												if inputVal, ok := inputMap[tagIDInList]; ok {
+													computeFieldsMap[tagIDInList] = inputVal
+													continue
+												} else {
+													hashKey := uidInMap + "_" + tagIDInList
+													cmd := pipe.HGet(hashKey, "value")
+													cmdList = append(cmdList, cmd)
+												}
+											} else {
+												computeFieldsMap[tagIDInList] = fieldsVal
+											}
 										}
 									}
 									_, err = pipe.Exec()
@@ -218,12 +224,16 @@ func TriggerComputed(data cmodel.DataMessage) error {
 											continue ruleloopModel
 										} else {
 											if _, ok := fieldsMap[tagIDInList]; ok {
-												continue
+												if nodeUIDNodeMap[uidInMap] == nodeID {
+													continue
+												}
 											}
 											//如果公式中的该参数为输入值类型则不用查Redis，直接套用
 											if _, ok := inputMap[tagIDInList]; ok {
 												//logicMap[tagIDInList] = inputVal
-												continue
+												if nodeUIDNodeMap[uidInMap] == nodeID {
+													continue
+												}
 											}
 											//resVal, err := tools.InterfaceTypeToRedisMethod(cmdList[resultIndex])
 											//if err != nil {
@@ -252,18 +262,18 @@ func TriggerComputed(data cmodel.DataMessage) error {
 										"uid":     uidInMap,
 										"fields":  computeFieldsMap,
 									}
-									for k, v := range computeFieldsMap {
-										dataMap[k] = v
-									}
+									//for k, v := range computeFieldsMap {
+									//	dataMap[k] = v
+									//}
 									computeFields = append(computeFields, dataMap)
 								}
 
 								//生成计算对象并发送
-								sendMap := bson.M{
-									"data":     computeFields,
-									"sendType": "dataCompute",
-								}
-								b, err := json.Marshal(sendMap)
+								//sendMap := bson.M{
+								//	"data":     computeFields,
+								//	"sendType": "dataCompute",
+								//}
+								b, err := json.Marshal(computeFields)
 								if err != nil {
 									continue
 								}
@@ -271,7 +281,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 								if err != nil {
 									logger.Warnf(eventComputeLogicLog, "发送事件(%s)错误:%s", eventID, err.Error())
 								} else {
-									logger.Debugf(eventComputeLogicLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
+									logger.Debugf(eventComputeLogicLog, "发送事件成功:%s,数据为:%+v", eventID, computeFields)
 								}
 								hasExecute = true
 							}
@@ -292,7 +302,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 									//	nodeUIDFieldsMap[nodeUID] = fieldsList
 									//}
 									if tagIDInMap, ok := tagMap["id"].(string); ok {
-										tools.MergeDataMap(nodeUID,tagIDInMap,&nodeUIDFieldsMap)
+										tools.MergeDataMap(nodeUID, tagIDInMap, &nodeUIDFieldsMap)
 									}
 									if nodeIDInInfo, ok := nodeInfoInMap["id"].(string); ok {
 										nodeUIDNodeMap[nodeUID] = nodeIDInInfo
@@ -341,28 +351,25 @@ func TriggerComputed(data cmodel.DataMessage) error {
 								pipe := iredis.Client.Pipeline()
 								for _, tagIDInList := range tagIDList {
 									//不在fieldsMap中的tagId就去查redis
-									if fieldsVal, ok := fieldsMap[tagIDInList]; !ok {
-										//如果公式中的该参数为输入值类型则不用查Redis，直接套用
-										if inputVal, ok := inputMap[tagIDInList]; ok {
-											if nodeUIDNodeMap[uidInMap] == nodeID {
+									if nodeUIDNodeMap[uidInMap] != nodeID {
+										hashKey := uidInMap + "_" + tagIDInList
+										cmd := pipe.HGet(hashKey, "value")
+										cmdList = append(cmdList, cmd)
+									} else {
+										if fieldsVal, ok := fieldsMap[tagIDInList]; !ok {
+											//如果公式中的该参数为输入值类型则不用查Redis，直接套用
+											if inputVal, ok := inputMap[tagIDInList]; ok {
 												computeFieldsMap[tagIDInList] = inputVal
 												continue
+											} else {
+												hashKey := uidInMap + "_" + tagIDInList
+												cmd := pipe.HGet(hashKey, "value")
+												cmdList = append(cmdList, cmd)
 											}
 										} else {
-											hashKey := uidInMap + "_" + tagIDInList
-											cmd := pipe.HGet(hashKey, "value")
-											cmdList = append(cmdList, cmd)
-										}
-									} else {
-										if nodeUIDNodeMap[uidInMap] == nodeID {
 											computeFieldsMap[tagIDInList] = fieldsVal
 										}
 									}
-									//if tagID != tagIDInList {
-									//	hashKey := nodeID + "_" + tagIDInList
-									//	cmd := pipe.HGet(hashKey, "value")
-									//	cmdList = append(cmdList, cmd)
-									//}
 								}
 								_, err = pipe.Exec()
 								if err != nil {
@@ -422,25 +429,18 @@ func TriggerComputed(data cmodel.DataMessage) error {
 									"uid":     uidInMap,
 									"fields":  computeFieldsMap,
 								}
-								for k, v := range computeFieldsMap {
-									dataMap[k] = v
-								}
+								//for k, v := range computeFieldsMap {
+								//	dataMap[k] = v
+								//}
 								computeFields = append(computeFields, dataMap)
 							}
 
 							//生成计算对象并发送
-							sendMap := bson.M{
-								"data":     computeFields,
-								"sendType": "dataCompute",
-							}
-							//b, err := json.Marshal(sendMap)
-							//if err != nil {
-							//	logger.Errorf(eventComputeLogicLog, "要发送到事件处理器的数据消息序列化失败:%s", err.Error())
-							//	return fmt.Errorf("要发送到事件处理器的数据消息序列化失败:%s", err.Error())
+							//sendMap := bson.M{
+							//	"data":     computeFields,
+							//	"sendType": "dataCompute",
 							//}
-							//logger.Debugf(eventComputeLogicLog, "发送的数据消息为:%s", string(b))
-							//imqtt.SendMsg(emqttConn, "event/"+eventID.Hex(), string(b))
-							b, err := json.Marshal(sendMap)
+							b, err := json.Marshal(computeFields)
 							if err != nil {
 								continue
 							}
@@ -448,7 +448,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 							if err != nil {
 								logger.Warnf(eventComputeLogicLog, "发送事件(%s)错误:%s", eventID, err.Error())
 							} else {
-								logger.Debugf(eventComputeLogicLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
+								logger.Debugf(eventComputeLogicLog, "发送事件成功:%s,数据为:%+v", eventID, computeFields)
 							}
 							hasExecute = true
 						}
