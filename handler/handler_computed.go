@@ -185,7 +185,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 									for _, tagIDInList := range tagIDList {
 										//不在fieldsMap中的tagId就去查redis
 										if nodeUIDNodeMap[uidInMap] != nodeID {
-											hashKey := uidInMap + "_" + tagIDInList
+											hashKey := uidInMap + "|" + tagIDInList
 											cmd := pipe.HGet(hashKey, "value")
 											cmdList = append(cmdList, cmd)
 										} else {
@@ -195,7 +195,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 													computeFieldsMap[tagIDInList] = inputVal
 													continue
 												} else {
-													hashKey := uidInMap + "_" + tagIDInList
+													hashKey := uidInMap + "|" + tagIDInList
 													cmd := pipe.HGet(hashKey, "value")
 													cmdList = append(cmdList, cmd)
 												}
@@ -352,7 +352,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 								for _, tagIDInList := range tagIDList {
 									//不在fieldsMap中的tagId就去查redis
 									if nodeUIDNodeMap[uidInMap] != nodeID {
-										hashKey := uidInMap + "_" + tagIDInList
+										hashKey := uidInMap + "|" + tagIDInList
 										cmd := pipe.HGet(hashKey, "value")
 										cmdList = append(cmdList, cmd)
 									} else {
@@ -362,7 +362,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 												computeFieldsMap[tagIDInList] = inputVal
 												continue
 											} else {
-												hashKey := uidInMap + "_" + tagIDInList
+												hashKey := uidInMap + "|" + tagIDInList
 												cmd := pipe.HGet(hashKey, "value")
 												cmdList = append(cmdList, cmd)
 											}
