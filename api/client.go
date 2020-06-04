@@ -51,13 +51,14 @@ func Get(url1 url.URL, token string, query, result interface{}) error {
 	}
 	v := url.Values{}
 	v.Set("query", string(b))
-
+	u := fmt.Sprintf(`%s?%s`, url1.String(), v.Encode())
+	logrus.Debugf("查询请求url:%s", u)
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", token).
 		SetHeader("Request-Type", "service").
 		SetResult(result).
-		Get(fmt.Sprintf(`%s?%s`, url1.String(), v.Encode()))
+		Get(u)
 
 	if err != nil {
 		return err
