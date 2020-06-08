@@ -52,6 +52,7 @@ func init() {
 	viper.SetDefault("log.level", "ERROR")
 
 	viper.SetDefault("data.action", "mqtt")
+	viper.SetDefault("data.save", "influx")
 
 	viper.SetDefault("consul.enable", true)
 	viper.SetDefault("consul.host", "consul")
