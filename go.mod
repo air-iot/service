@@ -19,6 +19,7 @@ require (
 	github.com/hashicorp/serf v0.9.0 // indirect
 	github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
+	github.com/jmoiron/sqlx v1.2.0 // indirect
 	github.com/json-iterator/go v1.1.9
 	github.com/klauspost/compress v1.10.4 // indirect
 	github.com/labstack/echo/v4 v4.1.16
@@ -36,6 +37,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.6.2
 	github.com/streadway/amqp v0.0.0-20200108173154-1c71cc93ed71
+	github.com/taosdata/driver-go v0.0.0-20200311072652-8c58c512b6ac // indirect
 	github.com/zhgqiang/jsonpath v0.0.0-20171228002920-ff973d0f4099
 	go.mongodb.org/mongo-driver v1.3.2
 	golang.org/x/crypto v0.0.0-20200406173513-056763e48d71

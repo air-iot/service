@@ -4,7 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/air-iot/service/tools"
+	"github.com/air-iot/service/db/taos"
 	"log"
 	"net"
 	"net/http"
@@ -24,6 +24,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/air-iot/service/consul"
+	"github.com/air-iot/service/tools"
 	"github.com/air-iot/service/db/influx"
 	"github.com/air-iot/service/db/mongo"
 	"github.com/air-iot/service/db/redis"
@@ -84,6 +85,15 @@ func init() {
 	viper.SetDefault("db.enable", false)
 	viper.SetDefault("db.dialect", "")
 	viper.SetDefault("db.url", "")
+	viper.SetDefault("db.maxIdleConn", 10)
+	viper.SetDefault("db.maxOpenConn", 20)
+
+	viper.SetDefault("taos.enable", false)
+	viper.SetDefault("taos.host", "taos")
+	viper.SetDefault("taos.port", 6035)
+	viper.SetDefault("taos.username", "root")
+	viper.SetDefault("taos.password", "taosdata")
+	viper.SetDefault("taos.db", "tsdb")
 	viper.SetDefault("db.maxIdleConn", 10)
 	viper.SetDefault("db.maxOpenConn", 20)
 
@@ -158,6 +168,7 @@ func NewApp() App {
 	consul.Init()
 	traefik.Init()
 	influx.Init()
+	taos.Init()
 	mongo.Init()
 	redis.Init()
 	sql.Init()
@@ -287,6 +298,7 @@ func (p *app) stop() {
 	sql.Close()
 	mqtt.Close()
 	rabbit.Close()
+	taos.Close()
 	if p.grpcServer != nil {
 		p.grpcServer.Stop()
 	}
