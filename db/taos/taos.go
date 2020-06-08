@@ -20,7 +20,7 @@ func Init() {
 		password    = viper.GetString("taos.password")
 		host        = viper.GetString("taos.host")
 		port        = viper.GetInt("taos.port")
-		db          = viper.GetInt("taos.db")
+		db          = viper.GetString("taos.db")
 		maxIdleConn = viper.GetInt("taos.maxIdleConn")
 		maxOpenConn = viper.GetInt("taos.maxOpenConn")
 	)
