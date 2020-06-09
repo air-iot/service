@@ -179,7 +179,8 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 		}
 		eventName, ok := eventInfo["name"].(string)
 		if !ok {
-			return fmt.Errorf("传入参数中事件名称不存在或类型错误")
+			logger.Errorf(eventScheduleLog, "传入参数中事件名称不存在或类型错误")
+			continue
 		}
 		logger.Debugf(eventScheduleLog, "开始分析事件")
 		if eventID, ok := eventInfo["id"].(primitive.ObjectID); ok {
@@ -205,7 +206,8 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 					}
 				}
 				if cronExpression == "" {
-					return fmt.Errorf("事件(%s)的定时表达式解析失败", eventID)
+					logger.Errorf(eventScheduleLog, "事件(%s)的定时表达式解析失败", eventID)
+					continue
 				}
 				logger.Debugf(eventScheduleLog, "事件(%s)的定时cron为:(%s)",eventID, cronExpression)
 				_,_ = c.AddFunc(cronExpression, func() {
