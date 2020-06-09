@@ -232,8 +232,6 @@ func TriggerLogin(data map[string]interface{}) error {
 			}
 		}
 
-		fmt.Println("send login event name",eventInfo.Name,"trigger userID:",userID)
-
 		sendMap := data
 		b, err := json.Marshal(sendMap)
 		if err != nil {
