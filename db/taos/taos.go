@@ -6,7 +6,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/taosdata/driver-go/taosSql"
 )
 
 var DB *sqlx.DB
