@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/robfig/cron"
+	"github.com/robfig/cron/v3"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -64,8 +64,9 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 	if cronExpression == "" {
 		return fmt.Errorf("事件(%s)的定时表达式解析失败", eventID)
 	}
-
-	_ = c.AddFunc(cronExpression, func() {
+	logger.Debugf(eventScheduleLog, "事件(%s)的定时cron为:(%s)",eventID, cronExpression)
+	_,_ = c.AddFunc(cronExpression, func() {
+		logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始",eventID)
 		scheduleType := ""
 		if settings, ok := data["settings"].(map[string]interface{}); ok {
 			scheduleType, ok = settings["type"].(string)
@@ -104,6 +105,7 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 		}
 		b, err := json.Marshal(sendMap)
 		if err != nil {
+			logger.Debugf(eventScheduleLog, "事件(%s)的发送map序列化失败:%s", err.Error())
 			return
 		}
 		//imqtt.SendMsg(emqttConn, "event"+"/"+eventID, string(b))
@@ -114,6 +116,8 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 			logger.Debugf(eventScheduleLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
 		}
 	})
+
+	c.Start()
 
 	//logger.Debugf(eventScheduleLog, "计划事件触发器（添加计划事件）执行结束")
 
@@ -202,8 +206,9 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 				if cronExpression == "" {
 					return fmt.Errorf("事件(%s)的定时表达式解析失败", eventID)
 				}
-
-				_ = c.AddFunc(cronExpression, func() {
+				logger.Debugf(eventScheduleLog, "事件(%s)的定时cron为:(%s)",eventID, cronExpression)
+				_,_ = c.AddFunc(cronExpression, func() {
+					logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始",eventID)
 					scheduleType := ""
 					if settings, ok := eventInfo["settings"].(primitive.M); ok {
 						scheduleType, ok := settings["type"].(string)
@@ -247,6 +252,7 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 					//imqtt.SendMsg(emqttConn, "event"+"/"+eventID.Hex(), string(b))
 					b, err := json.Marshal(sendMap)
 					if err != nil {
+						logger.Debugf(eventScheduleLog, "事件(%s)的发送map序列化失败:%s", err.Error())
 						return
 					}
 					err = imqtt.Send(fmt.Sprintf("event/%s", eventID.Hex()), b)
@@ -256,6 +262,8 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 						logger.Debugf(eventScheduleLog, "发送事件成功:%s,数据为:%+v", eventID.Hex(), sendMap)
 					}
 				})
+
+				c.Start()
 			}
 		}
 	}
