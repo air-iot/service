@@ -110,7 +110,10 @@ func TriggerLogin(data map[string]interface{}) error {
 		if v, ok := settings["sendTo"].(string); ok {
 			sendTo = v
 		}
-		if sendTo == "deptRole" {
+		allUser := false
+		if sendTo == "all"{
+			allUser = true
+		}else if sendTo == "deptRole" {
 			ok := false
 			//没有指定特定用户时，结合部门与角色进行判断
 			err = tools.FormatObjectIDListMap(&settings, "department", "id")
@@ -215,16 +218,18 @@ func TriggerLogin(data map[string]interface{}) error {
 			}
 		}
 
-		isValid := false
-		for _, id := range userIDList {
-			if userID == id {
-				isValid = true
-				break
+		if !allUser{
+			isValid := false
+			for _, id := range userIDList {
+				if userID == id {
+					isValid = true
+					break
+				}
 			}
-		}
 
-		if !isValid {
-			continue
+			if !isValid {
+				continue
+			}
 		}
 
 		sendMap := data
