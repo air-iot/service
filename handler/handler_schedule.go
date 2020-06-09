@@ -66,7 +66,8 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 	}
 	logger.Debugf(eventScheduleLog, "事件(%s)的定时cron为:(%s)",eventID, cronExpression)
 	_,_ = c.AddFunc(cronExpression, func() {
-		logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始",eventID)
+		fmt.Printf("事件(%s)的定时任务开始",eventID)
+		fmt.Println("============")
 		scheduleType := ""
 		if settings, ok := data["settings"].(map[string]interface{}); ok {
 			scheduleType, ok = settings["type"].(string)
@@ -208,7 +209,8 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 				}
 				logger.Debugf(eventScheduleLog, "事件(%s)的定时cron为:(%s)",eventID, cronExpression)
 				_,_ = c.AddFunc(cronExpression, func() {
-					logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始",eventID)
+					fmt.Printf("事件(%s)的定时任务开始",eventID)
+					fmt.Println("============")
 					scheduleType := ""
 					if settings, ok := eventInfo["settings"].(primitive.M); ok {
 						scheduleType, ok := settings["type"].(string)
