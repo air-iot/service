@@ -274,13 +274,13 @@ func (p *app) Run(handlers ...Handler) {
 	select {
 	case sig := <-ch:
 		fmt.Printf("收到关闭信号{%v} \n", sig)
+		for _, handler := range handlers {
+			handler.Stop()
+		}
 		p.stop()
 		logrus.Debugln("关闭服务,", sig)
 	}
 	close(ch)
-	for _, handler := range handlers {
-		handler.Stop()
-	}
 	os.Exit(0)
 }
 
