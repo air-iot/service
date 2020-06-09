@@ -131,7 +131,7 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 	defer cancel()
 
 	c.Stop()
-	c = cron.New()
+	c = cron.New(cron.WithSeconds(), cron.WithChain(cron.DelayIfStillRunning(cron.DefaultLogger)))
 	c.Start()
 
 	paramMatch := bson.D{
