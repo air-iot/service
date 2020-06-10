@@ -51,9 +51,16 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 	}
 
 	modifyTypeMapping := map[string]string{
-		"资产增加": "增加资产",
-		"资产修改": "修改资产属性",
-		"资产删除": "删除资产",
+		"资产增加":   "增加资产",
+		"资产修改":   "修改资产属性",
+		"资产删除":   "删除资产",
+		"编辑资产画面": "编辑资产画面",
+		"删除资产画面": "删除资产画面",
+		"编辑模型":   "编辑模型",
+		"删除模型":   "删除模型",
+		"编辑模型画面": "编辑模型画面",
+		"删除模型画面": "删除模型画面",
+		"新增模型画面": "新增模型画面",
 	}
 
 	modifyTypeAfterMapping := modifyTypeMapping[modifyType]
@@ -114,7 +121,6 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 			},
 		},
 	}
-
 
 	pipeline := mongo.Pipeline{}
 	pipeline = append(pipeline, paramMatch, paramLookup)
@@ -218,7 +224,6 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 		logger.Debugf(eventDeviceModifyLog, "开始分析事件")
 		if eventID, ok := eventInfo["id"].(primitive.ObjectID); ok {
 			if settings, ok := eventInfo["settings"].(primitive.M); ok {
-
 
 				//判断是否已经失效
 				if invalid, ok := eventInfo["invalid"].(bool); ok {
@@ -448,9 +453,6 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 					data["nodeName"] = tools.FormatKeyInfo(nodeInfo, "name")
 					data["nodeUid"] = tools.FormatKeyInfo(nodeInfo, "uid")
 					data["time"] = tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
-
-
-
 
 					data["content"] = content
 					sendMap := data
