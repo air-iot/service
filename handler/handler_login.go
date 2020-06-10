@@ -37,8 +37,8 @@ func TriggerLogin(data map[string]interface{}) error {
 	//	return fmt.Errorf("获取当前模型(%s)详情失败:%s", modelID, err.Error())
 	//}
 	userID := ""
-	if v, ok := data["user"].(primitive.ObjectID); ok {
-		userID = v.Hex()
+	if v, ok := data["user"].(string); ok {
+		userID = v
 	}
 
 	departmentListInSettings := make([]primitive.ObjectID, 0)
