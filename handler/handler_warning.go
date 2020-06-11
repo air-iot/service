@@ -171,10 +171,15 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 						return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
 					}
 				}
+				dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
+				if err != nil {
+					logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
+					continue
+				}
 				//生成报警对象并发送
 				sendMap := bson.M{
 					"time":           nowTimeString,
-					"type":           data.Type,
+					"type":           dataMappingType,
 					"status":         data.Status,
 					"processed":      data.Processed,
 					"desc":           data.Desc,
@@ -252,10 +257,16 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 						return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
 					}
 				}
+
+				dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
+				if err != nil {
+					logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
+					continue
+				}
 				//生成报警对象并发送
 				sendMap := bson.M{
 					"time":           nowTimeString,
-					"type":           data.Type,
+					"type":           dataMappingType,
 					"status":         data.Status,
 					"processed":      data.Processed,
 					"desc":           data.Desc,
@@ -340,10 +351,15 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 						return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
 					}
 				}
+				dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
+				if err != nil {
+					logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
+					continue
+				}
 				//生成报警对象并发送
 				sendMap := bson.M{
 					"time":           nowTimeString,
-					"type":           data.Type,
+					"type":           dataMappingType,
 					"status":         data.Status,
 					"processed":      data.Processed,
 					"desc":           data.Desc,
@@ -447,10 +463,15 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 						return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
 					}
 				}
+				dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
+				if err != nil {
+					logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
+					continue
+				}
 				//生成报警对象并发送
 				sendMap := bson.M{
 					"time":           nowTimeString,
-					"type":           data.Type,
+					"type":           dataMappingType,
 					"status":         data.Status,
 					"processed":      data.Processed,
 					"desc":           data.Desc,
