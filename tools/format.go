@@ -1090,19 +1090,6 @@ func FormatKeyInfoList(infoList []bson.M, key string) string {
 	return result
 }
 
-func FormatKeyInfoMapList(infoList []map[string]interface{}, key string) string {
-	result := ""
-	for _, info := range infoList {
-		if result != "" {
-			result = result + "；"
-		}
-		if value, ok := info[key].(string); ok {
-			result = result + value
-		}
-	}
-	return result
-}
-
 
 func FormatKeyInfoListMap(infoList []map[string]interface{}, key string) string {
 	result := ""
