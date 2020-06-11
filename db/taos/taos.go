@@ -32,6 +32,17 @@ func Init() {
 	DB.DB.SetMaxOpenConns(maxOpenConn)
 }
 
+func GetDB() (*sqlx.DB, error) {
+	var (
+		username = viper.GetString("taos.username")
+		password = viper.GetString("taos.password")
+		host     = viper.GetString("taos.host")
+		port     = viper.GetInt("taos.port")
+		db       = viper.GetString("taos.db")
+	)
+	return sqlx.Open("taosSql", fmt.Sprintf(`%s:%s@/tcp(%s:%d)/%s`, username, password, host, port, db))
+}
+
 func Close() {
 	if DB != nil {
 		if err := DB.Close(); err != nil {
