@@ -18,7 +18,7 @@ import (
 	"github.com/air-iot/service/tools"
 )
 
-var eventDeviceModifyLog = map[string]interface{}{"name": "资产修改事件触发"}
+var eventDeviceModifyLog = map[string]interface{}{"name": "模型资产事件触发"}
 
 func TriggerDeviceModify(data map[string]interface{}) error {
 	//logger.Debugf(eventDeviceModifyLog, "开始执行资产修改事件触发器")
