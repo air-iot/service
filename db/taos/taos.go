@@ -2,13 +2,14 @@ package taos
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/jmoiron/sqlx"
 )
 
-var DB *sqlx.DB
+var DB Pool
 
 func Init() {
 	if !viper.GetBool("taos.enable") {
@@ -20,16 +21,33 @@ func Init() {
 		host        = viper.GetString("taos.host")
 		port        = viper.GetInt("taos.port")
 		db          = viper.GetString("taos.db")
+		initialCap  = viper.GetInt("taos.initialCap")
 		maxIdleConn = viper.GetInt("taos.maxIdleConn")
 		maxOpenConn = viper.GetInt("taos.maxOpenConn")
+		idleTimeout = viper.GetInt("taos.idleTimeout")
 	)
 	var err error
-	DB, err = sqlx.Open("taosSql", fmt.Sprintf(`%s:%s@/tcp(%s:%d)/%s`, username, password, host, port, db))
+
+	factory := func() (*sqlx.DB, error) { return sqlx.Open("taosSql", fmt.Sprintf(`%s:%s@/tcp(%s:%d)/%s`, username, password, host, port, db)) }
+	close := func(v *sqlx.DB) error { return v.Close() }
+	poolConfig := &Config{
+		InitialCap: initialCap,
+		MaxIdle:    maxIdleConn,
+		MaxCap:     maxOpenConn,
+		Factory:    factory,
+		Close:      close,
+		//连接最大空闲时间，超过该时间的连接 将会关闭，可避免空闲时连接EOF，自动失效的问题
+		IdleTimeout: time.Duration(idleTimeout) * time.Second,
+	}
+
+	DB, err = NewChannelPool(poolConfig)
+
+	//DB, err = sqlx.Open("taosSql", fmt.Sprintf(`%s:%s@/tcp(%s:%d)/%s`, username, password, host, port, db))
 	if err != nil {
 		logrus.Panic(err)
 	}
-	DB.DB.SetMaxIdleConns(maxIdleConn)
-	DB.DB.SetMaxOpenConns(maxOpenConn)
+	//DB.DB.SetMaxIdleConns(maxIdleConn)
+	//DB.DB.SetMaxOpenConns(maxOpenConn)
 }
 
 func GetDB() (*sqlx.DB, error) {
@@ -45,8 +63,6 @@ func GetDB() (*sqlx.DB, error) {
 
 func Close() {
 	if DB != nil {
-		if err := DB.Close(); err != nil {
-			logrus.Errorln("Taos 连接关闭", err.Error())
-		}
+		DB.Release()
 	}
 }
