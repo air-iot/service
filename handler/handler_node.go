@@ -289,18 +289,18 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 				//判断事件是否已经触发
 				hasExecute := false
 
-				if modifyTypeAfterMapping == "修改资产属性" {
-					isValidModifyProp := false
-					if customProp, ok := settings["customProp"].(string); ok {
-						if _, ok := operateDataMap[customProp]; ok {
-							isValidModifyProp = true
-						}
-					}
-					if !isValidModifyProp {
-						logger.Warnln(eventComputeLogicLog, "事件(%s)修改属性不是触发事件需要的:%+v", eventID.Hex(), operateDataMap)
-						continue
-					}
-				}
+				//if modifyTypeAfterMapping == "修改资产属性" {
+				//	isValidModifyProp := false
+				//	if customProp, ok := settings["customProp"].(string); ok {
+				//		if _, ok := operateDataMap[customProp]; ok {
+				//			isValidModifyProp = true
+				//		}
+				//	}
+				//	if !isValidModifyProp {
+				//		logger.Warnln(eventComputeLogicLog, "事件(%s)修改属性不是触发事件需要的:%+v", eventID.Hex(), operateDataMap)
+				//		continue
+				//	}
+				//}
 
 				content := ""
 				if contentInSettings, ok := settings["content"].(string); ok {
