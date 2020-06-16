@@ -94,7 +94,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 			Value: bson.M{
 				"type":          DeviceModify,
 				"settings.type": modifyTypeAfterMapping,
-				"range":         "node",
+				"settings.range":         "node",
 				//"$or":
 				//bson.A{
 				//	bson.D{{
@@ -634,7 +634,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 			Value: bson.M{
 				"type":          DeviceModify,
 				"settings.type": modifyTypeAfterMapping,
-				"range":         "model",
+				"settings.range":         "model",
 				//"$or":
 				//bson.A{
 				//	bson.D{{
@@ -817,7 +817,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 										_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
 										if err != nil {
 											logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
-											return fmt.Errorf("失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+											continue
 										}
 									}
 								}
@@ -920,7 +920,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 						_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
 						if err != nil {
 							logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
-							return fmt.Errorf("失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+							continue
 						}
 					}
 				}

@@ -104,7 +104,7 @@ func Trigger(eventType EventType, data map[string]interface{}) error {
 								_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 								if err != nil {
 									logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
-									return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
+									continue
 								}
 							}
 						}
@@ -139,7 +139,7 @@ func Trigger(eventType EventType, data map[string]interface{}) error {
 				_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 				if err != nil {
 					logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
-					return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
+					continue
 				}
 			}
 		}

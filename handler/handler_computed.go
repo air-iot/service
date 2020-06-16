@@ -126,7 +126,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 								_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 								if err != nil {
 									logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
-									return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
+									continue
 								}
 							}
 						}
@@ -215,7 +215,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 									_, err = pipe.Exec()
 									if err != nil {
 										logger.Errorf(eventComputeLogicLog, "Redis批量查询tag最新数据(指令为:%+v)失败:%s", cmdList, err.Error())
-										return fmt.Errorf("Redis批量查询tag最新数据(指令为:%+v)失败:%s", cmdList, err.Error())
+										continue
 									}
 									resultIndex := 0
 									//if len(tagIDList) != len(cmdList)+1 {
@@ -317,7 +317,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 										nodeInfo, err := clogic.NodeLogic.FindLocalCache(nodeIDInInfo)
 										if err != nil {
 											logger.Errorf(eventComputeLogicLog, fmt.Sprintf("获取当前资产(%s)详情失败:%s", nodeID, err.Error()))
-											return fmt.Errorf("获取当前资产(%s)详情失败:%s", nodeID, err.Error())
+											continue
 										}
 										nodeUIDModelMap[nodeUID] = nodeInfo.Model
 									}
@@ -382,7 +382,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 								_, err = pipe.Exec()
 								if err != nil {
 									logger.Errorf(eventComputeLogicLog, "Redis批量查询tag最新数据(指令为:%+v)失败:%s", cmdList, err.Error())
-									return fmt.Errorf("Redis批量查询tag最新数据(指令为:%+v)失败:%s", cmdList, err.Error())
+									continue
 								}
 								resultIndex := 0
 								//if len(tagIDList) != len(cmdList)+1 {
@@ -474,7 +474,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 				_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 				if err != nil {
 					logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
-					return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
+					continue
 				}
 			}
 		}
