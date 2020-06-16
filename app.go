@@ -95,8 +95,10 @@ func init() {
 	viper.SetDefault("taos.username", "root")
 	viper.SetDefault("taos.password", "taosdata")
 	viper.SetDefault("taos.db", "tsdb")
-	viper.SetDefault("db.maxIdleConn", 10)
-	viper.SetDefault("db.maxOpenConn", 20)
+	viper.SetDefault("taos.initialCap", 8)
+	viper.SetDefault("taos.maxIdleConn", 10)
+	viper.SetDefault("taos.maxOpenConn", 20)
+	viper.SetDefault("taos.idleTimeout", 15)
 
 	viper.SetDefault("mqtt.enable", false)
 	viper.SetDefault("mqtt.host", "mqtt")
