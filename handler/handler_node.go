@@ -41,15 +41,15 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 		return fmt.Errorf("数据消息中department字段不存在或类型错误")
 	}
 
-	operateDataMap := map[string]interface{}{}
-	operateDataMapRaw, ok := data["data"].(map[string]interface{})
-	if ok {
-		operateDataMapCustom, ok := operateDataMapRaw["custom"].(map[string]interface{})
-		if ok {
-			operateDataMap = operateDataMapCustom
-		}
-		//return fmt.Errorf("数据消息中department字段不存在或类型错误")
-	}
+	//operateDataMap := map[string]interface{}{}
+	//operateDataMapRaw, ok := data["data"].(map[string]interface{})
+	//if ok {
+	//	operateDataMapCustom, ok := operateDataMapRaw["custom"].(map[string]interface{})
+	//	if ok {
+	//		operateDataMap = operateDataMapCustom
+	//	}
+	//	//return fmt.Errorf("数据消息中department字段不存在或类型错误")
+	//}
 
 	departmentObjectIDList, err := tools.StringListToObjectIdList(tools.InterfaceListToStringList(departmentList))
 	if err != nil {
