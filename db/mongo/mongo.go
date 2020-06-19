@@ -48,6 +48,10 @@ func Init() {
 		logrus.Panic(err)
 
 	}
+	err = Client.Ping(context.Background(),nil)
+	if err != nil {
+		logrus.Panic(err)
+	}
 	Database = Client.Database(DB)
 }
 

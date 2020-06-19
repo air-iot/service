@@ -36,6 +36,10 @@ func Init() {
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	})
+	p := Client.Ping()
+	if p.Err() != nil {
+		logrus.Panic(p.Err())
+	}
 }
 
 func Close() {
