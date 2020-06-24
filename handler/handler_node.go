@@ -310,7 +310,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 				//modelConditionList := make([]string, 0)
 
 				isValid := false
-				if rangType, ok := settings["range"].(string); ok {
+				if rangType, ok := settings["eventRange"].(string); ok {
 					switch rangType {
 					//case "model":
 					//	modelListInSettings := make([]primitive.ObjectID, 0)
@@ -794,7 +794,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 				//modelConditionList := make([]string, 0)
 
 				isValid := false
-				if rangType, ok := settings["range"].(string); ok {
+				if rangType, ok := settings["eventRange"].(string); ok {
 					switch rangType {
 					case "model":
 						modelListInSettings := make([]primitive.ObjectID, 0)
