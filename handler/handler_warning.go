@@ -124,7 +124,7 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 		hasExecute := false
 		hasValidAction := false
 
-		if rangeType, ok := settings["range"].(string); ok {
+		if rangeType, ok := settings["eventRange"].(string); ok {
 			switch rangeType {
 			case "warnType":
 				if actionList, ok := settings["action"].([]interface{}); ok {
@@ -620,7 +620,7 @@ func TriggerWarningDisableModelRules(data cmodel.WarningMessage, actionType stri
 		hasExecute := false
 		hasValidAction := false
 
-		if rangeType, ok := settings["range"].(string); ok {
+		if rangeType, ok := settings["eventRange"].(string); ok {
 			switch rangeType {
 			case "warnType":
 				if actionList, ok := settings["action"].([]interface{}); ok {
@@ -1057,7 +1057,7 @@ func TriggerWarningDisableNodeRules(data cmodel.WarningMessage, actionType strin
 		hasExecute := false
 		hasValidAction := false
 
-		if rangeType, ok := settings["range"].(string); ok {
+		if rangeType, ok := settings["eventRange"].(string); ok {
 			switch rangeType {
 			case "warnType":
 				if actionList, ok := settings["action"].([]interface{}); ok {
