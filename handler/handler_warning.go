@@ -64,6 +64,7 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 	}
 
 	//logger.Debugf(eventAlarmLog, "开始遍历事件列表")
+eventloop:
 	for _, eventInfo := range *eventInfoList {
 		logger.Debugf(eventAlarmLog, "事件信息为:%+v", eventInfo)
 		if eventInfo.Handlers == nil || len(eventInfo.Handlers) == 0 {
@@ -124,387 +125,180 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 		hasExecute := false
 		hasValidAction := false
 
-		if rangeType, ok := settings["eventRange"].(string); ok {
-			switch rangeType {
-			case "warnType":
-				if actionList, ok := settings["action"].([]interface{}); ok {
-					actionStringList := tools.InterfaceListToStringList(actionList)
-					for _, action := range actionStringList {
-						if action == actionType {
-							hasValidAction = true
-							break
-						}
+		if rangeTypeRawList, ok := settings["eventRange"].([]interface{}); ok {
+			rangeTypeList := tools.InterfaceListToStringList(rangeTypeRawList)
+			if actionList, ok := settings["action"].([]interface{}); ok {
+				actionStringList := tools.InterfaceListToStringList(actionList)
+				for _, action := range actionStringList {
+					if action == actionType {
+						hasValidAction = true
+						break
 					}
 				}
-				if !hasValidAction {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-				hasValidType := false
-				if warnTypeList, ok := settings["type"].([]interface{}); ok {
-					warnTypeStringList := tools.InterfaceListToStringList(warnTypeList)
-					for _, warnType := range warnTypeStringList {
-						if warnType == data.Type {
-							hasValidType = true
-							break
+			}
+			if !hasValidAction {
+				//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+				continue
+			}
+
+			for _, rangeType := range rangeTypeList {
+				switch rangeType {
+				case "warnType":
+					hasValidType := false
+					if warnTypeList, ok := settings["warnType"].([]interface{}); ok {
+						warnTypeStringList := tools.InterfaceListToStringList(warnTypeList)
+						for _, warnType := range warnTypeStringList {
+							if warnType == data.Type {
+								hasValidType = true
+								break
+							}
 						}
 					}
-				}
-				if !hasValidType {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-
-				//生成发送消息
-				departmentStringIDList := make([]string, 0)
-				//var departmentObjectList primitive.A
-				if departmentIDList, ok := nodeInfo["department"].([]interface{}); ok {
-					departmentStringIDList = tools.InterfaceListToStringList(departmentIDList)
-				} else {
-					logger.Warnf(eventAlarmLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
-				}
-
-				deptInfoList := make([]map[string]interface{}, 0)
-				if len(departmentStringIDList) != 0 {
-					deptInfoList, err = clogic.DeptLogic.FindLocalCacheList(departmentStringIDList)
+					if !hasValidType {
+						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+						continue eventloop
+					}
+				case "warnLevel":
+					hasValidLevel := false
+					if warnLevelList, ok := settings["level"].([]interface{}); ok {
+						warnLevelStringList := tools.InterfaceListToStringList(warnLevelList)
+						for _, warnLevel := range warnLevelStringList {
+							if warnLevel == data.Level {
+								hasValidLevel = true
+								break
+							}
+						}
+					}
+					if !hasValidLevel {
+						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+						continue eventloop
+					}
+				case "department":
+					hasValidWarn := false
+					deptIDInDataList, err := tools.ObjectIdListToStringList(data.Department)
 					if err != nil {
-						return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
+						return fmt.Errorf("当前资产(%s)所属部门ID数组转ObjectID数组失败:%s", nodeID, err.Error())
 					}
-				}
-				dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
-				if err != nil {
-					logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
-					continue
-				}
-				//生成报警对象并发送
-				sendMap := bson.M{
-					"time":           nowTimeString,
-					"type":           dataMappingType,
-					"status":         data.Status,
-					"processed":      data.Processed,
-					"desc":           data.Desc,
-					"level":          data.Level,
-					"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
-					"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
-					"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
-					"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
-					"tagInfo":        tools.FormatDataInfoList(data.Fields),
-					//"fields":         fieldsMap,
-					"isWarning": true,
-				}
-				fieldsInSendMap := map[string]interface{}{}
-				for _, fieldsMap := range data.Fields {
-					for k, v := range fieldsMap {
-						//sendMap[k] = v
-						fieldsInSendMap[k] = v
-					}
-				}
-				sendMap["fields"] = fieldsInSendMap
-
-				b, err := json.Marshal(sendMap)
-				if err != nil {
-					continue
-				}
-				err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
-				if err != nil {
-					logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
-				} else {
-					logger.Debugf(eventAlarmLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
-				}
-				hasExecute = true
-			case "warnLevel":
-				if actionList, ok := settings["action"].([]interface{}); ok {
-					actionStringList := tools.InterfaceListToStringList(actionList)
-					for _, action := range actionStringList {
-						if action == actionType {
-							hasValidAction = true
-							break
-						}
-					}
-				}
-				if !hasValidAction {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-				hasValidLevel := false
-				if warnLevelList, ok := settings["level"].([]interface{}); ok {
-					warnLevelStringList := tools.InterfaceListToStringList(warnLevelList)
-					for _, warnLevel := range warnLevelStringList {
-						if warnLevel == data.Level {
-							hasValidLevel = true
-							break
-						}
-					}
-				}
-				if !hasValidLevel {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-
-				//生成发送消息
-				departmentStringIDList := make([]string, 0)
-				//var departmentObjectList primitive.A
-				if departmentIDList, ok := nodeInfo["department"].([]interface{}); ok {
-					departmentStringIDList = tools.InterfaceListToStringList(departmentIDList)
-				} else {
-					logger.Warnf(eventAlarmLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
-				}
-
-				deptInfoList := make([]map[string]interface{}, 0)
-				if len(departmentStringIDList) != 0 {
-					deptInfoList, err = clogic.DeptLogic.FindLocalCacheList(departmentStringIDList)
-					if err != nil {
-						return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
-					}
-				}
-
-				dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
-				if err != nil {
-					logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
-					continue
-				}
-				//生成报警对象并发送
-				sendMap := bson.M{
-					"time":           nowTimeString,
-					"type":           dataMappingType,
-					"status":         data.Status,
-					"processed":      data.Processed,
-					"desc":           data.Desc,
-					"level":          data.Level,
-					"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
-					"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
-					"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
-					"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
-					"tagInfo":        tools.FormatDataInfoList(data.Fields),
-					//"fields":         fieldsMap,
-					"isWarning": true,
-				}
-				fieldsInSendMap := map[string]interface{}{}
-				for _, fieldsMap := range data.Fields {
-					for k, v := range fieldsMap {
-						//sendMap[k] = v
-						fieldsInSendMap[k] = v
-					}
-				}
-				sendMap["fields"] = fieldsInSendMap
-
-				b, err := json.Marshal(sendMap)
-				if err != nil {
-					continue
-				}
-				err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
-				if err != nil {
-					logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
-				} else {
-					logger.Debugf(eventAlarmLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
-				}
-				hasExecute = true
-			case "department":
-				if actionList, ok := settings["action"].([]interface{}); ok {
-					actionStringList := tools.InterfaceListToStringList(actionList)
-					for _, action := range actionStringList {
-						if action == actionType {
-							hasValidAction = true
-							break
-						}
-					}
-				}
-				if !hasValidAction {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-				hasValidWarn := false
-				deptIDInDataList, err := tools.ObjectIdListToStringList(data.Department)
-				if departmentList, ok := settings["department"].([]interface{}); ok {
-				deptLoop:
-					for _, dept := range departmentList {
-						if deptMap, ok := dept.(map[string]interface{}); ok {
-							if deptID, ok := deptMap["id"].(string); ok {
-								for _, deptIDInData := range deptIDInDataList {
-									if deptIDInData == deptID {
-										hasValidWarn = true
-										break deptLoop
+					if departmentList, ok := settings["department"].([]interface{}); ok {
+					deptLoop:
+						for _, dept := range departmentList {
+							if deptMap, ok := dept.(map[string]interface{}); ok {
+								if deptID, ok := deptMap["id"].(string); ok {
+									for _, deptIDInData := range deptIDInDataList {
+										if deptIDInData == deptID {
+											hasValidWarn = true
+											break deptLoop
+										}
 									}
 								}
 							}
 						}
 					}
-				}
-				if !hasValidWarn {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-
-				//生成发送消息
-				departmentStringIDList := make([]string, 0)
-				//var departmentObjectList primitive.A
-				if departmentIDList, ok := nodeInfo["department"].([]interface{}); ok {
-					departmentStringIDList = tools.InterfaceListToStringList(departmentIDList)
-				} else {
-					logger.Warnf(eventAlarmLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
-				}
-
-				deptInfoList := make([]map[string]interface{}, 0)
-				if len(departmentStringIDList) != 0 {
-					deptInfoList, err = clogic.DeptLogic.FindLocalCacheList(departmentStringIDList)
-					if err != nil {
-						return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
+					if !hasValidWarn {
+						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+						continue eventloop
 					}
-				}
-				dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
-				if err != nil {
-					logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
-					continue
-				}
-				//生成报警对象并发送
-				sendMap := bson.M{
-					"time":           nowTimeString,
-					"type":           dataMappingType,
-					"status":         data.Status,
-					"processed":      data.Processed,
-					"desc":           data.Desc,
-					"level":          data.Level,
-					"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
-					"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
-					"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
-					"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
-					"tagInfo":        tools.FormatDataInfoList(data.Fields),
-					//"fields":         fieldsMap,
-					"isWarning": true,
-				}
-				fieldsInSendMap := map[string]interface{}{}
-				for _, fieldsMap := range data.Fields {
-					for k, v := range fieldsMap {
-						//sendMap[k] = v
-						fieldsInSendMap[k] = v
-					}
-				}
-				sendMap["fields"] = fieldsInSendMap
-
-				b, err := json.Marshal(sendMap)
-				if err != nil {
-					continue
-				}
-				err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
-				if err != nil {
-					logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
-				} else {
-					logger.Debugf(eventAlarmLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
-				}
-				hasExecute = true
-			case "modelNode":
-				if actionList, ok := settings["action"].([]interface{}); ok {
-					actionStringList := tools.InterfaceListToStringList(actionList)
-					for _, action := range actionStringList {
-						if action == actionType {
-							hasValidAction = true
-							break
+				case "modelNode":
+					hasValidWarn := false
+					//判断该事件是否指定了特定报警规则
+					if ruleList, ok := settings["rule"].([]interface{}); ok {
+						for _, rule := range ruleList {
+							if ruleMap, ok := rule.(map[string]interface{}); ok {
+								if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
+									if data.RuleID == ruleIDInSettings {
+										hasValidWarn = true
+										break
+									}
+								}
+							}
 						}
-					}
-				}
-				if !hasValidAction {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-				hasValidWarn := false
-				//判断该事件是否指定了特定报警规则
-				if ruleList, ok := settings["rule"].([]interface{}); ok {
-					for _, rule := range ruleList {
-						if ruleMap, ok := rule.(map[string]interface{}); ok {
-							if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
-								if data.RuleID == ruleIDInSettings {
-									hasValidWarn = true
-									break
+					} else if nodeList, ok := settings["node"].([]interface{}); ok {
+						for _, node := range nodeList {
+							if nodeMap, ok := node.(map[string]interface{}); ok {
+								if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
+									if nodeID == nodeIDInSettings {
+										hasValidWarn = true
+										break
+									}
+								}
+							}
+						}
+					} else if modelList, ok := settings["model"].([]interface{}); ok {
+						for _, model := range modelList {
+							if modelMap, ok := model.(map[string]interface{}); ok {
+								if modelIDInSettings, ok := modelMap["id"].(string); ok {
+									if modelID == modelIDInSettings {
+										hasValidWarn = true
+										break
+									}
 								}
 							}
 						}
 					}
-				} else if nodeList, ok := settings["node"].([]interface{}); ok {
-					for _, node := range nodeList {
-						if nodeMap, ok := node.(map[string]interface{}); ok {
-							if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
-								if nodeID == nodeIDInSettings {
-									hasValidWarn = true
-									break
-								}
-							}
-						}
-					}
-				} else if modelList, ok := settings["model"].([]interface{}); ok {
-					for _, model := range modelList {
-						if modelMap, ok := model.(map[string]interface{}); ok {
-							if modelIDInSettings, ok := modelMap["id"].(string); ok {
-								if modelID == modelIDInSettings {
-									hasValidWarn = true
-									break
-								}
-							}
-						}
+					if !hasValidWarn {
+						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+						continue eventloop
 					}
 				}
-				if !hasValidWarn {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-
-				//生成发送消息
-				departmentStringIDList := make([]string, 0)
-				//var departmentObjectList primitive.A
-				if departmentIDList, ok := nodeInfo["department"].([]interface{}); ok {
-					departmentStringIDList = tools.InterfaceListToStringList(departmentIDList)
-				} else {
-					logger.Warnf(eventAlarmLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
-				}
-
-				deptInfoList := make([]map[string]interface{}, 0)
-				if len(departmentStringIDList) != 0 {
-					deptInfoList, err = clogic.DeptLogic.FindLocalCacheList(departmentStringIDList)
-					if err != nil {
-						return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
-					}
-				}
-				dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
-				if err != nil {
-					logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
-					continue
-				}
-				//生成报警对象并发送
-				sendMap := bson.M{
-					"time":           nowTimeString,
-					"type":           dataMappingType,
-					"status":         data.Status,
-					"processed":      data.Processed,
-					"desc":           data.Desc,
-					"level":          data.Level,
-					"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
-					"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
-					"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
-					"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
-					"tagInfo":        tools.FormatDataInfoList(data.Fields),
-					//"fields":         fieldsMap,
-					"isWarning": true,
-				}
-				fieldsInSendMap := map[string]interface{}{}
-				for _, fieldsMap := range data.Fields {
-					for k, v := range fieldsMap {
-						//sendMap[k] = v
-						fieldsInSendMap[k] = v
-					}
-				}
-				sendMap["fields"] = fieldsInSendMap
-
-				b, err := json.Marshal(sendMap)
-				if err != nil {
-					continue
-				}
-				err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
-				if err != nil {
-					logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
-				} else {
-					logger.Debugf(eventAlarmLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
-				}
-				hasExecute = true
 			}
+
+			//生成发送消息
+			departmentStringIDList := make([]string, 0)
+			//var departmentObjectList primitive.A
+			if departmentIDList, ok := nodeInfo["department"].([]interface{}); ok {
+				departmentStringIDList = tools.InterfaceListToStringList(departmentIDList)
+			} else {
+				logger.Warnf(eventAlarmLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
+			}
+
+			deptInfoList := make([]map[string]interface{}, 0)
+			if len(departmentStringIDList) != 0 {
+				deptInfoList, err = clogic.DeptLogic.FindLocalCacheList(departmentStringIDList)
+				if err != nil {
+					return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
+				}
+			}
+			dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
+			if err != nil {
+				logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
+				continue
+			}
+			//生成报警对象并发送
+			sendMap := bson.M{
+				"time":           nowTimeString,
+				"type":           dataMappingType,
+				"status":         data.Status,
+				"processed":      data.Processed,
+				"desc":           data.Desc,
+				"level":          data.Level,
+				"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
+				"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
+				"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
+				"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
+				"tagInfo":        tools.FormatDataInfoList(data.Fields),
+				//"fields":         fieldsMap,
+				"isWarning": true,
+			}
+			fieldsInSendMap := map[string]interface{}{}
+			for _, fieldsMap := range data.Fields {
+				for k, v := range fieldsMap {
+					//sendMap[k] = v
+					fieldsInSendMap[k] = v
+				}
+			}
+			sendMap["fields"] = fieldsInSendMap
+
+			b, err := json.Marshal(sendMap)
+			if err != nil {
+				continue
+			}
+			err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
+			if err != nil {
+				logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
+			} else {
+				logger.Debugf(eventAlarmLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
+			}
+			hasExecute = true
 		}
 
 		//对只能执行一次的事件进行失效
@@ -560,6 +354,7 @@ func TriggerWarningDisableModelRules(data cmodel.WarningMessage, actionType stri
 	}
 
 	//logger.Debugf(eventAlarmLog, "开始遍历事件列表")
+eventloop:
 	for _, eventInfo := range *eventInfoList {
 		logger.Debugf(eventAlarmLog, "事件信息为:%+v", eventInfo)
 		if eventInfo.Handlers == nil || len(eventInfo.Handlers) == 0 {
@@ -620,317 +415,154 @@ func TriggerWarningDisableModelRules(data cmodel.WarningMessage, actionType stri
 		hasExecute := false
 		hasValidAction := false
 
-		if rangeType, ok := settings["eventRange"].(string); ok {
-			switch rangeType {
-			case "warnType":
-				if actionList, ok := settings["action"].([]interface{}); ok {
-					actionStringList := tools.InterfaceListToStringList(actionList)
-					for _, action := range actionStringList {
-						if action == actionType {
-							hasValidAction = true
-							break
-						}
+		if rangeTypeRawList, ok := settings["eventRange"].([]interface{}); ok {
+			rangeTypeList := tools.InterfaceListToStringList(rangeTypeRawList)
+			if actionList, ok := settings["action"].([]interface{}); ok {
+				actionStringList := tools.InterfaceListToStringList(actionList)
+				for _, action := range actionStringList {
+					if action == actionType {
+						hasValidAction = true
+						break
 					}
 				}
-				if !hasValidAction {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-				hasValidType := false
-				if warnTypeList, ok := settings["type"].([]interface{}); ok {
-					warnTypeStringList := tools.InterfaceListToStringList(warnTypeList)
-					for _, warnType := range warnTypeStringList {
-						if warnType == data.Type {
-							hasValidType = true
-							break
+			}
+			if !hasValidAction {
+				//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+				continue
+			}
+
+			for _, rangeType := range rangeTypeList {
+				switch rangeType {
+				case "warnType":
+					hasValidType := false
+					if warnTypeList, ok := settings["warnType"].([]interface{}); ok {
+						warnTypeStringList := tools.InterfaceListToStringList(warnTypeList)
+						for _, warnType := range warnTypeStringList {
+							if warnType == data.Type {
+								hasValidType = true
+								break
+							}
 						}
 					}
-				}
-				if !hasValidType {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-
-				//生成发送消息
-
-				dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
-				if err != nil {
-					logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的报警类型中文失败:%s", modelID, err.Error()))
-					continue
-				}
-				//生成报警对象并发送
-				sendMap := bson.M{
-					"time":           nowTimeString,
-					"type":           dataMappingType,
-					//"status":         data.Status,
-					//"processed":      data.Processed,
-					"desc":           data.Desc,
-					"level":          data.Level,
-					//"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
-					"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
-					//"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
-					//"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
-					//"tagInfo":        tools.FormatDataInfoList(data.Fields),
-					//"fields":         fieldsMap,
-					//"isWarning": true,
-				}
-				//fieldsInSendMap := map[string]interface{}{}
-				//for _, fieldsMap := range data.Fields {
-				//	for k, v := range fieldsMap {
-				//		//sendMap[k] = v
-				//		fieldsInSendMap[k] = v
-				//	}
-				//}
-				//sendMap["fields"] = fieldsInSendMap
-
-				b, err := json.Marshal(sendMap)
-				if err != nil {
-					continue
-				}
-				err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
-				if err != nil {
-					logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
-				} else {
-					logger.Debugf(eventAlarmLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
-				}
-				hasExecute = true
-			case "warnLevel":
-				if actionList, ok := settings["action"].([]interface{}); ok {
-					actionStringList := tools.InterfaceListToStringList(actionList)
-					for _, action := range actionStringList {
-						if action == actionType {
-							hasValidAction = true
-							break
+					if !hasValidType {
+						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+						continue eventloop
+					}
+				case "warnLevel":
+					hasValidLevel := false
+					if warnLevelList, ok := settings["level"].([]interface{}); ok {
+						warnLevelStringList := tools.InterfaceListToStringList(warnLevelList)
+						for _, warnLevel := range warnLevelStringList {
+							if warnLevel == data.Level {
+								hasValidLevel = true
+								break
+							}
 						}
 					}
-				}
-				if !hasValidAction {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-				hasValidLevel := false
-				if warnLevelList, ok := settings["level"].([]interface{}); ok {
-					warnLevelStringList := tools.InterfaceListToStringList(warnLevelList)
-					for _, warnLevel := range warnLevelStringList {
-						if warnLevel == data.Level {
-							hasValidLevel = true
-							break
-						}
+					if !hasValidLevel {
+						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+						continue eventloop
 					}
-				}
-				if !hasValidLevel {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-
-				//生成发送消息
-
-				dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
-				if err != nil {
-					logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的报警类型中文失败:%s", modelID, err.Error()))
-					continue
-				}
-				//生成报警对象并发送
-				sendMap := bson.M{
-					"time":           nowTimeString,
-					"type":           dataMappingType,
-					//"status":         data.Status,
-					//"processed":      data.Processed,
-					"desc":           data.Desc,
-					"level":          data.Level,
-					//"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
-					"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
-					//"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
-					//"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
-					//"tagInfo":        tools.FormatDataInfoList(data.Fields),
-					//"fields":         fieldsMap,
-					//"isWarning": true,
-				}
-				//fieldsInSendMap := map[string]interface{}{}
-				//for _, fieldsMap := range data.Fields {
-				//	for k, v := range fieldsMap {
-				//		//sendMap[k] = v
-				//		fieldsInSendMap[k] = v
-				//	}
-				//}
-				//sendMap["fields"] = fieldsInSendMap
-
-				b, err := json.Marshal(sendMap)
-				if err != nil {
-					continue
-				}
-				err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
-				if err != nil {
-					logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
-				} else {
-					logger.Debugf(eventAlarmLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
-				}
-				hasExecute = true
-			case "department":
-				if actionList, ok := settings["action"].([]interface{}); ok {
-					actionStringList := tools.InterfaceListToStringList(actionList)
-					for _, action := range actionStringList {
-						if action == actionType {
-							hasValidAction = true
-							break
-						}
-					}
-				}
-				if !hasValidAction {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-				hasValidWarn := false
-				deptIDInDataList, err := tools.ObjectIdListToStringList(data.Department)
-				if departmentList, ok := settings["department"].([]interface{}); ok {
-				deptLoop:
-					for _, dept := range departmentList {
-						if deptMap, ok := dept.(map[string]interface{}); ok {
-							if deptID, ok := deptMap["id"].(string); ok {
-								for _, deptIDInData := range deptIDInDataList {
-									if deptIDInData == deptID {
+				case "department":
+					//hasValidWarn := false
+					//deptIDInDataList, err := tools.ObjectIdListToStringList(data.Department)
+					//if err != nil {
+					//	return fmt.Errorf("当前资产(%s)所属部门ID数组转ObjectID数组失败:%s", nodeID, err.Error())
+					//}
+					//if departmentList, ok := settings["department"].([]interface{}); ok {
+					//deptLoop:
+					//	for _, dept := range departmentList {
+					//		if deptMap, ok := dept.(map[string]interface{}); ok {
+					//			if deptID, ok := deptMap["id"].(string); ok {
+					//				for _, deptIDInData := range deptIDInDataList {
+					//					if deptIDInData == deptID {
+					//						hasValidWarn = true
+					//						break deptLoop
+					//					}
+					//				}
+					//			}
+					//		}
+					//	}
+					//}
+					//if !hasValidWarn {
+					//	//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+					//	continue eventloop
+					//}
+				case "modelNode":
+					hasValidWarn := false
+					//判断该事件是否指定了特定报警规则
+					if ruleList, ok := settings["rule"].([]interface{}); ok {
+						for _, rule := range ruleList {
+							if ruleMap, ok := rule.(map[string]interface{}); ok {
+								if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
+									if data.RuleID == ruleIDInSettings {
 										hasValidWarn = true
-										break deptLoop
+										break
+									}
+								}
+							}
+						}
+					} else if modelList, ok := settings["model"].([]interface{}); ok {
+						for _, model := range modelList {
+							if modelMap, ok := model.(map[string]interface{}); ok {
+								if modelIDInSettings, ok := modelMap["id"].(string); ok {
+									if modelID == modelIDInSettings {
+										hasValidWarn = true
+										break
 									}
 								}
 							}
 						}
 					}
-				}
-				if !hasValidWarn {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-
-				//生成发送消息
-				dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
-				if err != nil {
-					logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的报警类型中文失败:%s", modelID, err.Error()))
-					continue
-				}
-				//生成报警对象并发送
-				sendMap := bson.M{
-					"time":           nowTimeString,
-					"type":           dataMappingType,
-					//"status":         data.Status,
-					//"processed":      data.Processed,
-					"desc":           data.Desc,
-					"level":          data.Level,
-					//"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
-					"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
-					//"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
-					//"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
-					//"tagInfo":        tools.FormatDataInfoList(data.Fields),
-					//"fields":         fieldsMap,
-					//"isWarning": true,
-				}
-				//fieldsInSendMap := map[string]interface{}{}
-				//for _, fieldsMap := range data.Fields {
-				//	for k, v := range fieldsMap {
-				//		//sendMap[k] = v
-				//		fieldsInSendMap[k] = v
-				//	}
-				//}
-				//sendMap["fields"] = fieldsInSendMap
-
-				b, err := json.Marshal(sendMap)
-				if err != nil {
-					continue
-				}
-				err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
-				if err != nil {
-					logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
-				} else {
-					logger.Debugf(eventAlarmLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
-				}
-				hasExecute = true
-			case "modelNode":
-				if actionList, ok := settings["action"].([]interface{}); ok {
-					actionStringList := tools.InterfaceListToStringList(actionList)
-					for _, action := range actionStringList {
-						if action == actionType {
-							hasValidAction = true
-							break
-						}
+					if !hasValidWarn {
+						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+						continue eventloop
 					}
 				}
-				if !hasValidAction {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-				hasValidWarn := false
-				//判断该事件是否指定了特定报警规则
-				if ruleList, ok := settings["rule"].([]interface{}); ok {
-					for _, rule := range ruleList {
-						if ruleMap, ok := rule.(map[string]interface{}); ok {
-							if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
-								if data.RuleID == ruleIDInSettings {
-									hasValidWarn = true
-									break
-								}
-							}
-						}
-					}
-				} else if modelList, ok := settings["model"].([]interface{}); ok {
-					for _, model := range modelList {
-						if modelMap, ok := model.(map[string]interface{}); ok {
-							if modelIDInSettings, ok := modelMap["id"].(string); ok {
-								if modelID == modelIDInSettings {
-									hasValidWarn = true
-									break
-								}
-							}
-						}
-					}
-				}
-				if !hasValidWarn {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-
-				//生成发送消息
-				dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
-				if err != nil {
-					logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的报警类型中文失败:%s", modelID, err.Error()))
-					continue
-				}
-				//生成报警对象并发送
-				sendMap := bson.M{
-					"time":           nowTimeString,
-					"type":           dataMappingType,
-					//"status":         data.Status,
-					//"processed":      data.Processed,
-					"desc":           data.Desc,
-					"level":          data.Level,
-					//"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
-					"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
-					//"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
-					//"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
-					//"tagInfo":        tools.FormatDataInfoList(data.Fields),
-					//"fields":         fieldsMap,
-					//"isWarning": true,
-				}
-				//fieldsInSendMap := map[string]interface{}{}
-				//for _, fieldsMap := range data.Fields {
-				//	for k, v := range fieldsMap {
-				//		//sendMap[k] = v
-				//		fieldsInSendMap[k] = v
-				//	}
-				//}
-				//sendMap["fields"] = fieldsInSendMap
-
-				b, err := json.Marshal(sendMap)
-				if err != nil {
-					continue
-				}
-				err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
-				if err != nil {
-					logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
-				} else {
-					logger.Debugf(eventAlarmLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
-				}
-				hasExecute = true
 			}
+
+			//生成发送消息
+			dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
+			if err != nil {
+				logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的报警类型中文失败:%s", modelID, err.Error()))
+				continue
+			}
+			//生成报警对象并发送
+			sendMap := bson.M{
+				"time": nowTimeString,
+				"type": dataMappingType,
+				//"status":         data.Status,
+				//"processed":      data.Processed,
+				"desc":  data.Desc,
+				"level": data.Level,
+				//"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
+				"modelName": tools.FormatKeyInfo(modelInfo, "name"),
+				//"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
+				//"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
+				//"tagInfo":        tools.FormatDataInfoList(data.Fields),
+				//"fields":         fieldsMap,
+				//"isWarning": true,
+			}
+			//fieldsInSendMap := map[string]interface{}{}
+			//for _, fieldsMap := range data.Fields {
+			//	for k, v := range fieldsMap {
+			//		//sendMap[k] = v
+			//		fieldsInSendMap[k] = v
+			//	}
+			//}
+			//sendMap["fields"] = fieldsInSendMap
+
+			b, err := json.Marshal(sendMap)
+			if err != nil {
+				continue
+			}
+			err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
+			if err != nil {
+				logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
+			} else {
+				logger.Debugf(eventAlarmLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
+			}
+			hasExecute = true
 		}
 
 		//对只能执行一次的事件进行失效
@@ -997,6 +629,7 @@ func TriggerWarningDisableNodeRules(data cmodel.WarningMessage, actionType strin
 	}
 
 	//logger.Debugf(eventAlarmLog, "开始遍历事件列表")
+eventloop:
 	for _, eventInfo := range *eventInfoList {
 		logger.Debugf(eventAlarmLog, "事件信息为:%+v", eventInfo)
 		if eventInfo.Handlers == nil || len(eventInfo.Handlers) == 0 {
@@ -1057,387 +690,180 @@ func TriggerWarningDisableNodeRules(data cmodel.WarningMessage, actionType strin
 		hasExecute := false
 		hasValidAction := false
 
-		if rangeType, ok := settings["eventRange"].(string); ok {
-			switch rangeType {
-			case "warnType":
-				if actionList, ok := settings["action"].([]interface{}); ok {
-					actionStringList := tools.InterfaceListToStringList(actionList)
-					for _, action := range actionStringList {
-						if action == actionType {
-							hasValidAction = true
-							break
-						}
+		if rangeTypeRawList, ok := settings["eventRange"].([]interface{}); ok {
+			rangeTypeList := tools.InterfaceListToStringList(rangeTypeRawList)
+			if actionList, ok := settings["action"].([]interface{}); ok {
+				actionStringList := tools.InterfaceListToStringList(actionList)
+				for _, action := range actionStringList {
+					if action == actionType {
+						hasValidAction = true
+						break
 					}
 				}
-				if !hasValidAction {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-				hasValidType := false
-				if warnTypeList, ok := settings["type"].([]interface{}); ok {
-					warnTypeStringList := tools.InterfaceListToStringList(warnTypeList)
-					for _, warnType := range warnTypeStringList {
-						if warnType == data.Type {
-							hasValidType = true
-							break
+			}
+			if !hasValidAction {
+				//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+				continue
+			}
+
+			for _, rangeType := range rangeTypeList {
+				switch rangeType {
+				case "warnType":
+					hasValidType := false
+					if warnTypeList, ok := settings["warnType"].([]interface{}); ok {
+						warnTypeStringList := tools.InterfaceListToStringList(warnTypeList)
+						for _, warnType := range warnTypeStringList {
+							if warnType == data.Type {
+								hasValidType = true
+								break
+							}
 						}
 					}
-				}
-				if !hasValidType {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-
-				//生成发送消息
-				departmentStringIDList := make([]string, 0)
-				//var departmentObjectList primitive.A
-				if departmentIDList, ok := nodeInfo["department"].([]interface{}); ok {
-					departmentStringIDList = tools.InterfaceListToStringList(departmentIDList)
-				} else {
-					logger.Warnf(eventAlarmLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
-				}
-
-				deptInfoList := make([]map[string]interface{}, 0)
-				if len(departmentStringIDList) != 0 {
-					deptInfoList, err = clogic.DeptLogic.FindLocalCacheList(departmentStringIDList)
+					if !hasValidType {
+						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+						continue eventloop
+					}
+				case "warnLevel":
+					hasValidLevel := false
+					if warnLevelList, ok := settings["level"].([]interface{}); ok {
+						warnLevelStringList := tools.InterfaceListToStringList(warnLevelList)
+						for _, warnLevel := range warnLevelStringList {
+							if warnLevel == data.Level {
+								hasValidLevel = true
+								break
+							}
+						}
+					}
+					if !hasValidLevel {
+						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+						continue eventloop
+					}
+				case "department":
+					hasValidWarn := false
+					deptIDInDataList, err := tools.ObjectIdListToStringList(data.Department)
 					if err != nil {
-						return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
+						return fmt.Errorf("当前资产(%s)所属部门ID数组转ObjectID数组失败:%s", nodeID, err.Error())
 					}
-				}
-				dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
-				if err != nil {
-					logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
-					continue
-				}
-				//生成报警对象并发送
-				sendMap := bson.M{
-					"time":           nowTimeString,
-					"type":           dataMappingType,
-					//"status":         data.Status,
-					//"processed":      data.Processed,
-					"desc":           data.Desc,
-					"level":          data.Level,
-					"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
-					"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
-					"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
-					"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
-					//"tagInfo":        tools.FormatDataInfoList(data.Fields),
-					////"fields":         fieldsMap,
-					//"isWarning": true,
-				}
-				//fieldsInSendMap := map[string]interface{}{}
-				//for _, fieldsMap := range data.Fields {
-				//	for k, v := range fieldsMap {
-				//		//sendMap[k] = v
-				//		fieldsInSendMap[k] = v
-				//	}
-				//}
-				//sendMap["fields"] = fieldsInSendMap
-
-				b, err := json.Marshal(sendMap)
-				if err != nil {
-					continue
-				}
-				err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
-				if err != nil {
-					logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
-				} else {
-					logger.Debugf(eventAlarmLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
-				}
-				hasExecute = true
-			case "warnLevel":
-				if actionList, ok := settings["action"].([]interface{}); ok {
-					actionStringList := tools.InterfaceListToStringList(actionList)
-					for _, action := range actionStringList {
-						if action == actionType {
-							hasValidAction = true
-							break
-						}
-					}
-				}
-				if !hasValidAction {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-				hasValidLevel := false
-				if warnLevelList, ok := settings["level"].([]interface{}); ok {
-					warnLevelStringList := tools.InterfaceListToStringList(warnLevelList)
-					for _, warnLevel := range warnLevelStringList {
-						if warnLevel == data.Level {
-							hasValidLevel = true
-							break
-						}
-					}
-				}
-				if !hasValidLevel {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-
-				//生成发送消息
-				departmentStringIDList := make([]string, 0)
-				//var departmentObjectList primitive.A
-				if departmentIDList, ok := nodeInfo["department"].([]interface{}); ok {
-					departmentStringIDList = tools.InterfaceListToStringList(departmentIDList)
-				} else {
-					logger.Warnf(eventAlarmLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
-				}
-
-				deptInfoList := make([]map[string]interface{}, 0)
-				if len(departmentStringIDList) != 0 {
-					deptInfoList, err = clogic.DeptLogic.FindLocalCacheList(departmentStringIDList)
-					if err != nil {
-						return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
-					}
-				}
-
-				dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
-				if err != nil {
-					logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
-					continue
-				}
-				//生成报警对象并发送
-				sendMap := bson.M{
-					"time":           nowTimeString,
-					"type":           dataMappingType,
-					//"status":         data.Status,
-					//"processed":      data.Processed,
-					"desc":           data.Desc,
-					"level":          data.Level,
-					"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
-					"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
-					"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
-					"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
-					//"tagInfo":        tools.FormatDataInfoList(data.Fields),
-					////"fields":         fieldsMap,
-					//"isWarning": true,
-				}
-				//fieldsInSendMap := map[string]interface{}{}
-				//for _, fieldsMap := range data.Fields {
-				//	for k, v := range fieldsMap {
-				//		//sendMap[k] = v
-				//		fieldsInSendMap[k] = v
-				//	}
-				//}
-				//sendMap["fields"] = fieldsInSendMap
-
-				b, err := json.Marshal(sendMap)
-				if err != nil {
-					continue
-				}
-				err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
-				if err != nil {
-					logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
-				} else {
-					logger.Debugf(eventAlarmLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
-				}
-				hasExecute = true
-			case "department":
-				if actionList, ok := settings["action"].([]interface{}); ok {
-					actionStringList := tools.InterfaceListToStringList(actionList)
-					for _, action := range actionStringList {
-						if action == actionType {
-							hasValidAction = true
-							break
-						}
-					}
-				}
-				if !hasValidAction {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-				hasValidWarn := false
-				deptIDInDataList, err := tools.ObjectIdListToStringList(data.Department)
-				if departmentList, ok := settings["department"].([]interface{}); ok {
-				deptLoop:
-					for _, dept := range departmentList {
-						if deptMap, ok := dept.(map[string]interface{}); ok {
-							if deptID, ok := deptMap["id"].(string); ok {
-								for _, deptIDInData := range deptIDInDataList {
-									if deptIDInData == deptID {
-										hasValidWarn = true
-										break deptLoop
+					if departmentList, ok := settings["department"].([]interface{}); ok {
+					deptLoop:
+						for _, dept := range departmentList {
+							if deptMap, ok := dept.(map[string]interface{}); ok {
+								if deptID, ok := deptMap["id"].(string); ok {
+									for _, deptIDInData := range deptIDInDataList {
+										if deptIDInData == deptID {
+											hasValidWarn = true
+											break deptLoop
+										}
 									}
 								}
 							}
 						}
 					}
-				}
-				if !hasValidWarn {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-
-				//生成发送消息
-				departmentStringIDList := make([]string, 0)
-				//var departmentObjectList primitive.A
-				if departmentIDList, ok := nodeInfo["department"].([]interface{}); ok {
-					departmentStringIDList = tools.InterfaceListToStringList(departmentIDList)
-				} else {
-					logger.Warnf(eventAlarmLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
-				}
-
-				deptInfoList := make([]map[string]interface{}, 0)
-				if len(departmentStringIDList) != 0 {
-					deptInfoList, err = clogic.DeptLogic.FindLocalCacheList(departmentStringIDList)
-					if err != nil {
-						return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
+					if !hasValidWarn {
+						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+						continue eventloop
 					}
-				}
-				dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
-				if err != nil {
-					logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
-					continue
-				}
-				//生成报警对象并发送
-				sendMap := bson.M{
-					"time":           nowTimeString,
-					"type":           dataMappingType,
-					//"status":         data.Status,
-					//"processed":      data.Processed,
-					"desc":           data.Desc,
-					"level":          data.Level,
-					"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
-					"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
-					"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
-					"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
-					//"tagInfo":        tools.FormatDataInfoList(data.Fields),
-					////"fields":         fieldsMap,
-					//"isWarning": true,
-				}
-				//fieldsInSendMap := map[string]interface{}{}
-				//for _, fieldsMap := range data.Fields {
-				//	for k, v := range fieldsMap {
-				//		//sendMap[k] = v
-				//		fieldsInSendMap[k] = v
-				//	}
-				//}
-				//sendMap["fields"] = fieldsInSendMap
-
-				b, err := json.Marshal(sendMap)
-				if err != nil {
-					continue
-				}
-				err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
-				if err != nil {
-					logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
-				} else {
-					logger.Debugf(eventAlarmLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
-				}
-				hasExecute = true
-			case "modelNode":
-				if actionList, ok := settings["action"].([]interface{}); ok {
-					actionStringList := tools.InterfaceListToStringList(actionList)
-					for _, action := range actionStringList {
-						if action == actionType {
-							hasValidAction = true
-							break
+				case "modelNode":
+					hasValidWarn := false
+					//判断该事件是否指定了特定报警规则
+					if ruleList, ok := settings["rule"].([]interface{}); ok {
+						for _, rule := range ruleList {
+							if ruleMap, ok := rule.(map[string]interface{}); ok {
+								if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
+									if data.RuleID == ruleIDInSettings {
+										hasValidWarn = true
+										break
+									}
+								}
+							}
 						}
-					}
-				}
-				if !hasValidAction {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-				hasValidWarn := false
-				//判断该事件是否指定了特定报警规则
-				if ruleList, ok := settings["rule"].([]interface{}); ok {
-					for _, rule := range ruleList {
-						if ruleMap, ok := rule.(map[string]interface{}); ok {
-							if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
-								if data.RuleID == ruleIDInSettings {
-									hasValidWarn = true
-									break
+					} else if nodeList, ok := settings["node"].([]interface{}); ok {
+						for _, node := range nodeList {
+							if nodeMap, ok := node.(map[string]interface{}); ok {
+								if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
+									if nodeID == nodeIDInSettings {
+										hasValidWarn = true
+										break
+									}
+								}
+							}
+						}
+					} else if modelList, ok := settings["model"].([]interface{}); ok {
+						for _, model := range modelList {
+							if modelMap, ok := model.(map[string]interface{}); ok {
+								if modelIDInSettings, ok := modelMap["id"].(string); ok {
+									if modelID == modelIDInSettings {
+										hasValidWarn = true
+										break
+									}
 								}
 							}
 						}
 					}
-				} else if nodeList, ok := settings["node"].([]interface{}); ok {
-					for _, node := range nodeList {
-						if nodeMap, ok := node.(map[string]interface{}); ok {
-							if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
-								if nodeID == nodeIDInSettings {
-									hasValidWarn = true
-									break
-								}
-							}
-						}
-					}
-				} else if modelList, ok := settings["model"].([]interface{}); ok {
-					for _, model := range modelList {
-						if modelMap, ok := model.(map[string]interface{}); ok {
-							if modelIDInSettings, ok := modelMap["id"].(string); ok {
-								if modelID == modelIDInSettings {
-									hasValidWarn = true
-									break
-								}
-							}
-						}
+					if !hasValidWarn {
+						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+						continue eventloop
 					}
 				}
-				if !hasValidWarn {
-					//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-					continue
-				}
-
-				//生成发送消息
-				departmentStringIDList := make([]string, 0)
-				//var departmentObjectList primitive.A
-				if departmentIDList, ok := nodeInfo["department"].([]interface{}); ok {
-					departmentStringIDList = tools.InterfaceListToStringList(departmentIDList)
-				} else {
-					logger.Warnf(eventAlarmLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
-				}
-
-				deptInfoList := make([]map[string]interface{}, 0)
-				if len(departmentStringIDList) != 0 {
-					deptInfoList, err = clogic.DeptLogic.FindLocalCacheList(departmentStringIDList)
-					if err != nil {
-						return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
-					}
-				}
-				dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
-				if err != nil {
-					logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
-					continue
-				}
-				//生成报警对象并发送
-				sendMap := bson.M{
-					"time":           nowTimeString,
-					"type":           dataMappingType,
-					//"status":         data.Status,
-					//"processed":      data.Processed,
-					"desc":           data.Desc,
-					"level":          data.Level,
-					"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
-					"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
-					"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
-					"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
-					//"tagInfo":        tools.FormatDataInfoList(data.Fields),
-					////"fields":         fieldsMap,
-					//"isWarning": true,
-				}
-				//fieldsInSendMap := map[string]interface{}{}
-				//for _, fieldsMap := range data.Fields {
-				//	for k, v := range fieldsMap {
-				//		//sendMap[k] = v
-				//		fieldsInSendMap[k] = v
-				//	}
-				//}
-				//sendMap["fields"] = fieldsInSendMap
-
-				b, err := json.Marshal(sendMap)
-				if err != nil {
-					continue
-				}
-				err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
-				if err != nil {
-					logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
-				} else {
-					logger.Debugf(eventAlarmLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
-				}
-				hasExecute = true
 			}
+
+			//生成发送消息
+			departmentStringIDList := make([]string, 0)
+			//var departmentObjectList primitive.A
+			if departmentIDList, ok := nodeInfo["department"].([]interface{}); ok {
+				departmentStringIDList = tools.InterfaceListToStringList(departmentIDList)
+			} else {
+				logger.Warnf(eventAlarmLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
+			}
+
+			deptInfoList := make([]map[string]interface{}, 0)
+			if len(departmentStringIDList) != 0 {
+				deptInfoList, err = clogic.DeptLogic.FindLocalCacheList(departmentStringIDList)
+				if err != nil {
+					return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
+				}
+			}
+			dataMappingType, err := clogic.SettingLogic.FindLocalWarnTypeMapCache(data.Type)
+			if err != nil {
+				logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
+				continue
+			}
+			//生成报警对象并发送
+			sendMap := bson.M{
+				"time": nowTimeString,
+				"type": dataMappingType,
+				//"status":         data.Status,
+				//"processed":      data.Processed,
+				"desc":           data.Desc,
+				"level":          data.Level,
+				"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
+				"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
+				"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
+				"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
+				//"tagInfo":        tools.FormatDataInfoList(data.Fields),
+				////"fields":         fieldsMap,
+				//"isWarning": true,
+			}
+			//fieldsInSendMap := map[string]interface{}{}
+			//for _, fieldsMap := range data.Fields {
+			//	for k, v := range fieldsMap {
+			//		//sendMap[k] = v
+			//		fieldsInSendMap[k] = v
+			//	}
+			//}
+			//sendMap["fields"] = fieldsInSendMap
+
+			b, err := json.Marshal(sendMap)
+			if err != nil {
+				continue
+			}
+			err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
+			if err != nil {
+				logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
+			} else {
+				logger.Debugf(eventAlarmLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
+			}
+			hasExecute = true
 		}
 
 		//对只能执行一次的事件进行失效
