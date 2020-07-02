@@ -11,13 +11,13 @@ import (
 
 	"github.com/go-redis/redis"
 	_ "github.com/influxdata/influxdb1-client" // this is important because of the bug in go mod
-	client "github.com/influxdata/influxdb1-client/v2"
+	"github.com/influxdata/influxdb1-client/v2"
 	"github.com/zhgqiang/jsonpath"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	
+
 	"github.com/air-iot/service/model"
 )
 
@@ -2032,6 +2032,32 @@ func (p *APIView) InfluxResultConvertMap(results []client.Result) (map[string]in
 	for _, v := range results {
 		if v.Err == "" {
 			r := map[string]interface{}{}
+
+			for _, row := range v.Series {
+				timeIndex := 0
+				hasTime := false
+				for i, col := range row.Columns {
+					if col == "time" {
+						timeIndex = i
+						hasTime = true
+						break
+					}
+				}
+				if hasTime {
+					for _, list := range row.Values {
+						for j, ele := range list {
+							if j == timeIndex {
+								if _, ok := ele.(string); !ok {
+									if timeInt, ok := ele.(int64); ok {
+										queryTime := time.Unix(0, int64(timeInt)*int64(time.Millisecond))
+										list[j] = queryTime.Format("2006-01-02T15:04:05.000+08:00")
+									}
+								}
+							}
+						}
+					}
+				}
+			}
 			r["series"] = v.Series
 			newResults = append(newResults, r)
 		} else {
@@ -2042,6 +2068,10 @@ func (p *APIView) InfluxResultConvertMap(results []client.Result) (map[string]in
 	newResultMap["results"] = newResults
 
 	return newResultMap, nil
+
+}
+
+func ChangeTimeIntToString() {
 
 }
 
