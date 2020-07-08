@@ -58,13 +58,15 @@ func (p *userLogic) FindLocalMapCacheList(userIDs []string) (result map[string]*
 	return result, nil
 }
 
-func (p *userLogic) FindLocalDeptUserCacheList(ids []string) (result *[]model.User, err error) {
+func (p *userLogic) FindLocalDeptUserCacheList(ids []string) (*[]model.User, error) {
+	result := make([]model.User,0)
 	for _, id := range ids {
 		a, b := p.userDeptUserCache.Load(id)
 		if b {
 			a1, ok := a.([]model.User)
 			if ok {
-				return &a1, nil
+				result = append(result,a1...)
+				//return &a1, nil
 			} else {
 				return nil, errors.New("结构不正确")
 			}
@@ -73,16 +75,18 @@ func (p *userLogic) FindLocalDeptUserCacheList(ids []string) (result *[]model.Us
 			//return nil, errors.New("未查询到相关数据")
 		}
 	}
-	return result, nil
+	return &result, nil
 }
 
-func (p *userLogic) FindLocalRoleUserCacheList(ids []string) (result *[]model.User, err error) {
+func (p *userLogic) FindLocalRoleUserCacheList(ids []string) (*[]model.User, error) {
+	result := make([]model.User,0)
 	for _, id := range ids {
 		a, b := p.userRoleUserCache.Load(id)
 		if b {
 			a1, ok := a.([]model.User)
 			if ok {
-				return &a1, nil
+				result = append(result,a1...)
+				//return &a1, nil
 			} else {
 				return nil, errors.New("结构不正确")
 			}
@@ -91,7 +95,7 @@ func (p *userLogic) FindLocalRoleUserCacheList(ids []string) (result *[]model.Us
 			//return nil, errors.New("未查询到相关数据")
 		}
 	}
-	return result, nil
+	return &result, nil
 }
 
 func (p *userLogic) FindBsonMByPipeline(pipeLine mongo.Pipeline) (result []bson.M, err error) {
