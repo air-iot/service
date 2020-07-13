@@ -43,15 +43,23 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 	if settings, ok := data["settings"].(map[string]interface{}); ok {
 		if scheduleType, ok := settings["type"].(string); ok {
 			if scheduleType == "once" {
-				//if endTime, ok := settings["endTime"].(time.Time); ok {
-				//	if tools.GetLocalTimeNow(time.Now()).Unix() >= endTime.Unix() {
-				//		logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务结束事件已到，不再执行", eventID)
-				//		return nil
-				//	}
-				//}
-			}
-			if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
-				cronExpression = tools.GetCronExpression(scheduleType, startTime)
+				if startTime, ok := settings["startTime"].(string); ok {
+					formatStartTime, err := tools.ConvertStringToTime("2006-01-02 15:04:05", startTime, time.Local)
+					if err != nil {
+						//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
+						formatStartTime, err = tools.ConvertStringToTime("2006-01-02T15:04:05+08:00", startTime, time.Local)
+						if err != nil {
+							logger.Errorf(eventScheduleLog, "时间范围字段值格式错误:%s", err.Error())
+							return fmt.Errorf("时间范围字段值格式错误:%s", err.Error())
+						}
+						//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+					}
+					cronExpression = tools.GetCronExpressionOnce(scheduleType, formatStartTime)
+				}
+			}else{
+				if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
+					cronExpression = tools.GetCronExpression(scheduleType, startTime)
+				}
 			}
 		}
 		if endTime, ok := settings["endTime"].(time.Time); ok {
@@ -78,6 +86,22 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 								logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
 								return
 							}
+						}
+					}else if startTime, ok := settings["startTime"].(string); ok {
+						formatStartTime, err := tools.ConvertStringToTime("2006-01-02 15:04:05", startTime, time.Local)
+						if err != nil {
+							//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
+							formatStartTime, err = tools.ConvertStringToTime("2006-01-02T15:04:05+08:00", startTime, time.Local)
+							if err != nil {
+								logger.Errorf(eventScheduleLog, "时间范围字段值格式错误:%s", err.Error())
+								return
+							}
+							//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+						}
+						yearString := tools.InterfaceTypeToString(formatStartTime.Year())
+						if time.Now().Format("2006") != yearString {
+							logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
+							return
 						}
 					}
 				}
@@ -186,15 +210,23 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 				cronExpression := ""
 				if scheduleType, ok := settings["type"].(string); ok {
 					if scheduleType == "once" {
-						//if endTime, ok := settings["endTime"].(time.Time); ok {
-						//	if tools.GetLocalTimeNow(time.Now()).Unix() >= endTime.Unix() {
-						//		logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务结束事件已到，不再执行", eventID)
-						//		return nil
-						//	}
-						//}
-					}
-					if startTime, ok := settings["startTime"].(primitive.M); ok {
-						cronExpression = tools.GetCronExpression(scheduleType, startTime)
+						if startTime, ok := settings["startTime"].(string); ok {
+							formatStartTime, err := tools.ConvertStringToTime("2006-01-02 15:04:05", startTime, time.Local)
+							if err != nil {
+								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
+								formatStartTime, err = tools.ConvertStringToTime("2006-01-02T15:04:05+08:00", startTime, time.Local)
+								if err != nil {
+									logger.Errorf(eventScheduleLog, "时间范围字段值格式错误:%s", err.Error())
+									return fmt.Errorf("时间范围字段值格式错误:%s", err.Error())
+								}
+								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+							}
+							cronExpression = tools.GetCronExpressionOnce(scheduleType, formatStartTime)
+						}
+					}else{
+						if startTime, ok := settings["startTime"].(primitive.M); ok {
+							cronExpression = tools.GetCronExpression(scheduleType, startTime)
+						}
 					}
 				}
 				if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
@@ -221,6 +253,22 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 											logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
 											return
 										}
+									}
+								}else if startTime, ok := settings["startTime"].(string); ok {
+									formatStartTime, err := tools.ConvertStringToTime("2006-01-02 15:04:05", startTime, time.Local)
+									if err != nil {
+										//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
+										formatStartTime, err = tools.ConvertStringToTime("2006-01-02T15:04:05+08:00", startTime, time.Local)
+										if err != nil {
+											logger.Errorf(eventScheduleLog, "时间范围字段值格式错误:%s", err.Error())
+											return
+										}
+										//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+									}
+									yearString := tools.InterfaceTypeToString(formatStartTime.Year())
+									if time.Now().Format("2006") != yearString {
+										logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
+										return
 									}
 								}
 							}

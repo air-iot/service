@@ -1,5 +1,7 @@
 package tools
 
+import "time"
+
 func GetCronExpression(scheduleType string, data map[string]interface{}) string {
 	cronExpression := ""
 	switch scheduleType {
@@ -109,5 +111,31 @@ func GetCronExpression(scheduleType string, data map[string]interface{}) string 
 		cronExpression = secondString + " " + minuteString + " " + hourString + " " + dayString + " " + monthString + " ?"
 	default:
 	}
+	return cronExpression
+}
+
+func GetCronExpressionOnce(scheduleType string, data *time.Time) string {
+	cronExpression := ""
+	monthString := InterfaceTypeToString(int(data.Month()))
+	if monthString == "" {
+		monthString = "1"
+	}
+	dayString := InterfaceTypeToString(data.Day())
+	if dayString == "" {
+		dayString = "1"
+	}
+	minuteString := InterfaceTypeToString(data.Minute())
+	if minuteString == "" {
+		minuteString = "0"
+	}
+	secondString := InterfaceTypeToString(data.Second())
+	if secondString == "" {
+		secondString = "0"
+	}
+	hourString := InterfaceTypeToString(data.Hour())
+	if hourString == "" {
+		hourString = "0"
+	}
+	cronExpression = secondString + " " + minuteString + " " + hourString + " " + dayString + " " + monthString + " ?"
 	return cronExpression
 }
