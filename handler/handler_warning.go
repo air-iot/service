@@ -97,22 +97,42 @@ eventloop:
 				if rangeDefine, ok = settings["range"].(string); ok {
 					if rangeDefine != "once" {
 						//判断有效期
-						if startTime, ok := settings["startTime"].(time.Time); ok {
-							if tools.GetLocalTimeNow(time.Now()).Unix() < startTime.Unix() {
-								logger.Debugf(eventAlarmLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
+						if startTime, ok := settings["startTime"].(string); ok {
+							formatStartTime, err := tools.ConvertStringToTime("2006-01-02 15:04:05", startTime, time.Local)
+							if err != nil {
+								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
+								formatStartTime, err = tools.ConvertStringToTime("2006-01-02T15:04:05+08:00", startTime, time.Local)
+								if err != nil {
+									logger.Errorf(eventScheduleLog, "时间范围字段值格式错误:%s", err.Error())
+									return fmt.Errorf("时间范围字段值格式错误:%s", err.Error())
+								}
+								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+							}
+							if tools.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
+								logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
 								continue
 							}
 						}
 
-						if endTime, ok := settings["endTime"].(time.Time); ok {
-							if tools.GetLocalTimeNow(time.Now()).Unix() >= endTime.Unix() {
-								logger.Debugf(eventAlarmLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
+						if endTime, ok := settings["endTime"].(string); ok {
+							formatEndTime, err := tools.ConvertStringToTime("2006-01-02 15:04:05", endTime, time.Local)
+							if err != nil {
+								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
+								formatEndTime, err = tools.ConvertStringToTime("2006-01-02T15:04:05+08:00", endTime, time.Local)
+								if err != nil {
+									logger.Errorf(eventScheduleLog, "时间范围字段值格式错误:%s", err.Error())
+									return fmt.Errorf("时间范围字段值格式错误:%s", err.Error())
+								}
+								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+							}
+							if tools.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
+								logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
 								//修改事件为失效
 								updateMap := bson.M{"invalid": true}
 								_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 								if err != nil {
-									logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
-									return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
+									logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
+									continue
 								}
 								continue
 							}
@@ -388,22 +408,42 @@ eventloop:
 				if rangeDefine, ok = settings["range"].(string); ok {
 					if rangeDefine != "once" {
 						//判断有效期
-						if startTime, ok := settings["startTime"].(time.Time); ok {
-							if tools.GetLocalTimeNow(time.Now()).Unix() < startTime.Unix() {
-								logger.Debugf(eventAlarmLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
+						if startTime, ok := settings["startTime"].(string); ok {
+							formatStartTime, err := tools.ConvertStringToTime("2006-01-02 15:04:05", startTime, time.Local)
+							if err != nil {
+								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
+								formatStartTime, err = tools.ConvertStringToTime("2006-01-02T15:04:05+08:00", startTime, time.Local)
+								if err != nil {
+									logger.Errorf(eventScheduleLog, "时间范围字段值格式错误:%s", err.Error())
+									return fmt.Errorf("时间范围字段值格式错误:%s", err.Error())
+								}
+								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+							}
+							if tools.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
+								logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
 								continue
 							}
 						}
 
-						if endTime, ok := settings["endTime"].(time.Time); ok {
-							if tools.GetLocalTimeNow(time.Now()).Unix() >= endTime.Unix() {
-								logger.Debugf(eventAlarmLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
+						if endTime, ok := settings["endTime"].(string); ok {
+							formatEndTime, err := tools.ConvertStringToTime("2006-01-02 15:04:05", endTime, time.Local)
+							if err != nil {
+								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
+								formatEndTime, err = tools.ConvertStringToTime("2006-01-02T15:04:05+08:00", endTime, time.Local)
+								if err != nil {
+									logger.Errorf(eventScheduleLog, "时间范围字段值格式错误:%s", err.Error())
+									return fmt.Errorf("时间范围字段值格式错误:%s", err.Error())
+								}
+								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+							}
+							if tools.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
+								logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
 								//修改事件为失效
 								updateMap := bson.M{"invalid": true}
 								_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 								if err != nil {
-									logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
-									return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
+									logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
+									continue
 								}
 								continue
 							}
@@ -664,22 +704,42 @@ eventloop:
 				if rangeDefine, ok = settings["range"].(string); ok {
 					if rangeDefine != "once" {
 						//判断有效期
-						if startTime, ok := settings["startTime"].(time.Time); ok {
-							if tools.GetLocalTimeNow(time.Now()).Unix() < startTime.Unix() {
-								logger.Debugf(eventAlarmLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
+						if startTime, ok := settings["startTime"].(string); ok {
+							formatStartTime, err := tools.ConvertStringToTime("2006-01-02 15:04:05", startTime, time.Local)
+							if err != nil {
+								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
+								formatStartTime, err = tools.ConvertStringToTime("2006-01-02T15:04:05+08:00", startTime, time.Local)
+								if err != nil {
+									logger.Errorf(eventScheduleLog, "时间范围字段值格式错误:%s", err.Error())
+									return fmt.Errorf("时间范围字段值格式错误:%s", err.Error())
+								}
+								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+							}
+							if tools.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
+								logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
 								continue
 							}
 						}
 
-						if endTime, ok := settings["endTime"].(time.Time); ok {
-							if tools.GetLocalTimeNow(time.Now()).Unix() >= endTime.Unix() {
-								logger.Debugf(eventAlarmLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
+						if endTime, ok := settings["endTime"].(string); ok {
+							formatEndTime, err := tools.ConvertStringToTime("2006-01-02 15:04:05", endTime, time.Local)
+							if err != nil {
+								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
+								formatEndTime, err = tools.ConvertStringToTime("2006-01-02T15:04:05+08:00", endTime, time.Local)
+								if err != nil {
+									logger.Errorf(eventScheduleLog, "时间范围字段值格式错误:%s", err.Error())
+									return fmt.Errorf("时间范围字段值格式错误:%s", err.Error())
+								}
+								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+							}
+							if tools.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
+								logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
 								//修改事件为失效
 								updateMap := bson.M{"invalid": true}
 								_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 								if err != nil {
-									logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
-									return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
+									logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
+									continue
 								}
 								continue
 							}
