@@ -114,6 +114,7 @@ eventloop:
 									logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 									return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
 								}
+								continue
 							}
 						}
 					}
@@ -404,6 +405,7 @@ eventloop:
 									logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 									return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
 								}
+								continue
 							}
 						}
 					}
@@ -679,6 +681,7 @@ eventloop:
 									logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 									return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
 								}
+								continue
 							}
 						}
 					}

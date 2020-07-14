@@ -279,6 +279,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 											logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
 											return fmt.Errorf("失效事件(%s)失败:%s", eventID.Hex(), err.Error())
 										}
+										continue
 									}
 								}
 							}
@@ -776,6 +777,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 											logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
 											continue
 										}
+										continue
 									}
 								}
 							}

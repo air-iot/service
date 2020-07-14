@@ -95,6 +95,7 @@ func TriggerLogin(data map[string]interface{}) error {
 									logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
 									continue
 								}
+								continue
 							}
 						}
 					}
