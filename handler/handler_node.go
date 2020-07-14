@@ -240,7 +240,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 				//判断是否已经失效
 				if invalid, ok := eventInfo["invalid"].(bool); ok {
 					if invalid {
-						logger.Warnln(eventComputeLogicLog, "事件(%s)已经失效", eventID.Hex())
+						logger.Warnln(eventDeviceModifyLog, "事件(%s)已经失效", eventID.Hex())
 						continue
 					}
 				}
@@ -248,7 +248,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 				//判断禁用
 				if disable, ok := settings["disable"].(bool); ok {
 					if disable {
-						logger.Warnln(eventComputeLogicLog, "事件(%s)已经被禁用", eventID.Hex())
+						logger.Warnln(eventDeviceModifyLog, "事件(%s)已经被禁用", eventID.Hex())
 						continue
 					}
 				}
@@ -263,7 +263,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 								if startTime, ok := settings["startTime"].(primitive.DateTime); ok {
 									startTimeInt := int64(startTime / 1e3)
 									if tools.GetLocalTimeNow(time.Now()).Unix() < startTimeInt {
-										logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务开始时间未到，不执行", eventID.Hex())
+										logger.Debugf(eventDeviceModifyLog, "事件(%s)的定时任务开始时间未到，不执行", eventID.Hex())
 										continue
 									}
 								}
@@ -271,13 +271,13 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 								if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
 									endTimeInt := int64(endTime / 1e3)
 									if tools.GetLocalTimeNow(time.Now()).Unix() >= endTimeInt {
-										logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务结束时间已到，不执行", eventID.Hex())
+										logger.Debugf(eventDeviceModifyLog, "事件(%s)的定时任务结束时间已到，不执行", eventID.Hex())
 										//修改事件为失效
 										updateMap := bson.M{"invalid": true}
 										_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
 										if err != nil {
-											logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
-											return fmt.Errorf("失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+											logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+											continue
 										}
 										continue
 									}
@@ -298,7 +298,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 				//		}
 				//	}
 				//	if !isValidModifyProp {
-				//		logger.Warnln(eventComputeLogicLog, "事件(%s)修改属性不是触发事件需要的:%+v", eventID.Hex(), operateDataMap)
+				//		logger.Warnln(eventDeviceModifyLog, "事件(%s)修改属性不是触发事件需要的:%+v", eventID.Hex(), operateDataMap)
 				//		continue
 				//	}
 				//}
@@ -434,7 +434,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 						}
 
 					default:
-						logger.Errorf(eventComputeLogicLog, "事件(%s)的事件范围字段值(%s)未匹配到", eventID.Hex(), rangType)
+						logger.Errorf(eventDeviceModifyLog, "事件(%s)的事件范围字段值(%s)未匹配到", eventID.Hex(), rangType)
 						continue
 					}
 				}
@@ -442,7 +442,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 					nodeInfo := bson.M{}
 					nodeInfo, err = logic.NodeLogic.FindLocalMapCache(nodeID)
 					if err != nil {
-						logger.Errorf(eventComputeLogicLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), nodeID)
+						logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), nodeID)
 						nodeInfo = bson.M{}
 						continue
 					}
@@ -450,7 +450,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 					departmentStringIDList, err := tools.ObjectIdListToStringList(departmentObjectIDList)
 					departmentMList, err := logic.DeptLogic.FindLocalCacheList(departmentStringIDList)
 					if err != nil {
-						logger.Errorf(eventComputeLogicLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
+						logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
 						continue
 					}
 
@@ -458,7 +458,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 
 					modelEle, err := logic.ModelLogic.FindLocalMapCache(modelID)
 					if err != nil {
-						logger.Errorf(eventComputeLogicLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
+						logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
 						continue
 					}
 
@@ -477,7 +477,8 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 					case "编辑资产画面", "删除资产画面":
 						dashboardInfo, ok := data["dashboard"].(map[string]interface{})
 						if !ok {
-							return fmt.Errorf("数据消息中dashboard字段不存在或类型错误")
+							logger.Errorf(eventDeviceModifyLog,"数据消息中dashboard字段不存在或类型错误")
+							continue
 						}
 						data["dashboardName"] = tools.FormatKeyInfo(dashboardInfo, "name")
 					}
@@ -500,13 +501,13 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 				//对只能执行一次的事件进行失效
 				if validTime == "timeLimit" {
 					if rangeDefine == "once" && hasExecute {
-						logger.Warnln(eventComputeLogicLog, "事件(%s)为只执行一次的事件", eventID.Hex())
+						logger.Warnln(eventDeviceModifyLog, "事件(%s)为只执行一次的事件", eventID.Hex())
 						//修改事件为失效
 						updateMap := bson.M{"invalid": true}
 						_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
 						if err != nil {
-							logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
-							return fmt.Errorf("失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+							logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+							continue
 						}
 					}
 				}
@@ -637,7 +638,8 @@ func TriggerModelModify(data map[string]interface{}) error {
 	eventInfoList := make([]bson.M, 0)
 	err = restfulapi.FindPipeline(ctx, idb.Database.Collection("event"), &eventInfoList, pipeline, nil)
 	if err != nil {
-		return fmt.Errorf("获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
+		 logger.Errorf(eventDeviceModifyLog,"获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
+		 return  fmt.Errorf("获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
 	}
 
 	//logger.Debugf(eventDeviceModifyLog, "开始遍历事件列表")
@@ -688,11 +690,11 @@ func TriggerModelModify(data map[string]interface{}) error {
 		//nodeInfoList := make([]bson.M, 0)
 		//err = restfulapi.FindPipeline(ctx, idb.Database.Collection("node"), &nodeInfoList, pipeline, nil)
 		//if err != nil {
-		//	return fmt.Errorf("获取当前资产(%s)的详情失败:%s", nodeID, err.Error())
+		//	 fmt.Errorf("获取当前资产(%s)的详情失败:%s", nodeID, err.Error())
 		//}
 		//
 		//if len(nodeInfoList) == 0 {
-		//	return fmt.Errorf("当前查询的资产(%s)不存在", nodeID)
+		//	 fmt.Errorf("当前查询的资产(%s)不存在", nodeID)
 		//}
 		//
 		//nodeInfo := nodeInfoList[0]
@@ -738,7 +740,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 				//判断是否已经失效
 				if invalid, ok := eventInfo["invalid"].(bool); ok {
 					if invalid {
-						logger.Warnln(eventComputeLogicLog, "事件(%s)已经失效", eventID.Hex())
+						logger.Warnln(eventDeviceModifyLog, "事件(%s)已经失效", eventID.Hex())
 						continue
 					}
 				}
@@ -746,7 +748,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 				//判断禁用
 				if disable, ok := settings["disable"].(bool); ok {
 					if disable {
-						logger.Warnln(eventComputeLogicLog, "事件(%s)已经被禁用", eventID.Hex())
+						logger.Warnln(eventDeviceModifyLog, "事件(%s)已经被禁用", eventID.Hex())
 						continue
 					}
 				}
@@ -761,7 +763,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 								if startTime, ok := settings["startTime"].(primitive.DateTime); ok {
 									startTimeInt := int64(startTime / 1e3)
 									if tools.GetLocalTimeNow(time.Now()).Unix() < startTimeInt {
-										logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务开始时间未到，不执行", eventID.Hex())
+										logger.Debugf(eventDeviceModifyLog, "事件(%s)的定时任务开始时间未到，不执行", eventID.Hex())
 										continue
 									}
 								}
@@ -769,12 +771,12 @@ func TriggerModelModify(data map[string]interface{}) error {
 								if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
 									endTimeInt := int64(endTime / 1e3)
 									if tools.GetLocalTimeNow(time.Now()).Unix() >= endTimeInt {
-										logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务结束时间已到，不执行", eventID.Hex())
+										logger.Debugf(eventDeviceModifyLog, "事件(%s)的定时任务结束时间已到，不执行", eventID.Hex())
 										//修改事件为失效
 										updateMap := bson.M{"invalid": true}
 										_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
 										if err != nil {
-											logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+											logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
 											continue
 										}
 										continue
@@ -817,7 +819,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 							}
 						}
 					default:
-						logger.Errorf(eventComputeLogicLog, "事件(%s)的事件范围字段值(%s)未匹配到", eventID.Hex(), rangType)
+						logger.Errorf(eventDeviceModifyLog, "事件(%s)的事件范围字段值(%s)未匹配到", eventID.Hex(), rangType)
 						continue
 					}
 				}
@@ -825,7 +827,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 					departmentStringIDList, err := tools.ObjectIdListToStringList(departmentObjectIDList)
 					departmentMList, err := logic.DeptLogic.FindLocalCacheList(departmentStringIDList)
 					if err != nil {
-						logger.Errorf(eventComputeLogicLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
+						logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
 						continue
 					}
 
@@ -833,7 +835,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 
 					modelEle, err := logic.ModelLogic.FindLocalMapCache(modelID)
 					if err != nil {
-						logger.Errorf(eventComputeLogicLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
+						logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
 						continue
 					}
 
@@ -850,7 +852,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 					case "编辑模型画面", "新增模型画面","删除模型画面":
 						dashboardInfo, ok := data["dashboard"].(map[string]interface{})
 						if !ok {
-							return fmt.Errorf("数据消息中dashboard字段不存在或类型错误")
+							 fmt.Errorf("数据消息中dashboard字段不存在或类型错误")
 						}
 						data["dashboardName"] = tools.FormatKeyInfo(dashboardInfo, "name")
 					}
@@ -873,12 +875,12 @@ func TriggerModelModify(data map[string]interface{}) error {
 				//对只能执行一次的事件进行失效
 				if validTime == "timeLimit" {
 					if rangeDefine == "once" && hasExecute {
-						logger.Warnln(eventComputeLogicLog, "事件(%s)为只执行一次的事件", eventID.Hex())
+						logger.Warnln(eventDeviceModifyLog, "事件(%s)为只执行一次的事件", eventID.Hex())
 						//修改事件为失效
 						updateMap := bson.M{"invalid": true}
 						_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
 						if err != nil {
-							logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+							logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
 							continue
 						}
 					}

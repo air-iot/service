@@ -117,8 +117,8 @@ func TriggerComputed(data cmodel.DataMessage) error {
 								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
 								formatStartTime, err = tools.ConvertStringToTime("2006-01-02T15:04:05+08:00", startTime, time.Local)
 								if err != nil {
-									logger.Errorf(eventScheduleLog, "时间范围字段值格式错误:%s", err.Error())
-									return fmt.Errorf("时间范围字段值格式错误:%s", err.Error())
+									logger.Errorf(eventComputeLogicLog, "时间范围字段值格式错误:%s", err.Error())
+									continue
 								}
 								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
 							}
@@ -134,8 +134,8 @@ func TriggerComputed(data cmodel.DataMessage) error {
 								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
 								formatEndTime, err = tools.ConvertStringToTime("2006-01-02T15:04:05+08:00", endTime, time.Local)
 								if err != nil {
-									logger.Errorf(eventScheduleLog, "时间范围字段值格式错误:%s", err.Error())
-									return fmt.Errorf("时间范围字段值格式错误:%s", err.Error())
+									logger.Errorf(eventComputeLogicLog, "时间范围字段值格式错误:%s", err.Error())
+									continue
 								}
 								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
 							}

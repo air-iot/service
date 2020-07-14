@@ -70,14 +70,14 @@ func Trigger(eventType EventType, data map[string]interface{}) error {
 		//判断是否已经失效
 		invalid := eventInfo.Invalid
 		if invalid {
-			logger.Warnln(eventComputeLogicLog, "事件(%s)已经失效", eventID)
+			logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
 			continue
 		}
 
 		//判断禁用
 		if disable, ok := settings["disable"].(bool); ok {
 			if disable {
-				logger.Warnln(eventComputeLogicLog, "事件(%s)已经被禁用", eventID)
+				logger.Warnln(eventLog, "事件(%s)已经被禁用", eventID)
 				continue
 			}
 		}
@@ -95,13 +95,13 @@ func Trigger(eventType EventType, data map[string]interface{}) error {
 								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
 								formatStartTime, err = tools.ConvertStringToTime("2006-01-02T15:04:05+08:00", startTime, time.Local)
 								if err != nil {
-									logger.Errorf(eventScheduleLog, "时间范围字段值格式错误:%s", err.Error())
-									return fmt.Errorf("时间范围字段值格式错误:%s", err.Error())
+									logger.Errorf(eventLog, "时间范围字段值格式错误:%s", err.Error())
+									continue
 								}
 								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
 							}
 							if tools.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
-								logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
+								logger.Debugf(eventLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
 								continue
 							}
 						}
@@ -112,18 +112,18 @@ func Trigger(eventType EventType, data map[string]interface{}) error {
 								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
 								formatEndTime, err = tools.ConvertStringToTime("2006-01-02T15:04:05+08:00", endTime, time.Local)
 								if err != nil {
-									logger.Errorf(eventScheduleLog, "时间范围字段值格式错误:%s", err.Error())
-									return fmt.Errorf("时间范围字段值格式错误:%s", err.Error())
+									logger.Errorf(eventLog, "时间范围字段值格式错误:%s", err.Error())
+									continue
 								}
 								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
 							}
 							if tools.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
-								logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
+								logger.Debugf(eventLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
 								//修改事件为失效
 								updateMap := bson.M{"invalid": true}
 								_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 								if err != nil {
-									logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
+									logger.Errorf(eventLog, "失效事件(%s)失败:%s", eventID, err.Error())
 									continue
 								}
 								continue
@@ -133,7 +133,6 @@ func Trigger(eventType EventType, data map[string]interface{}) error {
 				}
 			}
 		}
-
 		//判断事件是否已经触发
 		hasExecute := false
 
@@ -154,12 +153,12 @@ func Trigger(eventType EventType, data map[string]interface{}) error {
 		//对只能执行一次的事件进行失效
 		if validTime == "timeLimit" {
 			if rangeDefine == "once" && hasExecute {
-				logger.Warnln(eventComputeLogicLog, "事件(%s)为只执行一次的事件", eventID)
+				logger.Warnln(eventLog, "事件(%s)为只执行一次的事件", eventID)
 				//修改事件为失效
 				updateMap := bson.M{"invalid": true}
 				_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 				if err != nil {
-					logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
+					logger.Errorf(eventLog, "失效事件(%s)失败:%s", eventID, err.Error())
 					continue
 				}
 			}
