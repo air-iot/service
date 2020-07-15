@@ -128,7 +128,7 @@ func init() {
 
 	viper.SetDefault("cache.enable", true)
 
-	viper.SetDefault("auth.k3s", false)
+	viper.SetDefault("auth.middleware", false)
 
 	viper.SetConfigType("env")
 	viper.AutomaticEnv()
@@ -212,7 +212,7 @@ func NewApp() App {
 		AllowHeaders:  []string{"Authorization", echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
 	}))
 	e.Use(mw.Recover())
-	if viper.GetBool("auth.k3s") {
+	if viper.GetBool("auth.middleware") {
 		e.Use(imw.AuthFilter())
 	}
 	e.HTTPErrorHandler = restfulapi.HTTPErrorHandler
