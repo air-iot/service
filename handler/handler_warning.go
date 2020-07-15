@@ -298,6 +298,7 @@ eventloop:
 				"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
 				"tagInfo":        tools.FormatDataInfoList(data.Fields),
 				//"fields":         fieldsMap,
+				"userName":  data.HandleUserName,
 				"isWarning": true,
 			}
 			fieldsInSendMap := map[string]interface{}{}
@@ -579,6 +580,7 @@ eventloop:
 				"level": data.Level,
 				//"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
 				"modelName": tools.FormatKeyInfo(modelInfo, "name"),
+				"userName":  data.HandleUserName,
 				//"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
 				//"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
 				//"tagInfo":        tools.FormatDataInfoList(data.Fields),
@@ -805,7 +807,7 @@ eventloop:
 					hasValidWarn := false
 					deptIDInDataList, err := tools.ObjectIdListToStringList(data.Department)
 					if err != nil {
-						logger.Debugf(eventAlarmLog,"当前资产(%s)所属部门ID数组转ObjectID数组失败:%s", nodeID, err.Error())
+						logger.Debugf(eventAlarmLog, "当前资产(%s)所属部门ID数组转ObjectID数组失败:%s", nodeID, err.Error())
 						continue
 					}
 					if departmentList, ok := settings["department"].([]interface{}); ok {
@@ -884,7 +886,7 @@ eventloop:
 			if len(departmentStringIDList) != 0 {
 				deptInfoList, err = clogic.DeptLogic.FindLocalCacheList(departmentStringIDList)
 				if err != nil {
-					logger.Errorf(eventAlarmLog,"获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
+					logger.Errorf(eventAlarmLog, "获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
 					continue
 				}
 			}
@@ -905,6 +907,7 @@ eventloop:
 				"modelName":      tools.FormatKeyInfo(modelInfo, "name"),
 				"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
 				"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
+				"userName":       data.HandleUserName,
 				//"tagInfo":        tools.FormatDataInfoList(data.Fields),
 				////"fields":         fieldsMap,
 				//"isWarning": true,
