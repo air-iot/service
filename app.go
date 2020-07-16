@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/air-iot/service/db/taos"
 	"log"
 	"net"
 	"net/http"
@@ -24,17 +23,19 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/air-iot/service/consul"
-	"github.com/air-iot/service/tools"
 	"github.com/air-iot/service/db/influx"
 	"github.com/air-iot/service/db/mongo"
 	"github.com/air-iot/service/db/redis"
 	"github.com/air-iot/service/db/sql"
+	"github.com/air-iot/service/db/taos"
 	"github.com/air-iot/service/logger"
 	"github.com/air-iot/service/logic"
+	imw "github.com/air-iot/service/middleware"
 	"github.com/air-iot/service/mq/mqtt"
 	"github.com/air-iot/service/mq/rabbit"
 	"github.com/air-iot/service/mq/srv"
 	restfulapi "github.com/air-iot/service/restful-api"
+	"github.com/air-iot/service/tools"
 	"github.com/air-iot/service/traefik"
 )
 
@@ -127,6 +128,8 @@ func init() {
 
 	viper.SetDefault("cache.enable", true)
 
+	viper.SetDefault("auth.middleware", false)
+
 	viper.SetConfigType("env")
 	viper.AutomaticEnv()
 	viper.SetConfigType(*configSuffix)
@@ -209,6 +212,9 @@ func NewApp() App {
 		AllowHeaders:  []string{"Authorization", echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
 	}))
 	e.Use(mw.Recover())
+	if viper.GetBool("auth.middleware") {
+		e.Use(imw.AuthFilter())
+	}
 	e.HTTPErrorHandler = restfulapi.HTTPErrorHandler
 	e.GET("/check", func(c echo.Context) error {
 		return c.NoContent(http.StatusOK)
