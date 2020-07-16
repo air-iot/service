@@ -27,7 +27,7 @@ const (
 	Login        EventType = "用户登录"
 	Log          EventType = "日志事件"
 	ExecCmd      EventType = "执行指令"
-	DeviceModify EventType = "模型资产事件"
+	DeviceModify EventType = "资产修改"
 
 	//HandlerEmail     EventHandlerType = "email"
 	//HandlerWechat    EventHandlerType = "wechat"
