@@ -76,10 +76,11 @@ eventloop:
 		settings := eventInfo.Settings
 
 		//判断是否已经失效
-		invalid := eventInfo.Invalid
-		if invalid {
-			logger.Warnln(eventAlarmLog, "事件(%s)已经失效", eventID)
-			continue
+		if invalid, ok := settings["invalid"].(bool); ok{
+			if invalid {
+				logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
+				continue
+			}
 		}
 
 		//判断禁用
@@ -128,7 +129,7 @@ eventloop:
 							if tools.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
 								logger.Debugf(eventAlarmLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
 								//修改事件为失效
-								updateMap := bson.M{"invalid": true}
+								updateMap := bson.M{"settings.invalid": true}
 								_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 								if err != nil {
 									logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
@@ -328,7 +329,7 @@ eventloop:
 			if rangeDefine == "once" && hasExecute {
 				logger.Warnln(eventAlarmLog, "事件(%s)为只执行一次的事件", eventID)
 				//修改事件为失效
-				updateMap := bson.M{"invalid": true}
+				updateMap := bson.M{"settings.invalid": true}
 				_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 				if err != nil {
 					logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
@@ -388,10 +389,11 @@ eventloop:
 		settings := eventInfo.Settings
 
 		//判断是否已经失效
-		invalid := eventInfo.Invalid
-		if invalid {
-			logger.Warnln(eventAlarmLog, "事件(%s)已经失效", eventID)
-			continue
+		if invalid, ok := settings["invalid"].(bool); ok{
+			if invalid {
+				logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
+				continue
+			}
 		}
 
 		//判断禁用
@@ -440,7 +442,7 @@ eventloop:
 							if tools.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
 								logger.Debugf(eventAlarmLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
 								//修改事件为失效
-								updateMap := bson.M{"invalid": true}
+								updateMap := bson.M{"settings.invalid": true}
 								_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 								if err != nil {
 									logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
@@ -614,7 +616,7 @@ eventloop:
 			if rangeDefine == "once" && hasExecute {
 				logger.Warnln(eventAlarmLog, "事件(%s)为只执行一次的事件", eventID)
 				//修改事件为失效
-				updateMap := bson.M{"invalid": true}
+				updateMap := bson.M{"settings.invalid": true}
 				_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 				if err != nil {
 					logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
@@ -685,10 +687,11 @@ eventloop:
 		settings := eventInfo.Settings
 
 		//判断是否已经失效
-		invalid := eventInfo.Invalid
-		if invalid {
-			logger.Warnln(eventAlarmLog, "事件(%s)已经失效", eventID)
-			continue
+		if invalid, ok := settings["invalid"].(bool); ok{
+			if invalid {
+				logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
+				continue
+			}
 		}
 
 		//判断禁用
@@ -737,7 +740,7 @@ eventloop:
 							if tools.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
 								logger.Debugf(eventAlarmLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
 								//修改事件为失效
-								updateMap := bson.M{"invalid": true}
+								updateMap := bson.M{"settings.invalid": true}
 								_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 								if err != nil {
 									logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
@@ -939,7 +942,7 @@ eventloop:
 			if rangeDefine == "once" && hasExecute {
 				logger.Warnln(eventAlarmLog, "事件(%s)为只执行一次的事件", eventID)
 				//修改事件为失效
-				updateMap := bson.M{"invalid": true}
+				updateMap := bson.M{"settings.invalid": true}
 				_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 				if err != nil {
 					logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())

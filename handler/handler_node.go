@@ -238,9 +238,9 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 			if settings, ok := eventInfo["settings"].(primitive.M); ok {
 
 				//判断是否已经失效
-				if invalid, ok := eventInfo["invalid"].(bool); ok {
+				if invalid, ok := settings["invalid"].(bool); ok{
 					if invalid {
-						logger.Warnln(eventDeviceModifyLog, "事件(%s)已经失效", eventID.Hex())
+						logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
 						continue
 					}
 				}
@@ -273,7 +273,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 									if tools.GetLocalTimeNow(time.Now()).Unix() >= endTimeInt {
 										logger.Debugf(eventDeviceModifyLog, "事件(%s)的定时任务结束时间已到，不执行", eventID.Hex())
 										//修改事件为失效
-										updateMap := bson.M{"invalid": true}
+										updateMap := bson.M{"settings.invalid": true}
 										_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
 										if err != nil {
 											logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
@@ -503,7 +503,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 					if rangeDefine == "once" && hasExecute {
 						logger.Warnln(eventDeviceModifyLog, "事件(%s)为只执行一次的事件", eventID.Hex())
 						//修改事件为失效
-						updateMap := bson.M{"invalid": true}
+						updateMap := bson.M{"settings.invalid": true}
 						_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
 						if err != nil {
 							logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
@@ -738,9 +738,9 @@ func TriggerModelModify(data map[string]interface{}) error {
 			if settings, ok := eventInfo["settings"].(primitive.M); ok {
 
 				//判断是否已经失效
-				if invalid, ok := eventInfo["invalid"].(bool); ok {
+				if invalid, ok := settings["invalid"].(bool); ok{
 					if invalid {
-						logger.Warnln(eventDeviceModifyLog, "事件(%s)已经失效", eventID.Hex())
+						logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
 						continue
 					}
 				}
@@ -773,7 +773,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 									if tools.GetLocalTimeNow(time.Now()).Unix() >= endTimeInt {
 										logger.Debugf(eventDeviceModifyLog, "事件(%s)的定时任务结束时间已到，不执行", eventID.Hex())
 										//修改事件为失效
-										updateMap := bson.M{"invalid": true}
+										updateMap := bson.M{"settings.invalid": true}
 										_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
 										if err != nil {
 											logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
@@ -877,7 +877,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 					if rangeDefine == "once" && hasExecute {
 						logger.Warnln(eventDeviceModifyLog, "事件(%s)为只执行一次的事件", eventID.Hex())
 						//修改事件为失效
-						updateMap := bson.M{"invalid": true}
+						updateMap := bson.M{"settings.invalid": true}
 						_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
 						if err != nil {
 							logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
