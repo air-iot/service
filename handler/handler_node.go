@@ -94,7 +94,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 			Value: bson.M{
 				"type":          DeviceModify,
 				"settings.type": modifyTypeAfterMapping,
-				"settings.range":         "node",
+				"settings.eventRange":         "node",
 				//"$or":
 				//bson.A{
 				//	bson.D{{
@@ -593,7 +593,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 			Value: bson.M{
 				"type":          DeviceModify,
 				"settings.type": modifyTypeAfterMapping,
-				"settings.range":         "model",
+				"settings.eventRange":         "model",
 				//"$or":
 				//bson.A{
 				//	bson.D{{
