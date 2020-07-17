@@ -16,6 +16,7 @@ type Node struct {
 	Warning     Warning  `json:"warning"`
 	Offined     bool     `json:"offlined"`
 	TimeoutTime string   `json:"timeoutTime"`
+	Status      string   `json:"status"`
 }
 
 // NodeCommand
@@ -37,6 +38,7 @@ type NodeMongo struct {
 	Warning     WarningMongo         `json:"warning" bson:"warning"`
 	Offined     bool                 `json:"offlined" bson:"offlined"`
 	TimeoutTime interface{}          `json:"timeoutTime" bson:"timeoutTime"`
+	Status      string               `json:"status" bson:"status"`
 }
 
 type Warning struct {
