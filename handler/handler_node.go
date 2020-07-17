@@ -67,6 +67,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 		"资产删除":   "删除资产",
 		"编辑资产画面": "编辑资产画面",
 		"删除资产画面": "删除资产画面",
+		"新增资产画面": "新增资产画面",
 		//"编辑模型":   "编辑模型",
 		//"删除模型":   "删除模型",
 		//"编辑模型画面": "编辑模型画面",
@@ -92,9 +93,9 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 		bson.E{
 			Key: "$match",
 			Value: bson.M{
-				"type":          DeviceModify,
-				"settings.type": modifyTypeAfterMapping,
-				"settings.eventRange":         "node",
+				"type":                DeviceModify,
+				"settings.type":       modifyTypeAfterMapping,
+				"settings.eventRange": "node",
 				//"$or":
 				//bson.A{
 				//	bson.D{{
@@ -238,7 +239,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 			if settings, ok := eventInfo["settings"].(primitive.M); ok {
 
 				//判断是否已经失效
-				if invalid, ok := settings["invalid"].(bool); ok{
+				if invalid, ok := settings["invalid"].(bool); ok {
 					if invalid {
 						logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
 						continue
@@ -440,31 +441,34 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 				}
 				if isValid {
 					nodeInfo := bson.M{}
-					nodeInfo, err = logic.NodeLogic.FindLocalMapCache(nodeID)
-					if err != nil {
-						logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), nodeID)
-						nodeInfo = bson.M{}
-						continue
+					if initNode, ok := data["initNode"].(map[string]interface{}); ok {
+						nodeInfo = initNode
+					} else {
+						nodeInfo, err = logic.NodeLogic.FindLocalMapCache(nodeID)
+						if err != nil {
+							logger.Errorf(eventDeviceModifyLog, "事件(%s)的资产缓存(%+v)查询失败", eventID.Hex(), nodeID)
+							nodeInfo = bson.M{}
+							continue
+						}
 					}
 
 					departmentStringIDList, err := tools.ObjectIdListToStringList(departmentObjectIDList)
 					departmentMList, err := logic.DeptLogic.FindLocalCacheList(departmentStringIDList)
 					if err != nil {
 						logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
-						continue
+						departmentMList = make([]map[string]interface{}, 0)
 					}
 
 					data["departmentName"] = tools.FormatKeyInfoMapList(departmentMList, "name")
 
 					modelEle, err := logic.ModelLogic.FindLocalMapCache(modelID)
 					if err != nil {
-						logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
+						logger.Errorf(eventDeviceModifyLog, "事件(%s)的模型缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
 						continue
 					}
 
 					modelMList := make([]bson.M, 0)
 					modelMList = append(modelMList, modelEle)
-
 
 					data["modelName"] = tools.FormatKeyInfoList(modelMList, "name")
 					data["nodeName"] = tools.FormatKeyInfo(nodeInfo, "name")
@@ -477,7 +481,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 					case "编辑资产画面", "删除资产画面":
 						dashboardInfo, ok := data["dashboard"].(map[string]interface{})
 						if !ok {
-							logger.Errorf(eventDeviceModifyLog,"数据消息中dashboard字段不存在或类型错误")
+							logger.Errorf(eventDeviceModifyLog, "数据消息中dashboard字段不存在或类型错误")
 							continue
 						}
 						data["dashboardName"] = tools.FormatKeyInfo(dashboardInfo, "name")
@@ -591,9 +595,9 @@ func TriggerModelModify(data map[string]interface{}) error {
 		bson.E{
 			Key: "$match",
 			Value: bson.M{
-				"type":          DeviceModify,
-				"settings.type": modifyTypeAfterMapping,
-				"settings.eventRange":         "model",
+				"type":                DeviceModify,
+				"settings.type":       modifyTypeAfterMapping,
+				"settings.eventRange": "model",
 				//"$or":
 				//bson.A{
 				//	bson.D{{
@@ -638,8 +642,8 @@ func TriggerModelModify(data map[string]interface{}) error {
 	eventInfoList := make([]bson.M, 0)
 	err = restfulapi.FindPipeline(ctx, idb.Database.Collection("event"), &eventInfoList, pipeline, nil)
 	if err != nil {
-		 logger.Errorf(eventDeviceModifyLog,"获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
-		 return  fmt.Errorf("获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
+		logger.Errorf(eventDeviceModifyLog, "获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
+		return fmt.Errorf("获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
 	}
 
 	//logger.Debugf(eventDeviceModifyLog, "开始遍历事件列表")
@@ -738,7 +742,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 			if settings, ok := eventInfo["settings"].(primitive.M); ok {
 
 				//判断是否已经失效
-				if invalid, ok := settings["invalid"].(bool); ok{
+				if invalid, ok := settings["invalid"].(bool); ok {
 					if invalid {
 						logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
 						continue
@@ -828,14 +832,14 @@ func TriggerModelModify(data map[string]interface{}) error {
 					departmentMList, err := logic.DeptLogic.FindLocalCacheList(departmentStringIDList)
 					if err != nil {
 						logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
-						continue
+						departmentMList = make([]map[string]interface{}, 0)
 					}
 
 					data["departmentName"] = tools.FormatKeyInfoMapList(departmentMList, "name")
 
 					modelEle, err := logic.ModelLogic.FindLocalMapCache(modelID)
 					if err != nil {
-						logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
+						logger.Errorf(eventDeviceModifyLog, "事件(%s)的模型缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
 						continue
 					}
 
@@ -849,10 +853,10 @@ func TriggerModelModify(data map[string]interface{}) error {
 
 					data["content"] = content
 					switch modifyTypeAfterMapping {
-					case "编辑模型画面", "新增模型画面","删除模型画面":
+					case "编辑模型画面", "新增模型画面", "删除模型画面":
 						dashboardInfo, ok := data["dashboard"].(map[string]interface{})
 						if !ok {
-							 fmt.Errorf("数据消息中dashboard字段不存在或类型错误")
+							fmt.Errorf("数据消息中dashboard字段不存在或类型错误")
 						}
 						data["dashboardName"] = tools.FormatKeyInfo(dashboardInfo, "name")
 					}
