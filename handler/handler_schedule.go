@@ -154,8 +154,13 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 	defer cancel()
 
 	c.Stop()
-	c = cron.New(cron.WithSeconds(), cron.WithChain(cron.DelayIfStillRunning(cron.DefaultLogger)))
-	c.Start()
+	//c = cron.New(cron.WithSeconds(), cron.WithChain(cron.DelayIfStillRunning(cron.DefaultLogger)))
+	//c.Start()
+
+	testBefore := c.Entries()
+	for _,v :=  range testBefore{
+		c.Remove(v.ID)
+	}
 
 	paramMatch := bson.D{
 		bson.E{
@@ -186,6 +191,7 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 	}
 
 	//logger.Debugf(eventScheduleLog, "开始遍历事件列表")
+	//fmt.Println("len eventInfoList:",len(eventInfoList))
 	for i, eventInfo := range eventInfoList {
 		j := i
 		eventInfo = eventInfoList[j]
@@ -235,9 +241,12 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 					continue
 				}
 				logger.Debugf(eventScheduleLog, "事件(%s)的定时cron为:(%s)",eventID, cronExpression)
+
+				eventInfoCron := eventInfo
+				eventIDCron := eventID
 				_,_ = c.AddFunc(cronExpression, func() {
 					scheduleType := ""
-					if settings, ok := eventInfo["settings"].(primitive.M); ok {
+					if settings, ok := eventInfoCron["settings"].(primitive.M); ok {
 						scheduleType, ok := settings["type"].(string)
 						if ok {
 							if scheduleType == "once" {
@@ -293,20 +302,32 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 						logger.Debugf(eventScheduleLog, "事件(%s)的发送map序列化失败:%s", err.Error())
 						return
 					}
-					err = imqtt.Send(fmt.Sprintf("event/%s", eventID.Hex()), b)
+					err = imqtt.Send(fmt.Sprintf("event/%s", eventIDCron.Hex()), b)
 					if err != nil {
-						logger.Warnf(eventScheduleLog, "发送事件(%s)错误:%s", eventID.Hex(), err.Error())
+						logger.Warnf(eventScheduleLog, "发送事件(%s)错误:%s", eventIDCron.Hex(), err.Error())
+						//fmt.Println(eventScheduleLog, "发送事件(%s)错误:%s", eventIDCron.Hex(), err.Error())
 					} else {
-						logger.Debugf(eventScheduleLog, "发送事件成功:%s,数据为:%+v", eventID.Hex(), sendMap)
+						logger.Debugf(eventScheduleLog, "发送事件成功:%s,数据为:%+v", eventIDCron.Hex(), sendMap)
+						//fmt.Println(eventScheduleLog, "发送事件成功:%s,数据为:%+v", eventIDCron.Hex(), sendMap)
 					}
 				})
+				//if err != nil{
+				//	fmt.Println("AddFunc err:",err.Error())
+				//}
 
+				//fmt.Println("AddFunc entryID:",entryID,"eventIDCron:",eventIDCron)
 			}
 		}
 	}
 
 	c.Start()
 
-	//logger.Debugf(eventScheduleLog, "计划事件触发器(修改或删除计划事件)执行结束")
+	//test := c.Entries()
+	//fmt.Println("len entries:",len(test),"entries:",test)
+	//for _,v :=  range test{
+	//	fmt.Println("id:",v.ID,"prev:",v.Prev.Format("2006-01-02 15:04:05"),"next:",v.Next.Format("2006-01-02 15:04:05"))
+	//}
+	logger.Debugf(eventScheduleLog, "计划事件触发器(修改或删除计划事件)执行结束")
 	return nil
 }
+
