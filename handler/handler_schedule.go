@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/robfig/cron/v3"
+	"github.com/robfig/cron"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -73,7 +73,7 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 		return fmt.Errorf("事件(%s)的定时表达式解析失败", eventID)
 	}
 	logger.Debugf(eventScheduleLog, "事件(%s)的定时cron为:(%s)",eventID, cronExpression)
-	_,_ = c.AddFunc(cronExpression, func() {
+	_ = c.AddFunc(cronExpression, func() {
 		scheduleType := ""
 		if settings, ok := data["settings"].(map[string]interface{}); ok {
 			scheduleType, ok = settings["type"].(string)
@@ -140,7 +140,6 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 		}
 	})
 
-	c.Start()
 
 	//logger.Debugf(eventScheduleLog, "计划事件触发器（添加计划事件）执行结束")
 
@@ -154,7 +153,7 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 	defer cancel()
 
 	c.Stop()
-	c = cron.New(cron.WithSeconds(), cron.WithChain(cron.DelayIfStillRunning(cron.DefaultLogger)))
+	c = cron.New()
 	c.Start()
 
 	paramMatch := bson.D{
@@ -235,7 +234,7 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 					continue
 				}
 				logger.Debugf(eventScheduleLog, "事件(%s)的定时cron为:(%s)",eventID, cronExpression)
-				_,_ = c.AddFunc(cronExpression, func() {
+				_ = c.AddFunc(cronExpression, func() {
 					scheduleType := ""
 					if settings, ok := eventInfo["settings"].(primitive.M); ok {
 						scheduleType, ok := settings["type"].(string)
@@ -305,7 +304,6 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 		}
 	}
 
-	c.Start()
 
 	//logger.Debugf(eventScheduleLog, "计划事件触发器(修改或删除计划事件)执行结束")
 	return nil
