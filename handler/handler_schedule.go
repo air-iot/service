@@ -41,6 +41,13 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 	}
 	cronExpression := ""
 	if settings, ok := data["settings"].(map[string]interface{}); ok {
+		//判断是否已经失效
+		if invalid, ok := settings["invalid"].(bool); ok {
+			if invalid {
+				logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
+				return fmt.Errorf("事件(%s)已经失效", eventID)
+			}
+		}
 		if scheduleType, ok := settings["type"].(string); ok {
 			if scheduleType == "once" {
 				if startTime, ok := settings["startTime"].(string); ok {
@@ -56,7 +63,7 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 					}
 					cronExpression = tools.GetCronExpressionOnce(scheduleType, formatStartTime)
 				}
-			}else{
+			} else {
 				if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
 					cronExpression = tools.GetCronExpression(scheduleType, startTime)
 				}
@@ -65,6 +72,13 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 		if endTime, ok := settings["endTime"].(time.Time); ok {
 			if tools.GetLocalTimeNow(time.Now()).Unix() >= endTime.Unix() {
 				logger.Debugf(eventScheduleLog, "事件(%s)的定时任务结束事件已到，不再执行", eventID)
+				//修改事件为失效
+				updateMap := bson.M{"settings.invalid": true}
+				_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+				if err != nil {
+					logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
+					return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
+				}
 				return nil
 			}
 		}
@@ -72,13 +86,15 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 	if cronExpression == "" {
 		return fmt.Errorf("事件(%s)的定时表达式解析失败", eventID)
 	}
-	logger.Debugf(eventScheduleLog, "事件(%s)的定时cron为:(%s)",eventID, cronExpression)
-	_,_ = c.AddFunc(cronExpression, func() {
+	logger.Debugf(eventScheduleLog, "事件(%s)的定时cron为:(%s)", eventID, cronExpression)
+	_, _ = c.AddFunc(cronExpression, func() {
 		scheduleType := ""
+		isOnce := false
 		if settings, ok := data["settings"].(map[string]interface{}); ok {
 			scheduleType, ok = settings["type"].(string)
 			if ok {
 				if scheduleType == "once" {
+					isOnce = true
 					if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
 						if year, ok := startTime["year"]; ok {
 							yearString := tools.InterfaceTypeToString(year)
@@ -87,7 +103,7 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 								return
 							}
 						}
-					}else if startTime, ok := settings["startTime"].(string); ok {
+					} else if startTime, ok := settings["startTime"].(string); ok {
 						formatStartTime, err := tools.ConvertStringToTime("2006-01-02 15:04:05", startTime, time.Local)
 						if err != nil {
 							//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
@@ -109,6 +125,13 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 			if endTime, ok := settings["endTime"].(time.Time); ok {
 				if tools.GetLocalTimeNow(time.Now()).Unix() >= endTime.Unix() {
 					logger.Debugf(eventScheduleLog, "事件(%s)的定时任务结束时间已到，不再执行", eventID)
+					//修改事件为失效
+					updateMap := bson.M{"settings.invalid": true}
+					_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+					if err != nil {
+						logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
+						return
+					}
 					return
 				}
 			}
@@ -138,6 +161,16 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 		} else {
 			logger.Debugf(eventScheduleLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
 		}
+		if isOnce {
+			logger.Warnln(eventAlarmLog, "事件(%s)为只执行一次的事件", eventID)
+			//修改事件为失效
+			updateMap := bson.M{"settings.invalid": true}
+			_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+			if err != nil {
+				logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
+				return
+			}
+		}
 	})
 
 	c.Start()
@@ -158,7 +191,7 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 	//c.Start()
 
 	testBefore := c.Entries()
-	for _,v :=  range testBefore{
+	for _, v := range testBefore {
 		c.Remove(v.ID)
 	}
 
@@ -213,6 +246,13 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 		logger.Debugf(eventScheduleLog, "开始分析事件")
 		if eventID, ok := eventInfo["id"].(primitive.ObjectID); ok {
 			if settings, ok := eventInfo["settings"].(primitive.M); ok {
+				//判断是否已经失效
+				if invalid, ok := settings["invalid"].(bool); ok {
+					if invalid {
+						logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
+						continue
+					}
+				}
 				cronExpression := ""
 				if scheduleType, ok := settings["type"].(string); ok {
 					if scheduleType == "once" {
@@ -224,7 +264,7 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 							}
 							cronExpression = tools.GetCronExpressionOnce(scheduleType, &formatStartTime)
 						}
-					}else{
+					} else {
 						if startTime, ok := settings["startTime"].(primitive.M); ok {
 							cronExpression = tools.GetCronExpression(scheduleType, startTime)
 						}
@@ -232,7 +272,14 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 				}
 				if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
 					if tools.GetLocalTimeNow(time.Now()).Unix() >= int64(endTime)/1000 {
-						logger.Debugf(eventScheduleLog, "事件(%s)的定时任务结束事件已到，不再执行", eventID)
+						logger.Debugf(eventScheduleLog, "事件(%s)的定时任务结束事件已到，不再执行", eventID.Hex())
+						//修改事件为失效
+						updateMap := bson.M{"settings.invalid": true}
+						_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+						if err != nil {
+							logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
+							continue
+						}
 						continue
 					}
 				}
@@ -240,16 +287,18 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 					logger.Errorf(eventScheduleLog, "事件(%s)的定时表达式解析失败", eventID)
 					continue
 				}
-				logger.Debugf(eventScheduleLog, "事件(%s)的定时cron为:(%s)",eventID, cronExpression)
+				logger.Debugf(eventScheduleLog, "事件(%s)的定时cron为:(%s)", eventID, cronExpression)
 
 				eventInfoCron := eventInfo
 				eventIDCron := eventID
-				_,_ = c.AddFunc(cronExpression, func() {
+				_, _ = c.AddFunc(cronExpression, func() {
 					scheduleType := ""
+					isOnce := false
 					if settings, ok := eventInfoCron["settings"].(primitive.M); ok {
 						scheduleType, ok := settings["type"].(string)
 						if ok {
 							if scheduleType == "once" {
+								isOnce = true
 								if startTime, ok := settings["startTime"].(primitive.M); ok {
 									if year, ok := startTime["year"]; ok {
 										yearString := tools.InterfaceTypeToString(year)
@@ -274,7 +323,15 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 						}
 						if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
 							if tools.GetLocalTimeNow(time.Now()).Unix() >= int64(endTime)/1000 {
-								logger.Debugf(eventScheduleLog, "事件(%s)的定时任务结束事件已到，不再执行", eventID)
+								logger.Debugf(eventScheduleLog, "事件(%s)的定时任务结束事件已到，不再执行", eventID.Hex())
+
+								//修改事件为失效
+								updateMap := bson.M{"settings.invalid": true}
+								_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+								if err != nil {
+									logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
+									return
+								}
 								return
 							}
 						}
@@ -310,6 +367,17 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 						logger.Debugf(eventScheduleLog, "发送事件成功:%s,数据为:%+v", eventIDCron.Hex(), sendMap)
 						//fmt.Println(eventScheduleLog, "发送事件成功:%s,数据为:%+v", eventIDCron.Hex(), sendMap)
 					}
+
+					if isOnce {
+						logger.Warnln(eventAlarmLog, "事件(%s)为只执行一次的事件", eventID)
+						//修改事件为失效
+						updateMap := bson.M{"settings.invalid": true}
+						_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+						if err != nil {
+							logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+							return
+						}
+					}
 				})
 				//if err != nil{
 				//	fmt.Println("AddFunc err:",err.Error())
@@ -330,4 +398,3 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 	logger.Debugf(eventScheduleLog, "计划事件触发器(修改或删除计划事件)执行结束")
 	return nil
 }
-
