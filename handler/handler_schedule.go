@@ -295,7 +295,7 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 					scheduleType := ""
 					isOnce := false
 					if settings, ok := eventInfoCron["settings"].(primitive.M); ok {
-						scheduleType, ok := settings["type"].(string)
+						scheduleType, ok = settings["type"].(string)
 						if ok {
 							if scheduleType == "once" {
 								isOnce = true
