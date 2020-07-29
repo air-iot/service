@@ -94,7 +94,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 			Key: "$match",
 			Value: bson.M{
 				"type":                DeviceModify,
-				"settings.type":       modifyTypeAfterMapping,
+				"settings.eventType":       modifyTypeAfterMapping,
 				"settings.eventRange": "node",
 				//"$or":
 				//bson.A{
@@ -596,7 +596,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 			Key: "$match",
 			Value: bson.M{
 				"type":                DeviceModify,
-				"settings.type":       modifyTypeAfterMapping,
+				"settings.eventType":       modifyTypeAfterMapping,
 				"settings.eventRange": "model",
 				//"$or":
 				//bson.A{
