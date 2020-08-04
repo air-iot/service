@@ -220,7 +220,7 @@ eventloop:
 						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
 						continue eventloop
 					}
-				case "modelNode":
+				case "model":
 					hasValidWarn := false
 					//判断该事件是否指定了特定报警规则
 					if modelList, ok := settings["model"].([]interface{}); ok {
@@ -228,57 +228,7 @@ eventloop:
 							if modelMap, ok := model.(map[string]interface{}); ok {
 								if modelIDInSettings, ok := modelMap["id"].(string); ok {
 									if modelID == modelIDInSettings {
-										if nodeList, ok := settings["node"].([]interface{}); ok {
-											if len(nodeList) != 0 {
-												for _, node := range nodeList {
-													if nodeMap, ok := node.(map[string]interface{}); ok {
-														if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
-															if nodeID == nodeIDInSettings {
-																if ruleList, ok := settings["rule"].([]interface{}); ok {
-																	if len(ruleList) != 0{
-																		for _, rule := range ruleList {
-																			if ruleMap, ok := rule.(map[string]interface{}); ok {
-																				if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
-																					if data.RuleID == ruleIDInSettings {
-																						hasValidWarn = true
-																						break
-																					}
-																				}
-																			}
-																		}
-																	}else {
-																		hasValidWarn = true
-																		break
-																	}
-																} else {
-																	hasValidWarn = true
-																	break
-																}
-															}
-														}
-													}
-												}
-											}else if ruleList, ok := settings["rule"].([]interface{}); ok {
-												if len(ruleList) != 0{
-													for _, rule := range ruleList {
-														if ruleMap, ok := rule.(map[string]interface{}); ok {
-															if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
-																if data.RuleID == ruleIDInSettings {
-																	hasValidWarn = true
-																	break
-																}
-															}
-														}
-													}
-												}else {
-													hasValidWarn = true
-													break
-												}
-											} else {
-												hasValidWarn = true
-												break
-											}
-										} else if ruleList, ok := settings["rule"].([]interface{}); ok {
+										if ruleList, ok := settings["rule"].([]interface{}); ok {
 											if len(ruleList) != 0{
 												for _, rule := range ruleList {
 													if ruleMap, ok := rule.(map[string]interface{}); ok {
@@ -302,7 +252,26 @@ eventloop:
 								}
 							}
 						}
-					} else if nodeList, ok := settings["node"].([]interface{}); ok {
+					}else if ruleList, ok := settings["rule"].([]interface{}); ok {
+						for _, rule := range ruleList {
+							if ruleMap, ok := rule.(map[string]interface{}); ok {
+								if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
+									if data.RuleID == ruleIDInSettings {
+										hasValidWarn = true
+										break
+									}
+								}
+							}
+						}
+					}
+					if !hasValidWarn {
+						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+						continue eventloop
+					}
+				case "node":
+					hasValidWarn := false
+					//判断该事件是否指定了特定报警规则
+					if nodeList, ok := settings["node"].([]interface{}); ok {
 						for _, node := range nodeList {
 							if nodeMap, ok := node.(map[string]interface{}); ok {
 								if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
@@ -619,7 +588,7 @@ eventloop:
 					//	//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
 					//	continue eventloop
 					//}
-				case "modelNode":
+				case "model":
 					hasValidWarn := false
 					//判断该事件是否指定了特定报警规则
 					if modelList, ok := settings["model"].([]interface{}); ok {
@@ -651,7 +620,7 @@ eventloop:
 								}
 							}
 						}
-					} else if ruleList, ok := settings["rule"].([]interface{}); ok {
+					}else if ruleList, ok := settings["rule"].([]interface{}); ok {
 						for _, rule := range ruleList {
 							if ruleMap, ok := rule.(map[string]interface{}); ok {
 								if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
@@ -667,6 +636,54 @@ eventloop:
 						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
 						continue eventloop
 					}
+				case "node":
+					//hasValidWarn := false
+					////判断该事件是否指定了特定报警规则
+					//if nodeList, ok := settings["node"].([]interface{}); ok {
+					//	for _, node := range nodeList {
+					//		if nodeMap, ok := node.(map[string]interface{}); ok {
+					//			if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
+					//				if nodeID == nodeIDInSettings {
+					//					if ruleList, ok := settings["rule"].([]interface{}); ok {
+					//						if len(ruleList) != 0{
+					//							for _, rule := range ruleList {
+					//								if ruleMap, ok := rule.(map[string]interface{}); ok {
+					//									if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
+					//										if data.RuleID == ruleIDInSettings {
+					//											hasValidWarn = true
+					//											break
+					//										}
+					//									}
+					//								}
+					//							}
+					//						}else {
+					//							hasValidWarn = true
+					//							break
+					//						}
+					//					} else {
+					//						hasValidWarn = true
+					//						break
+					//					}
+					//				}
+					//			}
+					//		}
+					//	}
+					//} else if ruleList, ok := settings["rule"].([]interface{}); ok {
+					//	for _, rule := range ruleList {
+					//		if ruleMap, ok := rule.(map[string]interface{}); ok {
+					//			if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
+					//				if data.RuleID == ruleIDInSettings {
+					//					hasValidWarn = true
+					//					break
+					//				}
+					//			}
+					//		}
+					//	}
+					//}
+					//if !hasValidWarn {
+					//	//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+					//	continue eventloop
+					//}
 				}
 			}
 
@@ -936,7 +953,7 @@ eventloop:
 						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
 						continue eventloop
 					}
-				case "modelNode":
+				case "model":
 					hasValidWarn := false
 					//判断该事件是否指定了特定报警规则
 					if modelList, ok := settings["model"].([]interface{}); ok {
@@ -944,57 +961,7 @@ eventloop:
 							if modelMap, ok := model.(map[string]interface{}); ok {
 								if modelIDInSettings, ok := modelMap["id"].(string); ok {
 									if modelID == modelIDInSettings {
-										if nodeList, ok := settings["node"].([]interface{}); ok {
-											if len(nodeList) != 0 {
-												for _, node := range nodeList {
-													if nodeMap, ok := node.(map[string]interface{}); ok {
-														if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
-															if nodeID == nodeIDInSettings {
-																if ruleList, ok := settings["rule"].([]interface{}); ok {
-																	if len(ruleList) != 0{
-																		for _, rule := range ruleList {
-																			if ruleMap, ok := rule.(map[string]interface{}); ok {
-																				if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
-																					if data.RuleID == ruleIDInSettings {
-																						hasValidWarn = true
-																						break
-																					}
-																				}
-																			}
-																		}
-																	}else {
-																		hasValidWarn = true
-																		break
-																	}
-																} else {
-																	hasValidWarn = true
-																	break
-																}
-															}
-														}
-													}
-												}
-											}else if ruleList, ok := settings["rule"].([]interface{}); ok {
-												if len(ruleList) != 0{
-													for _, rule := range ruleList {
-														if ruleMap, ok := rule.(map[string]interface{}); ok {
-															if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
-																if data.RuleID == ruleIDInSettings {
-																	hasValidWarn = true
-																	break
-																}
-															}
-														}
-													}
-												}else {
-													hasValidWarn = true
-													break
-												}
-											} else {
-												hasValidWarn = true
-												break
-											}
-										} else if ruleList, ok := settings["rule"].([]interface{}); ok {
+										if ruleList, ok := settings["rule"].([]interface{}); ok {
 											if len(ruleList) != 0{
 												for _, rule := range ruleList {
 													if ruleMap, ok := rule.(map[string]interface{}); ok {
@@ -1018,7 +985,26 @@ eventloop:
 								}
 							}
 						}
-					} else if nodeList, ok := settings["node"].([]interface{}); ok {
+					}else if ruleList, ok := settings["rule"].([]interface{}); ok {
+						for _, rule := range ruleList {
+							if ruleMap, ok := rule.(map[string]interface{}); ok {
+								if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
+									if data.RuleID == ruleIDInSettings {
+										hasValidWarn = true
+										break
+									}
+								}
+							}
+						}
+					}
+					if !hasValidWarn {
+						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+						continue eventloop
+					}
+				case "node":
+					hasValidWarn := false
+					//判断该事件是否指定了特定报警规则
+					if nodeList, ok := settings["node"].([]interface{}); ok {
 						for _, node := range nodeList {
 							if nodeMap, ok := node.(map[string]interface{}); ok {
 								if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
