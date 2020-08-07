@@ -160,7 +160,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 		//判断事件是否已经触发
 		hasExecute := false
 
-		if computeType, ok := settings["type"].(string); ok {
+		if computeType, ok := settings["dataType"].(string); ok {
 			switch computeType {
 			case "model":
 				if tags, ok := settings["tags"].([]interface{}); ok {
