@@ -163,40 +163,34 @@ eventloop:
 				continue
 			}
 
+			hasValidWarn := false
+
 			for _, rangeType := range rangeTypeList {
 				switch rangeType {
 				case "warnType":
-					hasValidType := false
+					hasValidWarn = false
 					if warnTypeList, ok := settings["warnType"].([]interface{}); ok {
 						warnTypeStringList := tools.InterfaceListToStringList(warnTypeList)
 						for _, warnType := range warnTypeStringList {
 							if warnType == data.Type {
-								hasValidType = true
+								hasValidWarn = true
 								break
 							}
 						}
 					}
-					if !hasValidType {
-						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-						continue eventloop
-					}
 				case "warnLevel":
-					hasValidLevel := false
+					hasValidWarn = false
 					if warnLevelList, ok := settings["level"].([]interface{}); ok {
 						warnLevelStringList := tools.InterfaceListToStringList(warnLevelList)
 						for _, warnLevel := range warnLevelStringList {
 							if warnLevel == data.Level {
-								hasValidLevel = true
+								hasValidWarn = true
 								break
 							}
 						}
 					}
-					if !hasValidLevel {
-						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-						continue eventloop
-					}
 				case "department":
-					hasValidWarn := false
+					hasValidWarn = false
 					deptIDInDataList, err := tools.ObjectIdListToStringList(data.Department)
 					if err != nil {
 						return fmt.Errorf("当前资产(%s)所属部门ID数组转ObjectID数组失败:%s", nodeID, err.Error())
@@ -216,12 +210,8 @@ eventloop:
 							}
 						}
 					}
-					if !hasValidWarn {
-						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-						continue eventloop
-					}
 				case "model":
-					hasValidWarn := false
+					hasValidWarn = false
 					//判断该事件是否指定了特定报警规则
 					if modelList, ok := settings["model"].([]interface{}); ok {
 						for _, model := range modelList {
@@ -229,7 +219,7 @@ eventloop:
 								if modelIDInSettings, ok := modelMap["id"].(string); ok {
 									if modelID == modelIDInSettings {
 										if ruleList, ok := settings["rule"].([]interface{}); ok {
-											if len(ruleList) != 0 {
+											if len(ruleList) != 0{
 												for _, rule := range ruleList {
 													if ruleMap, ok := rule.(map[string]interface{}); ok {
 														if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
@@ -240,7 +230,7 @@ eventloop:
 														}
 													}
 												}
-											} else {
+											}else {
 												hasValidWarn = true
 												break
 											}
@@ -252,7 +242,7 @@ eventloop:
 								}
 							}
 						}
-					} else if ruleList, ok := settings["rule"].([]interface{}); ok {
+					}else if ruleList, ok := settings["rule"].([]interface{}); ok {
 						for _, rule := range ruleList {
 							if ruleMap, ok := rule.(map[string]interface{}); ok {
 								if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
@@ -264,12 +254,8 @@ eventloop:
 							}
 						}
 					}
-					if !hasValidWarn {
-						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-						continue eventloop
-					}
 				case "node":
-					hasValidWarn := false
+					hasValidWarn = false
 					//判断该事件是否指定了特定报警规则
 					if nodeList, ok := settings["node"].([]interface{}); ok {
 						for _, node := range nodeList {
@@ -277,7 +263,7 @@ eventloop:
 								if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
 									if nodeID == nodeIDInSettings {
 										if ruleList, ok := settings["rule"].([]interface{}); ok {
-											if len(ruleList) != 0 {
+											if len(ruleList) != 0{
 												for _, rule := range ruleList {
 													if ruleMap, ok := rule.(map[string]interface{}); ok {
 														if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
@@ -288,7 +274,7 @@ eventloop:
 														}
 													}
 												}
-											} else {
+											}else {
 												hasValidWarn = true
 												break
 											}
@@ -317,6 +303,11 @@ eventloop:
 						continue eventloop
 					}
 				}
+			}
+
+			if !hasValidWarn {
+				//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+				continue eventloop
 			}
 
 			//生成发送消息
@@ -532,39 +523,34 @@ eventloop:
 				continue
 			}
 
+			hasValidWarn := false
+
 			for _, rangeType := range rangeTypeList {
 				switch rangeType {
 				case "warnType":
-					hasValidType := false
+					hasValidWarn = false
 					if warnTypeList, ok := settings["warnType"].([]interface{}); ok {
 						warnTypeStringList := tools.InterfaceListToStringList(warnTypeList)
 						for _, warnType := range warnTypeStringList {
 							if warnType == data.Type {
-								hasValidType = true
+								hasValidWarn = true
 								break
 							}
 						}
 					}
-					if !hasValidType {
-						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-						continue eventloop
-					}
 				case "warnLevel":
-					hasValidLevel := false
+					hasValidWarn = false
 					if warnLevelList, ok := settings["level"].([]interface{}); ok {
 						warnLevelStringList := tools.InterfaceListToStringList(warnLevelList)
 						for _, warnLevel := range warnLevelStringList {
 							if warnLevel == data.Level {
-								hasValidLevel = true
+								hasValidWarn = true
 								break
 							}
 						}
 					}
-					if !hasValidLevel {
-						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-						continue eventloop
-					}
 				case "department":
+					continue eventloop
 					//hasValidWarn := false
 					//deptIDInDataList, err := tools.ObjectIdListToStringList(data.Department)
 					//if err != nil {
@@ -590,7 +576,7 @@ eventloop:
 					//	continue eventloop
 					//}
 				case "model":
-					hasValidWarn := false
+					hasValidWarn = false
 					//判断该事件是否指定了特定报警规则
 					if modelList, ok := settings["model"].([]interface{}); ok {
 						for _, model := range modelList {
@@ -633,11 +619,8 @@ eventloop:
 							}
 						}
 					}
-					if !hasValidWarn {
-						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-						continue eventloop
-					}
 				case "node":
+					continue eventloop
 					//hasValidWarn := false
 					////判断该事件是否指定了特定报警规则
 					//if nodeList, ok := settings["node"].([]interface{}); ok {
@@ -686,6 +669,11 @@ eventloop:
 					//	continue eventloop
 					//}
 				}
+			}
+
+			if !hasValidWarn {
+				//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+				continue eventloop
 			}
 
 			//生成发送消息
@@ -897,40 +885,34 @@ eventloop:
 				continue
 			}
 
+			hasValidWarn := false
+
 			for _, rangeType := range rangeTypeList {
 				switch rangeType {
 				case "warnType":
-					hasValidType := false
+					hasValidWarn = false
 					if warnTypeList, ok := settings["warnType"].([]interface{}); ok {
 						warnTypeStringList := tools.InterfaceListToStringList(warnTypeList)
 						for _, warnType := range warnTypeStringList {
 							if warnType == data.Type {
-								hasValidType = true
+								hasValidWarn = true
 								break
 							}
 						}
 					}
-					if !hasValidType {
-						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-						continue eventloop
-					}
 				case "warnLevel":
-					hasValidLevel := false
+					hasValidWarn = false
 					if warnLevelList, ok := settings["level"].([]interface{}); ok {
 						warnLevelStringList := tools.InterfaceListToStringList(warnLevelList)
 						for _, warnLevel := range warnLevelStringList {
 							if warnLevel == data.Level {
-								hasValidLevel = true
+								hasValidWarn = true
 								break
 							}
 						}
 					}
-					if !hasValidLevel {
-						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-						continue eventloop
-					}
 				case "department":
-					hasValidWarn := false
+					hasValidWarn = false
 					deptIDInDataList, err := tools.ObjectIdListToStringList(data.Department)
 					if err != nil {
 						logger.Debugf(eventAlarmLog, "当前资产(%s)所属部门ID数组转ObjectID数组失败:%s", nodeID, err.Error())
@@ -951,12 +933,8 @@ eventloop:
 							}
 						}
 					}
-					if !hasValidWarn {
-						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-						continue eventloop
-					}
 				case "model":
-					hasValidWarn := false
+					hasValidWarn = false
 					//判断该事件是否指定了特定报警规则
 					if modelList, ok := settings["model"].([]interface{}); ok {
 						for _, model := range modelList {
@@ -999,12 +977,8 @@ eventloop:
 							}
 						}
 					}
-					if !hasValidWarn {
-						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-						continue eventloop
-					}
 				case "node":
-					hasValidWarn := false
+					hasValidWarn = false
 					//判断该事件是否指定了特定报警规则
 					if nodeList, ok := settings["node"].([]interface{}); ok {
 						for _, node := range nodeList {
@@ -1047,11 +1021,12 @@ eventloop:
 							}
 						}
 					}
-					if !hasValidWarn {
-						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
-						continue eventloop
-					}
 				}
+			}
+
+			if !hasValidWarn {
+				//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
+				continue eventloop
 			}
 
 			//生成发送消息
