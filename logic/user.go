@@ -24,6 +24,21 @@ type userLogic struct {
 	userRoleUserCache *sync.Map
 }
 
+func (p *userLogic) FindLocalCache(userID string) (result *model.User, err error) {
+	a, b := p.userCache.Load(userID)
+	if b {
+		a1, ok := a.(model.User)
+		if ok {
+			return &a1, nil
+		} else {
+			return nil, errors.New("结构不正确")
+		}
+	} else {
+		return nil, errors.New("未查询到相关数据")
+	}
+}
+
+
 func (p *userLogic) FindLocalMapCache(userID string) (result map[string]interface{}, err error) {
 	a, b := p.userMapCache.Load(userID)
 	if b {

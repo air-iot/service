@@ -25,6 +25,7 @@ const (
 	ConfigDeptCache         = "config_dept_cache"
 	ConfigUserCache         = "config_user_cache"
 	ConfigSettingCache      = "config_setting_cache"
+	ConfigRoleCache         = "config_role_cache"
 )
 
 type CacheM struct {
@@ -58,6 +59,11 @@ type SettingCache struct {
 	Setting model.Setting `json:"setting"`
 }
 
+type RoleCache struct {
+	RoleMap []map[string]interface{} `json:"roleMap"`
+	Role    []model.Role             `json:"role"`
+}
+
 func Init() {
 	if !viper.GetBool("mqtt.enable") || !viper.GetBool("redis.enable") || !viper.GetBool("cache.enable") {
 		return
@@ -79,6 +85,8 @@ func Init() {
 	UserLogic.userMapCache = &sync.Map{}
 	UserLogic.userDeptUserCache = &sync.Map{}
 	UserLogic.userRoleUserCache = &sync.Map{}
+	RoleLogic.roleCache = &sync.Map{}
+	RoleLogic.roleMapCache = &sync.Map{}
 
 	cache()
 	cacheEvent()
@@ -86,6 +94,7 @@ func Init() {
 	cacheDept()
 	cacheUser()
 	cacheSetting()
+	cacheRole()
 	if token := mqtt.Client.Subscribe(ConfigCacheChannel, 0, func(client MQTT.Client, message MQTT.Message) {
 		logrus.Debugf("更新缓存:%s", string(message.Payload()))
 		switch string(message.Payload()) {
@@ -129,6 +138,13 @@ func Init() {
 				err := cacheSetting()
 				if err != nil {
 					logrus.Errorf("更新系统配置缓存错误:%s", err.Error())
+				}
+			}()
+		case ConfigRoleCache:
+			go func() {
+				err := cacheRole()
+				if err != nil {
+					logrus.Errorf("更新角色缓存错误:%s", err.Error())
 				}
 			}()
 		}
@@ -202,7 +218,7 @@ func cacheEvent() error {
 					tools.MergeEventDataMap(modelID+"|"+n.Type, n, eventCacheMapRaw)
 				}
 			}
-			if n.Type != ""{
+			if n.Type != "" {
 				tools.MergeEventDataMap(n.Type, n, eventCacheMapType)
 			}
 		}
@@ -308,6 +324,26 @@ func cacheSetting() error {
 			}
 		}
 
+	}
+	return nil
+}
+
+func cacheRole() error {
+	cmd := redis.Client.Get(ConfigRoleCache)
+	if cmd.Err() == nil {
+		resultMap := new(RoleCache)
+		if err := json.Unmarshal([]byte(cmd.Val()), &resultMap); err != nil {
+			return fmt.Errorf("解析Map错误:%s", err.Error())
+		}
+
+		for _, n := range resultMap.RoleMap {
+			if id, ok := n["id"]; ok {
+				RoleLogic.roleMapCache.Store(id, n)
+			}
+		}
+		for _, n := range resultMap.Role {
+			RoleLogic.roleCache.Store(n.ID, n)
+		}
 	}
 	return nil
 }

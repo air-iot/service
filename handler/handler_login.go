@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/air-iot/service/model"
 	"time"
 
 	idb "github.com/air-iot/service/db/mongo"
@@ -57,7 +58,7 @@ func TriggerLogin(data map[string]interface{}) error {
 		settings := eventInfo.Settings
 
 		//判断是否已经失效
-		if invalid, ok := settings["invalid"].(bool); ok{
+		if invalid, ok := settings["invalid"].(bool); ok {
 			if invalid {
 				logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
 				continue
@@ -133,9 +134,9 @@ func TriggerLogin(data map[string]interface{}) error {
 			sendTo = v
 		}
 		allUser := false
-		if sendTo == "all"{
+		if sendTo == "all" {
 			allUser = true
-		}else if sendTo == "deptRole" {
+		} else if sendTo == "deptRole" {
 			ok := false
 			//没有指定特定用户时，结合部门与角色进行判断
 			err = tools.FormatObjectIDListMap(&settings, "department", "id")
@@ -189,6 +190,7 @@ func TriggerLogin(data map[string]interface{}) error {
 						}
 					}
 				}
+
 			} else if len(departmentListInSettings) != 0 && len(roleListInSettings) == 0 {
 				departmentStringListInSettings, err = tools.ObjectIdListToStringList(departmentListInSettings)
 				if err != nil {
@@ -204,6 +206,7 @@ func TriggerLogin(data map[string]interface{}) error {
 				for _, user := range *userInfoListByDept {
 					userIDList = tools.AddNonRepByLoop(userIDList, user.ID)
 				}
+
 			} else if len(departmentListInSettings) == 0 && len(roleListInSettings) != 0 {
 				roleStringListInSettings, err = tools.ObjectIdListToStringList(roleListInSettings)
 				if err != nil {
@@ -240,10 +243,44 @@ func TriggerLogin(data map[string]interface{}) error {
 			}
 		}
 
-		if !allUser{
+		if !allUser {
 			isValid := false
 			for _, id := range userIDList {
 				if userID == id {
+					departmentStringIDList := make([]string, 0)
+					//var departmentObjectList primitive.A
+					if departmentIDList, ok := data["department"].([]interface{}); ok {
+						departmentStringIDList = tools.InterfaceListToStringList(departmentIDList)
+					} else {
+						logger.Warnf(eventLoginLog, "用户(%s)所属部门字段不存在或类型错误", userID)
+					}
+
+					deptInfoList := make([]map[string]interface{}, 0)
+					if len(departmentStringIDList) != 0 {
+						deptInfoList, err = clogic.DeptLogic.FindLocalCacheList(departmentStringIDList)
+						if err != nil {
+							logger.Warnf(eventLoginLog, "获取当前用户(%s)所属部门失败:%s", userID, err.Error())
+						}
+						data["departmentName"] = tools.FormatKeyInfoListMap(deptInfoList, "name")
+					}
+
+					userInfo := &model.User{}
+					userInfo, err := clogic.UserLogic.FindLocalCache(userID)
+					if err != nil {
+						logger.Warnf(eventLoginLog, "获取用户(%s)缓存失败:%s", userID, err.Error())
+						userInfo = &model.User{}
+					}
+
+					roleIDs := userInfo.Roles
+					roleInfoList := make([]map[string]interface{}, 0)
+					if len(roleIDs) != 0 {
+						roleInfoList, err = clogic.RoleLogic.FindLocalMapCacheList(roleIDs)
+						if err != nil {
+							logger.Warnf(eventLoginLog, "获取当前用户(%s)拥有的角色失败:%s", userID, err.Error())
+						}
+						data["roleName"] = tools.FormatKeyInfoListMap(roleInfoList, "name")
+					}
+
 					isValid = true
 					break
 				}

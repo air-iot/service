@@ -229,7 +229,7 @@ eventloop:
 								if modelIDInSettings, ok := modelMap["id"].(string); ok {
 									if modelID == modelIDInSettings {
 										if ruleList, ok := settings["rule"].([]interface{}); ok {
-											if len(ruleList) != 0{
+											if len(ruleList) != 0 {
 												for _, rule := range ruleList {
 													if ruleMap, ok := rule.(map[string]interface{}); ok {
 														if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
@@ -240,7 +240,7 @@ eventloop:
 														}
 													}
 												}
-											}else {
+											} else {
 												hasValidWarn = true
 												break
 											}
@@ -252,7 +252,7 @@ eventloop:
 								}
 							}
 						}
-					}else if ruleList, ok := settings["rule"].([]interface{}); ok {
+					} else if ruleList, ok := settings["rule"].([]interface{}); ok {
 						for _, rule := range ruleList {
 							if ruleMap, ok := rule.(map[string]interface{}); ok {
 								if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
@@ -277,7 +277,7 @@ eventloop:
 								if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
 									if nodeID == nodeIDInSettings {
 										if ruleList, ok := settings["rule"].([]interface{}); ok {
-											if len(ruleList) != 0{
+											if len(ruleList) != 0 {
 												for _, rule := range ruleList {
 													if ruleMap, ok := rule.(map[string]interface{}); ok {
 														if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
@@ -288,7 +288,7 @@ eventloop:
 														}
 													}
 												}
-											}else {
+											} else {
 												hasValidWarn = true
 												break
 											}
@@ -355,6 +355,7 @@ eventloop:
 				"tagInfo":        tools.FormatDataInfoList(data.Fields),
 				//"fields":         fieldsMap,
 				"userName":  data.HandleUserName,
+				"action":    actionType,
 				"isWarning": true,
 			}
 			fieldsInSendMap := map[string]interface{}{}
@@ -597,7 +598,7 @@ eventloop:
 								if modelIDInSettings, ok := modelMap["id"].(string); ok {
 									if modelID == modelIDInSettings {
 										if ruleList, ok := settings["rule"].([]interface{}); ok {
-											if len(ruleList) != 0{
+											if len(ruleList) != 0 {
 												for _, rule := range ruleList {
 													if ruleMap, ok := rule.(map[string]interface{}); ok {
 														if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
@@ -608,7 +609,7 @@ eventloop:
 														}
 													}
 												}
-											}else {
+											} else {
 												hasValidWarn = true
 												break
 											}
@@ -620,7 +621,7 @@ eventloop:
 								}
 							}
 						}
-					}else if ruleList, ok := settings["rule"].([]interface{}); ok {
+					} else if ruleList, ok := settings["rule"].([]interface{}); ok {
 						for _, rule := range ruleList {
 							if ruleMap, ok := rule.(map[string]interface{}); ok {
 								if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
@@ -704,6 +705,7 @@ eventloop:
 				//"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
 				"modelName": tools.FormatKeyInfo(modelInfo, "name"),
 				"userName":  data.HandleUserName,
+				"action":    actionType,
 				//"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
 				//"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
 				//"tagInfo":        tools.FormatDataInfoList(data.Fields),
@@ -962,7 +964,7 @@ eventloop:
 								if modelIDInSettings, ok := modelMap["id"].(string); ok {
 									if modelID == modelIDInSettings {
 										if ruleList, ok := settings["rule"].([]interface{}); ok {
-											if len(ruleList) != 0{
+											if len(ruleList) != 0 {
 												for _, rule := range ruleList {
 													if ruleMap, ok := rule.(map[string]interface{}); ok {
 														if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
@@ -973,7 +975,7 @@ eventloop:
 														}
 													}
 												}
-											}else {
+											} else {
 												hasValidWarn = true
 												break
 											}
@@ -985,7 +987,7 @@ eventloop:
 								}
 							}
 						}
-					}else if ruleList, ok := settings["rule"].([]interface{}); ok {
+					} else if ruleList, ok := settings["rule"].([]interface{}); ok {
 						for _, rule := range ruleList {
 							if ruleMap, ok := rule.(map[string]interface{}); ok {
 								if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
@@ -1010,7 +1012,7 @@ eventloop:
 								if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
 									if nodeID == nodeIDInSettings {
 										if ruleList, ok := settings["rule"].([]interface{}); ok {
-											if len(ruleList) != 0{
+											if len(ruleList) != 0 {
 												for _, rule := range ruleList {
 													if ruleMap, ok := rule.(map[string]interface{}); ok {
 														if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
@@ -1021,7 +1023,7 @@ eventloop:
 														}
 													}
 												}
-											}else {
+											} else {
 												hasValidWarn = true
 												break
 											}
@@ -1087,6 +1089,7 @@ eventloop:
 				"nodeName":       tools.FormatKeyInfo(nodeInfo, "name"),
 				"nodeUid":        tools.FormatKeyInfo(nodeInfo, "uid"),
 				"userName":       data.HandleUserName,
+				"action":         actionType,
 				//"tagInfo":        tools.FormatDataInfoList(data.Fields),
 				////"fields":         fieldsMap,
 				//"isWarning": true,
