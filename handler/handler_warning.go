@@ -164,6 +164,8 @@ eventloop:
 			}
 
 			hasValidWarn := false
+			needCount := len(rangeTypeList)
+			actualCount := 0
 
 			for _, rangeType := range rangeTypeList {
 				switch rangeType {
@@ -178,6 +180,9 @@ eventloop:
 							}
 						}
 					}
+					if hasValidWarn {
+						actualCount++
+					}
 				case "warnLevel":
 					hasValidWarn = false
 					if warnLevelList, ok := settings["level"].([]interface{}); ok {
@@ -188,6 +193,9 @@ eventloop:
 								break
 							}
 						}
+					}
+					if hasValidWarn {
+						actualCount++
 					}
 				case "department":
 					hasValidWarn = false
@@ -210,6 +218,9 @@ eventloop:
 							}
 						}
 					}
+					if hasValidWarn {
+						actualCount++
+					}
 				case "model":
 					hasValidWarn = false
 					//判断该事件是否指定了特定报警规则
@@ -219,7 +230,7 @@ eventloop:
 								if modelIDInSettings, ok := modelMap["id"].(string); ok {
 									if modelID == modelIDInSettings {
 										if ruleList, ok := settings["rule"].([]interface{}); ok {
-											if len(ruleList) != 0{
+											if len(ruleList) != 0 {
 												for _, rule := range ruleList {
 													if ruleMap, ok := rule.(map[string]interface{}); ok {
 														if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
@@ -230,7 +241,7 @@ eventloop:
 														}
 													}
 												}
-											}else {
+											} else {
 												hasValidWarn = true
 												break
 											}
@@ -242,7 +253,7 @@ eventloop:
 								}
 							}
 						}
-					}else if ruleList, ok := settings["rule"].([]interface{}); ok {
+					} else if ruleList, ok := settings["rule"].([]interface{}); ok {
 						for _, rule := range ruleList {
 							if ruleMap, ok := rule.(map[string]interface{}); ok {
 								if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
@@ -254,6 +265,9 @@ eventloop:
 							}
 						}
 					}
+					if hasValidWarn {
+						actualCount++
+					}
 				case "node":
 					hasValidWarn = false
 					//判断该事件是否指定了特定报警规则
@@ -263,7 +277,7 @@ eventloop:
 								if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
 									if nodeID == nodeIDInSettings {
 										if ruleList, ok := settings["rule"].([]interface{}); ok {
-											if len(ruleList) != 0{
+											if len(ruleList) != 0 {
 												for _, rule := range ruleList {
 													if ruleMap, ok := rule.(map[string]interface{}); ok {
 														if ruleIDInSettings, ok := ruleMap["id"].(string); ok {
@@ -274,7 +288,7 @@ eventloop:
 														}
 													}
 												}
-											}else {
+											} else {
 												hasValidWarn = true
 												break
 											}
@@ -302,10 +316,13 @@ eventloop:
 						//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
 						continue eventloop
 					}
+					if hasValidWarn {
+						actualCount++
+					}
 				}
 			}
 
-			if !hasValidWarn {
+			if !hasValidWarn || (actualCount != needCount) {
 				//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
 				continue eventloop
 			}
@@ -524,6 +541,8 @@ eventloop:
 			}
 
 			hasValidWarn := false
+			needCount := len(rangeTypeList)
+			actualCount := 0
 
 			for _, rangeType := range rangeTypeList {
 				switch rangeType {
@@ -538,6 +557,10 @@ eventloop:
 							}
 						}
 					}
+
+					if hasValidWarn {
+						actualCount++
+					}
 				case "warnLevel":
 					hasValidWarn = false
 					if warnLevelList, ok := settings["level"].([]interface{}); ok {
@@ -548,6 +571,10 @@ eventloop:
 								break
 							}
 						}
+					}
+
+					if hasValidWarn {
+						actualCount++
 					}
 				case "department":
 					continue eventloop
@@ -575,6 +602,7 @@ eventloop:
 					//	//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
 					//	continue eventloop
 					//}
+
 				case "model":
 					hasValidWarn = false
 					//判断该事件是否指定了特定报警规则
@@ -618,6 +646,10 @@ eventloop:
 								}
 							}
 						}
+					}
+
+					if hasValidWarn {
+						actualCount++
 					}
 				case "node":
 					continue eventloop
@@ -671,7 +703,7 @@ eventloop:
 				}
 			}
 
-			if !hasValidWarn {
+			if !hasValidWarn || (actualCount != needCount) {
 				//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
 				continue eventloop
 			}
@@ -886,6 +918,8 @@ eventloop:
 			}
 
 			hasValidWarn := false
+			needCount := len(rangeTypeList)
+			actualCount := 0
 
 			for _, rangeType := range rangeTypeList {
 				switch rangeType {
@@ -900,6 +934,9 @@ eventloop:
 							}
 						}
 					}
+					if hasValidWarn {
+						actualCount++
+					}
 				case "warnLevel":
 					hasValidWarn = false
 					if warnLevelList, ok := settings["level"].([]interface{}); ok {
@@ -910,6 +947,9 @@ eventloop:
 								break
 							}
 						}
+					}
+					if hasValidWarn {
+						actualCount++
 					}
 				case "department":
 					hasValidWarn = false
@@ -932,6 +972,9 @@ eventloop:
 								}
 							}
 						}
+					}
+					if hasValidWarn {
+						actualCount++
 					}
 				case "model":
 					hasValidWarn = false
@@ -977,6 +1020,9 @@ eventloop:
 							}
 						}
 					}
+					if hasValidWarn {
+						actualCount++
+					}
 				case "node":
 					hasValidWarn = false
 					//判断该事件是否指定了特定报警规则
@@ -1021,10 +1067,13 @@ eventloop:
 							}
 						}
 					}
+					if hasValidWarn {
+						actualCount++
+					}
 				}
 			}
 
-			if !hasValidWarn {
+			if !hasValidWarn || (actualCount != needCount) {
 				//logger.Debugf(eventAlarmLog, "报警事件(%s)类型未对应当前信息", eventID)
 				continue eventloop
 			}
