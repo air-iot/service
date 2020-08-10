@@ -56,4 +56,7 @@ const (
 	REPO string = "repo"
 
 	API string = "api"
+
+	// SYSTEMVARIABLE 系统变量
+	SYSTEMVARIABLE string = "systemVariable"
 )

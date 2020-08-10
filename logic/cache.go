@@ -18,14 +18,15 @@ import (
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 const (
-	ConfigCacheChannel      = "config_cache_channel"
-	ConfigCache             = "config_cache"
-	ConfigEventCache        = "config_event_cache"
-	ConfigEventHandlerCache = "config_event_handler_cache"
-	ConfigDeptCache         = "config_dept_cache"
-	ConfigUserCache         = "config_user_cache"
-	ConfigSettingCache      = "config_setting_cache"
-	ConfigRoleCache         = "config_role_cache"
+	ConfigCacheChannel        = "config_cache_channel"
+	ConfigCache               = "config_cache"
+	ConfigEventCache          = "config_event_cache"
+	ConfigEventHandlerCache   = "config_event_handler_cache"
+	ConfigDeptCache           = "config_dept_cache"
+	ConfigUserCache           = "config_user_cache"
+	ConfigSettingCache        = "config_setting_cache"
+	ConfigRoleCache           = "config_role_cache"
+	ConfigSystemVariableCache = "config_system_variable_cache"
 )
 
 type CacheM struct {
@@ -64,6 +65,11 @@ type RoleCache struct {
 	Role    []model.Role             `json:"role"`
 }
 
+type SystemVariableCache struct {
+	SystemVariableMap []map[string]interface{} `json:"systemVariableMap"`
+	SystemVariable    []model.SystemVariable   `json:"systemVariable"`
+}
+
 func Init() {
 	if !viper.GetBool("mqtt.enable") || !viper.GetBool("redis.enable") || !viper.GetBool("cache.enable") {
 		return
@@ -87,6 +93,9 @@ func Init() {
 	UserLogic.userRoleUserCache = &sync.Map{}
 	RoleLogic.roleCache = &sync.Map{}
 	RoleLogic.roleMapCache = &sync.Map{}
+	SystemVariableLogic.systemVariableCache = &sync.Map{}
+	SystemVariableLogic.systemVariableMapCache = &sync.Map{}
+	SystemVariableLogic.systemVariableNameValueMapCache = &sync.Map{}
 
 	cache()
 	cacheEvent()
@@ -95,6 +104,7 @@ func Init() {
 	cacheUser()
 	cacheSetting()
 	cacheRole()
+	cacheSystemVariable()
 	if token := mqtt.Client.Subscribe(ConfigCacheChannel, 0, func(client MQTT.Client, message MQTT.Message) {
 		logrus.Debugf("更新缓存:%s", string(message.Payload()))
 		switch string(message.Payload()) {
@@ -145,6 +155,13 @@ func Init() {
 				err := cacheRole()
 				if err != nil {
 					logrus.Errorf("更新角色缓存错误:%s", err.Error())
+				}
+			}()
+		case ConfigSystemVariableCache:
+			go func() {
+				err := cacheSystemVariable()
+				if err != nil {
+					logrus.Errorf("更新系统变量缓存错误:%s", err.Error())
 				}
 			}()
 		}
@@ -343,6 +360,27 @@ func cacheRole() error {
 		}
 		for _, n := range resultMap.Role {
 			RoleLogic.roleCache.Store(n.ID, n)
+		}
+	}
+	return nil
+}
+
+func cacheSystemVariable() error {
+	cmd := redis.Client.Get(ConfigSystemVariableCache)
+	if cmd.Err() == nil {
+		resultMap := new(SystemVariableCache)
+		if err := json.Unmarshal([]byte(cmd.Val()), &resultMap); err != nil {
+			return fmt.Errorf("解析Map错误:%s", err.Error())
+		}
+
+		for _, n := range resultMap.SystemVariableMap {
+			if id, ok := n["id"]; ok {
+				SystemVariableLogic.systemVariableMapCache.Store(id, n)
+			}
+		}
+		for _, n := range resultMap.SystemVariable {
+			SystemVariableLogic.systemVariableCache.Store(n.ID, n)
+			SystemVariableLogic.systemVariableNameValueMapCache.Store(n.Name, n.Value)
 		}
 	}
 	return nil
