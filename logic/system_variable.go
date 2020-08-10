@@ -51,8 +51,8 @@ func (p *systemVariableLogic) FindLocalMapCache(systemVariableID string) (result
 	}
 }
 
-func (p *systemVariableLogic) FindLocalNameValueMapCache(systemVariableName string) (result interface{}, err error) {
-	a, b := p.systemVariableNameValueMapCache.Load(systemVariableName)
+func (p *systemVariableLogic) FindLocalNameValueMapCache(systemVariableUid string) (result interface{}, err error) {
+	a, b := p.systemVariableNameValueMapCache.Load(systemVariableUid)
 	if b {
 		return a, nil
 	} else {

@@ -380,7 +380,7 @@ func cacheSystemVariable() error {
 		}
 		for _, n := range resultMap.SystemVariable {
 			SystemVariableLogic.systemVariableCache.Store(n.ID, n)
-			SystemVariableLogic.systemVariableNameValueMapCache.Store(n.Name, n.Value)
+			SystemVariableLogic.systemVariableNameValueMapCache.Store(n.Uid, n.Value)
 		}
 	}
 	return nil
