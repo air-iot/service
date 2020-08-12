@@ -1077,6 +1077,80 @@ func convertJsonLogicANode(varList *[]string, key string, val primitive.A) {
 	}
 }
 
+
+// GetJsonLogicVarListSystemVar 递归获取jsonlogic中var字段的值组成数组
+func GetJsonLogicVarListSystemVar(data primitive.M, varList *[]string) {
+	for k, v := range data {
+		switch val := v.(type) {
+		case primitive.M:
+			convertJsonLogicMapSystemVar(varList, k, val)
+		case primitive.A:
+			convertJsonLogicASystemVar(varList, k, val)
+		case string:
+			if k == "var" || k == "varrate" {
+				if strings.HasPrefix(val, "systemVar.") {
+					splitList := strings.Split(val, ".")
+					*varList = AddNonRepByLoop(*varList, splitList[1])
+				}
+			}
+		case map[string]interface{}:
+			convertJsonLogicMapSystemVar(varList, k, val)
+		case []interface{}:
+			convertJsonLogicASystemVar(varList, k, val)
+		default:
+		}
+	}
+}
+
+// convertJsonLogicMapSystemVar 转换为primitive.M
+func convertJsonLogicMapSystemVar(varList *[]string, key string, value primitive.M) {
+	for k, v := range value {
+		switch val := v.(type) {
+		case primitive.M:
+			convertJsonLogicMapSystemVar(varList, k, val)
+		case primitive.A:
+			convertJsonLogicASystemVar(varList, k, val)
+		case string:
+			if k == "var" || k == "varrate" {
+				if strings.HasPrefix(val, "systemVar.") {
+					splitList := strings.Split(val, ".")
+					*varList = AddNonRepByLoop(*varList, splitList[1])
+				}
+			}
+		case map[string]interface{}:
+			convertJsonLogicMapSystemVar(varList, k, val)
+		case []interface{}:
+			convertJsonLogicASystemVar(varList, k, val)
+		default:
+		}
+	}
+}
+
+// convertJsonLogicASystemVar 转换primitive.A类型数组
+func convertJsonLogicASystemVar(varList *[]string, key string, val primitive.A) {
+	for _, outValue := range val {
+		switch val := outValue.(type) {
+		case primitive.M:
+			convertJsonLogicMapSystemVar(varList, key, val)
+		case primitive.A:
+			convertJsonLogicASystemVar(varList, key, val)
+		case string:
+			if key == "var" || key == "varrate" {
+				if strings.HasPrefix(val, "systemVar.") {
+					splitList := strings.Split(val, ".")
+					*varList = AddNonRepByLoop(*varList, splitList[1])
+				}
+			}
+		case map[string]interface{}:
+			convertJsonLogicMapSystemVar(varList, key, val)
+		case []interface{}:
+			convertJsonLogicASystemVar(varList, key, val)
+		default:
+		}
+
+	}
+}
+
 func FormatKeyInfoList(infoList []bson.M, key string) string {
 	result := ""
 	for _, info := range infoList {
@@ -1089,7 +1163,6 @@ func FormatKeyInfoList(infoList []bson.M, key string) string {
 	}
 	return result
 }
-
 
 func FormatKeyInfoListMap(infoList []map[string]interface{}, key string) string {
 	result := ""
