@@ -54,6 +54,7 @@ func init() {
 
 	viper.SetDefault("data.action", "mqtt")
 	viper.SetDefault("data.save", "influx")
+	viper.SetDefault("data.mqApiEnable", false)
 
 	viper.SetDefault("consul.enable", true)
 	viper.SetDefault("consul.host", "consul")
@@ -104,6 +105,7 @@ func init() {
 	viper.SetDefault("mqtt.enable", false)
 	viper.SetDefault("mqtt.host", "mqtt")
 	viper.SetDefault("mqtt.port", 1883)
+	viper.SetDefault("mqtt.apiPort", 15672)
 	viper.SetDefault("mqtt.username", "admin")
 	viper.SetDefault("mqtt.password", "public")
 	viper.SetDefault("mqtt.topic", "data/")
@@ -112,6 +114,7 @@ func init() {
 	viper.SetDefault("rabbit.enable", false)
 	viper.SetDefault("rabbit.host", "rabbit")
 	viper.SetDefault("rabbit.port", 5672)
+	viper.SetDefault("rabbit.apiPort", 15672)
 	viper.SetDefault("rabbit.username", "admin")
 	viper.SetDefault("rabbit.password", "public")
 	viper.SetDefault("rabbit.vhost", "")
@@ -180,6 +183,7 @@ func NewApp() App {
 	sql.Init()
 	mqtt.Init()
 	rabbit.Init()
+	rabbit.InitApi()
 	logic.Init()
 	var (
 		serviceID   = viper.GetString("service.id")
@@ -196,7 +200,7 @@ func NewApp() App {
 		logrus.Panic("服务name不能为空")
 	}
 	if serviceID == "" {
-		//logrus.Panic("服务id不能为空")
+		// logrus.Panic("服务id不能为空")
 		serviceID = fmt.Sprintf("%s_%s", serviceName, tools.GetRandomString(8))
 	}
 	var err error
@@ -326,7 +330,7 @@ func (p *app) register() error {
 	var check = &consulApi.AgentServiceCheck{
 		CheckID: p.id,
 		HTTP:    fmt.Sprintf("http://%s:%d/check", p.host, p.port),
-		//TCP:                            fmt.Sprintf("%s:%d", p.node.Address, p.node.Port),
+		// TCP:                            fmt.Sprintf("%s:%d", p.node.Address, p.node.Port),
 		Interval:                       fmt.Sprintf("%v", 10*time.Second),
 		Timeout:                        fmt.Sprintf("%v", 30*time.Second),
 		DeregisterCriticalServiceAfter: fmt.Sprintf("%v", p.getDeregisterTTL(30*time.Second)),
