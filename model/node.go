@@ -47,19 +47,20 @@ type Warning struct {
 }
 
 type Rule struct {
-	ID          string                 `json:"id"`
-	Level       string                 `json:"level"`
-	Type        string                 `json:"type"`
-	Description string                 `json:"description"`
-	Logic       map[string]interface{} `json:"logic"`
-	Interval    float64                `json:"interval"`
-	Disable     bool                   `json:"disable"`
-	Handle      bool                   `json:"handle"`
-	Alert       bool                   `json:"alert"`
-	ExtraTags   []ExtraTagForRule      `json:"extraTags"`
-	Delay       float64                `json:"delay"`
-	DeadZone    float64                `json:"deadZone"`
-	Once        bool                   `json:"once"`
+	ID           string                 `json:"id"`
+	Level        string                 `json:"level"`
+	Type         string                 `json:"type"`
+	Description  string                 `json:"description"`
+	Logic        map[string]interface{} `json:"logic"`
+	FormulaLogic string                 `json:"formulaLogic"`
+	Interval     float64                `json:"interval"`
+	Disable      bool                   `json:"disable"`
+	Handle       bool                   `json:"handle"`
+	Alert        bool                   `json:"alert"`
+	ExtraTags    []ExtraTagForRule      `json:"extraTags"`
+	Delay        float64                `json:"delay"`
+	DeadZone     float64                `json:"deadZone"`
+	Once         bool                   `json:"once"`
 }
 
 type WarningMongo struct {
@@ -68,19 +69,20 @@ type WarningMongo struct {
 }
 
 type RuleMongo struct {
-	ID          string                 `json:"id" bson:"id"`
-	Level       string                 `json:"level" bson:"level"`
-	Type        string                 `json:"type" bson:"type"`
-	Description string                 `json:"description" bson:"description"`
-	Logic       primitive.M            `json:"logic" bson:"logic"`
-	Interval    interface{}            `json:"interval" bson:"interval"`
-	Disable     bool                   `json:"disable"bson:"disable"`
-	Handle      bool                   `json:"handle"bson:"handle"`
-	Alert       bool                   `json:"alert"bson:"alert"`
-	ExtraTags   []ExtraTagForRuleMongo `json:"extraTags" bson:"extraTags"`
-	Delay       interface{}            `json:"delay" bson:"delay"`
-	DeadZone    interface{}            `json:"deadZone" bson:"deadZone"`
-	Once        bool                   `json:"once" bson:"once"`
+	ID           string                 `json:"id" bson:"id"`
+	Level        string                 `json:"level" bson:"level"`
+	Type         string                 `json:"type" bson:"type"`
+	Description  string                 `json:"description" bson:"description"`
+	Logic        primitive.M            `json:"logic" bson:"logic"`
+	FormulaLogic string                 `json:"formulaLogic" bson:"formulaLogic"`
+	Interval     interface{}            `json:"interval" bson:"interval"`
+	Disable      bool                   `json:"disable"bson:"disable"`
+	Handle       bool                   `json:"handle"bson:"handle"`
+	Alert        bool                   `json:"alert"bson:"alert"`
+	ExtraTags    []ExtraTagForRuleMongo `json:"extraTags" bson:"extraTags"`
+	Delay        interface{}            `json:"delay" bson:"delay"`
+	DeadZone     interface{}            `json:"deadZone" bson:"deadZone"`
+	Once         bool                   `json:"once" bson:"once"`
 }
 
 type ComputedMongo struct {

@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -103,4 +104,22 @@ func GetRandomNumberCode(digit int) string {
 		code += strconv.Itoa(rand.Intn(10))
 	}
 	return code
+}
+
+func FormatStringToNumber(v string) (interface{}, error) {
+	v = strings.TrimSpace(v)
+	if strings.Contains(v, ".") {
+		res, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return nil, err
+		}
+		return res, nil
+	} else {
+		res, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, err
+		}
+		return res, nil
+	}
+
 }

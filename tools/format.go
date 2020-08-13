@@ -2,9 +2,11 @@ package tools
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"strings"
 
 	cmodel "github.com/air-iot/service/model"
 )
@@ -1308,4 +1310,147 @@ func convertJsonLogicASymbol(key string, outValList *primitive.A, deadArea float
 		}
 
 	}
+}
+
+
+// FormulaLogicMappingNumberVal 提取数值转化死区
+func FormulaLogicMappingNumberValDead(templateModelString string,deadZone float64) string {
+	//去除所有空格
+	templateModelString = strings.ReplaceAll(templateModelString," ","")
+	//匹配出> < >= <=带数字的组合
+	reg := regexp.MustCompile(">\\d+\\.?\\d*")
+	templateMatchString := reg.FindAllString(templateModelString, -1)
+	for _, v := range templateMatchString {
+		//去除逻辑符号
+		numberWithoutLarge := strings.ReplaceAll(v,">","")
+		formatNumber ,err := FormatStringToNumber(numberWithoutLarge)
+		if err != nil{
+			continue
+		}
+		formatFloatNumber,err := GetFloatNumber(formatNumber)
+		if err != nil{
+			continue
+		}
+		deadNumber := formatFloatNumber + deadZone
+		deadNumberString := fmt.Sprintf("<=%f",deadNumber)
+		//变量为替换为具体值
+		templateModelString = strings.ReplaceAll(templateModelString, v, deadNumberString)
+	}
+
+	reg = regexp.MustCompile(">=\\d+\\.?\\d*")
+	templateMatchString = reg.FindAllString(templateModelString, -1)
+	for _, v := range templateMatchString {
+		//去除逻辑符号
+		numberWithoutLarge := strings.ReplaceAll(v,">=","")
+		formatNumber ,err := FormatStringToNumber(numberWithoutLarge)
+		if err != nil{
+			continue
+		}
+		formatFloatNumber,err := GetFloatNumber(formatNumber)
+		if err != nil{
+			continue
+		}
+		deadNumber := formatFloatNumber + deadZone
+		deadNumberString := fmt.Sprintf("<=%f",deadNumber)
+		//变量为替换为具体值
+		templateModelString = strings.ReplaceAll(templateModelString, v, deadNumberString)
+	}
+
+	reg = regexp.MustCompile("<=\\d+\\.?\\d*")
+	templateMatchString = reg.FindAllString(templateModelString, -1)
+	for _, v := range templateMatchString {
+		//去除逻辑符号
+		numberWithoutLarge := strings.ReplaceAll(v,"<=","")
+		formatNumber ,err := FormatStringToNumber(numberWithoutLarge)
+		if err != nil{
+			continue
+		}
+		formatFloatNumber,err := GetFloatNumber(formatNumber)
+		if err != nil{
+			continue
+		}
+		deadNumber := formatFloatNumber - deadZone
+		deadNumberString := fmt.Sprintf("<=%f",deadNumber)
+		//变量为替换为具体值
+		templateModelString = strings.ReplaceAll(templateModelString, v, deadNumberString)
+	}
+
+	reg = regexp.MustCompile("<\\d+\\.?\\d*")
+	templateMatchString = reg.FindAllString(templateModelString, -1)
+	for _, v := range templateMatchString {
+		//去除逻辑符号
+		numberWithoutLarge := strings.ReplaceAll(v,"<","")
+		formatNumber ,err := FormatStringToNumber(numberWithoutLarge)
+		if err != nil{
+			continue
+		}
+		formatFloatNumber,err := GetFloatNumber(formatNumber)
+		if err != nil{
+			continue
+		}
+		deadNumber := formatFloatNumber - deadZone
+		deadNumberString := fmt.Sprintf("<=%f",deadNumber)
+		//变量为替换为具体值
+		templateModelString = strings.ReplaceAll(templateModelString, v, deadNumberString)
+	}
+	return templateModelString
+}
+
+// FormulaLogicMappingTagID 提取普通数据点ID
+func FormulaLogicMappingTagID(templateModelString string) []string {
+	//识别变量,两边带花括号的
+	testRegExp, _ := regexp.Compile("{{(.*?)}}")
+	//匹配出变量数组
+	templateMatchString := testRegExp.FindAllString(templateModelString, -1)
+	returnIDList := make([]string, 0)
+	for _, v := range templateMatchString {
+		//去除花括号
+		replaceBrace, _ := regexp.Compile("[{}]")
+		formatVariable := replaceBrace.ReplaceAllString(v, "")
+		//映射为具体值
+		if !strings.HasPrefix(formatVariable, "systemVar.") && !strings.HasPrefix(formatVariable, "node.") {
+			returnIDList = AddNonRepByLoop(returnIDList, formatVariable)
+		}
+	}
+	return returnIDList
+}
+
+// FormulaLogicMappingSystem 提取普通系统变量ID
+func FormulaLogicMappingSystem(templateModelString string) []string {
+	//识别变量,两边带花括号的
+	testRegExp, _ := regexp.Compile("{{(.*?)}}")
+	//匹配出变量数组
+	templateMatchString := testRegExp.FindAllString(templateModelString, -1)
+	returnIDList := make([]string, 0)
+	for _, v := range templateMatchString {
+		//去除花括号
+		replaceBrace, _ := regexp.Compile("[{}]")
+		formatVariable := replaceBrace.ReplaceAllString(v, "")
+		//映射为具体值
+		if strings.HasPrefix(formatVariable, "systemVar.") {
+			splitList := strings.Split(formatVariable, ".")
+			returnIDList = AddNonRepByLoop(returnIDList, splitList[1])
+		}
+	}
+	return returnIDList
+}
+
+// FormulaLogicMappingNodeProp 提取资产属性ID
+func FormulaLogicMappingNodeProp(templateModelString string) []string {
+	//识别变量,两边带花括号的
+	testRegExp, _ := regexp.Compile("{{(.*?)}}")
+	//匹配出变量数组
+	templateMatchString := testRegExp.FindAllString(templateModelString, -1)
+	returnIDList := make([]string, 0)
+	for _, v := range templateMatchString {
+		//去除花括号
+		replaceBrace, _ := regexp.Compile("[{}]")
+		formatVariable := replaceBrace.ReplaceAllString(v, "")
+		//映射为具体值
+		if strings.HasPrefix(formatVariable, "node.") {
+			splitList := strings.Split(formatVariable, ".")
+			returnIDList = AddNonRepByLoop(returnIDList, splitList[1])
+		}
+	}
+	return returnIDList
 }
