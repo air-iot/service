@@ -1292,9 +1292,9 @@ func convertJsonLogicASymbol(key string, outValList *primitive.A, deadArea float
 				}
 				switch key {
 				case "<", "<=":
-					(*outValList)[i] = symbolVal - deadArea
-				case ">", ">=":
 					(*outValList)[i] = symbolVal + deadArea
+				case ">", ">=":
+					(*outValList)[i] = symbolVal - deadArea
 				}
 				//symbol := JsonLogicSymbol{
 				//	Symbol: key,
@@ -1331,7 +1331,7 @@ func FormulaLogicMappingNumberValDead(templateModelString string,deadZone float6
 		if err != nil{
 			continue
 		}
-		deadNumber := formatFloatNumber + deadZone
+		deadNumber := formatFloatNumber - deadZone
 		deadNumberString := fmt.Sprintf("<=%f",deadNumber)
 		//变量为替换为具体值
 		templateModelString = strings.ReplaceAll(templateModelString, v, deadNumberString)
@@ -1350,7 +1350,7 @@ func FormulaLogicMappingNumberValDead(templateModelString string,deadZone float6
 		if err != nil{
 			continue
 		}
-		deadNumber := formatFloatNumber + deadZone
+		deadNumber := formatFloatNumber - deadZone
 		deadNumberString := fmt.Sprintf("<=%f",deadNumber)
 		//变量为替换为具体值
 		templateModelString = strings.ReplaceAll(templateModelString, v, deadNumberString)
@@ -1369,7 +1369,7 @@ func FormulaLogicMappingNumberValDead(templateModelString string,deadZone float6
 		if err != nil{
 			continue
 		}
-		deadNumber := formatFloatNumber - deadZone
+		deadNumber := formatFloatNumber + deadZone
 		deadNumberString := fmt.Sprintf("<=%f",deadNumber)
 		//变量为替换为具体值
 		templateModelString = strings.ReplaceAll(templateModelString, v, deadNumberString)
@@ -1388,7 +1388,7 @@ func FormulaLogicMappingNumberValDead(templateModelString string,deadZone float6
 		if err != nil{
 			continue
 		}
-		deadNumber := formatFloatNumber - deadZone
+		deadNumber := formatFloatNumber + deadZone
 		deadNumberString := fmt.Sprintf("<=%f",deadNumber)
 		//变量为替换为具体值
 		templateModelString = strings.ReplaceAll(templateModelString, v, deadNumberString)
