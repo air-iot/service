@@ -77,6 +77,7 @@ type Tag struct {
 	GroupName     string                 `json:"groupname"`
 	Unit          string                 `json:"unit"`
 	Logic         map[string]interface{} `json:"logic"`
+	FormulaLogic  string                 `json:"formulaLogic"`
 	StatsMethod   string                 `json:"statsMethod"`
 	StatsTag      string                 `json:"statsTag"`
 	StatsInterval string                 `json:"statsInterval"`

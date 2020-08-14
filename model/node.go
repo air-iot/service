@@ -122,6 +122,7 @@ type TagMongo struct {
 	GroupName     string      `json:"groupname" bson:"groupname"`
 	Unit          string      `json:"unit" bson:"unit"`
 	Logic         primitive.M `json:"logic" bson:"logic"`
+	FormulaLogic  string      `json:"formulaLogic" bson:"formulaLogic"`
 	StatsMethod   string      `json:"statsMethod" bson:"statsMethod"`
 	StatsTag      string      `json:"statsTag" bson:"statsTag"`
 	StatsInterval string      `json:"statsInterval" bson:"statsInterval"`
