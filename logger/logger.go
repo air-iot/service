@@ -1,11 +1,9 @@
 package logger
 
 import (
-	"os"
-	"strings"
-
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"os"
 )
 
 const (
@@ -19,37 +17,27 @@ const (
 	EMQTTPOOLRELEASEERROR  = "释放Mqtt连接失败: %s"
 	INFLUXPOOLRELEASEERROR = "释放InfluxDB连接失败: %s"
 
-	QUERYERROR = "根据过滤器查询数据失败: %s"
-	QUERYBYIDERROR = "根据id查询数据失败: %s"
-	SAVEONEERROR = "保存一条数据到数据库失败: %s"
+	QUERYERROR      = "根据过滤器查询数据失败: %s"
+	QUERYBYIDERROR  = "根据id查询数据失败: %s"
+	SAVEONEERROR    = "保存一条数据到数据库失败: %s"
 	DELETEBYIDERROR = "根据id从数据库删除一条数据失败: %s"
 	UPDATEBYIDERROR = "根据id更新数据失败: %s"
 
-	INPUTUNMARSHALERROR = "传入参数解序列化错误: %s"
-	USERCACHEUPDATEERROR = "更新用户权限缓存失败: %s"
+	INPUTUNMARSHALERROR   = "传入参数解序列化错误: %s"
+	USERCACHEUPDATEERROR  = "更新用户权限缓存失败: %s"
 	UPDATETAGMAPPINGERROR = "更新动态属性反向映射Map失败: %s"
 )
 
-var levelMap = map[string]logrus.Level{
-	"DEBUG": logrus.DebugLevel,
-	"INFO":  logrus.InfoLevel,
-	"WARN":  logrus.WarnLevel,
-	"ERROR": logrus.ErrorLevel,
-}
-
-// LogLevel 日志等级
-var logLevel = logrus.ErrorLevel
-
 func Init() {
 	var tmpLogLevel = viper.GetString("log.level")
-	if tmpLogLevel != "" {
-		if l, ok := levelMap[strings.ToUpper(tmpLogLevel)]; ok {
-			logLevel = l
-		}
+	l, err := logrus.ParseLevel(tmpLogLevel)
+	if err != nil {
+		l = logrus.ErrorLevel
 	}
-	//logrus.SetFormatter(&logrus.JSONFormatter{TimestampFormat: "2006-01-02 15:04:05"})
+	// logrus.SetFormatter(&logrus.JSONFormatter{TimestampFormat: "2006-01-02 15:04:05"})
 	logrus.SetOutput(os.Stdout)
-	logrus.SetLevel(logLevel)
+	logrus.SetLevel(l)
+
 }
 
 // Debugln 调试输出
