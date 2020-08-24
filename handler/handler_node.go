@@ -94,7 +94,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 			Key: "$match",
 			Value: bson.M{
 				"type":                DeviceModify,
-				"settings.eventType":       modifyTypeAfterMapping,
+				"settings.eventType":  modifyTypeAfterMapping,
 				"settings.eventRange": "node",
 				//"$or":
 				//bson.A{
@@ -144,6 +144,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 	}
 
 	//logger.Debugf(eventDeviceModifyLog, "开始遍历事件列表")
+eventloop:
 	for _, eventInfo := range eventInfoList {
 		logger.Debugf(eventDeviceModifyLog, "事件信息为:%+v", eventInfo)
 		handlers, ok := eventInfo["handlers"].(primitive.A)
@@ -353,7 +354,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 											} else {
 												logger.Debugf(eventDeviceModifyLog, "发送事件成功:%s,数据为:%+v", eventID.Hex(), sendMap)
 											}
-											continue
+											continue eventloop
 										} else {
 											continue
 										}
@@ -596,7 +597,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 			Key: "$match",
 			Value: bson.M{
 				"type":                DeviceModify,
-				"settings.eventType":       modifyTypeAfterMapping,
+				"settings.eventType":  modifyTypeAfterMapping,
 				"settings.eventRange": "model",
 				//"$or":
 				//bson.A{
