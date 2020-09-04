@@ -307,6 +307,7 @@ func cacheUser() error {
 		userDeptMapRaw := &map[string][]model.User{}
 		userRoleMapRaw := &map[string][]model.User{}
 		for _, n := range resultMap.UserStruct {
+			UserLogic.userCache.Store(n.ID, n)
 			for _, dept := range n.Department {
 				tools.MergeUserDataMap(dept, n, userDeptMapRaw)
 			}
