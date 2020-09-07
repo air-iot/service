@@ -1,4 +1,4 @@
-package user
+package gateway
 
 import (
 	"github.com/air-iot/service/traefik"
