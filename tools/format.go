@@ -11,7 +11,6 @@ import (
 	cmodel "github.com/air-iot/service/model"
 )
 
-
 // RemoveRepByLoop 通过循环过滤重复元素
 func RemoveRepByLoop(slc []string, removeEle string) []string {
 	result := []string{} // 存放结果
@@ -92,6 +91,26 @@ func AddNonRepObjectIDByLoop(slc []primitive.ObjectID, addEle primitive.ObjectID
 	flag := true
 	for i := range slc {
 		if slc[i].Hex() == addEle.Hex() {
+			flag = false // 存在重复元素，标识为false
+		}
+	}
+	if flag { // 标识为false，不添加进结果
+		slc = append(slc, addEle)
+	}
+	return slc
+}
+
+// AddNonRepBsonMByLoop 通过循环添加非重复元素（[]bson.M）
+func AddNonRepBsonMByLoop(slc []bson.M, addEle bson.M) []bson.M {
+	flag := true
+	for i := range slc {
+		if _, ok := slc[i]["id"].(primitive.ObjectID); !ok {
+			return slc
+		}
+		if _, ok := addEle["id"].(primitive.ObjectID); !ok {
+			return slc
+		}
+		if slc[i]["id"].(primitive.ObjectID) == addEle["id"].(primitive.ObjectID) {
 			flag = false // 存在重复元素，标识为false
 		}
 	}
@@ -1079,7 +1098,6 @@ func convertJsonLogicANode(varList *[]string, key string, val primitive.A) {
 	}
 }
 
-
 // GetJsonLogicVarListSystemVar 递归获取jsonlogic中var字段的值组成数组
 func GetJsonLogicVarListSystemVar(data primitive.M, varList *[]string) {
 	for k, v := range data {
@@ -1312,27 +1330,26 @@ func convertJsonLogicASymbol(key string, outValList *primitive.A, deadArea float
 	}
 }
 
-
 // FormulaLogicMappingNumberVal 提取数值转化死区
-func FormulaLogicMappingNumberValDead(templateModelString string,deadZone float64) string {
+func FormulaLogicMappingNumberValDead(templateModelString string, deadZone float64) string {
 	//去除所有空格
-	templateModelString = strings.ReplaceAll(templateModelString," ","")
+	templateModelString = strings.ReplaceAll(templateModelString, " ", "")
 	//匹配出> < >= <=带数字的组合
 	reg := regexp.MustCompile(">\\d+\\.?\\d*")
 	templateMatchString := reg.FindAllString(templateModelString, -1)
 	for _, v := range templateMatchString {
 		//去除逻辑符号
-		numberWithoutLarge := strings.ReplaceAll(v,">","")
-		formatNumber ,err := FormatStringToNumber(numberWithoutLarge)
-		if err != nil{
+		numberWithoutLarge := strings.ReplaceAll(v, ">", "")
+		formatNumber, err := FormatStringToNumber(numberWithoutLarge)
+		if err != nil {
 			continue
 		}
-		formatFloatNumber,err := GetFloatNumber(formatNumber)
-		if err != nil{
+		formatFloatNumber, err := GetFloatNumber(formatNumber)
+		if err != nil {
 			continue
 		}
 		deadNumber := formatFloatNumber - deadZone
-		deadNumberString := fmt.Sprintf("<=%f",deadNumber)
+		deadNumberString := fmt.Sprintf("<=%f", deadNumber)
 		//变量为替换为具体值
 		templateModelString = strings.ReplaceAll(templateModelString, v, deadNumberString)
 	}
@@ -1341,17 +1358,17 @@ func FormulaLogicMappingNumberValDead(templateModelString string,deadZone float6
 	templateMatchString = reg.FindAllString(templateModelString, -1)
 	for _, v := range templateMatchString {
 		//去除逻辑符号
-		numberWithoutLarge := strings.ReplaceAll(v,">=","")
-		formatNumber ,err := FormatStringToNumber(numberWithoutLarge)
-		if err != nil{
+		numberWithoutLarge := strings.ReplaceAll(v, ">=", "")
+		formatNumber, err := FormatStringToNumber(numberWithoutLarge)
+		if err != nil {
 			continue
 		}
-		formatFloatNumber,err := GetFloatNumber(formatNumber)
-		if err != nil{
+		formatFloatNumber, err := GetFloatNumber(formatNumber)
+		if err != nil {
 			continue
 		}
 		deadNumber := formatFloatNumber - deadZone
-		deadNumberString := fmt.Sprintf("<=%f",deadNumber)
+		deadNumberString := fmt.Sprintf("<=%f", deadNumber)
 		//变量为替换为具体值
 		templateModelString = strings.ReplaceAll(templateModelString, v, deadNumberString)
 	}
@@ -1360,17 +1377,17 @@ func FormulaLogicMappingNumberValDead(templateModelString string,deadZone float6
 	templateMatchString = reg.FindAllString(templateModelString, -1)
 	for _, v := range templateMatchString {
 		//去除逻辑符号
-		numberWithoutLarge := strings.ReplaceAll(v,"<=","")
-		formatNumber ,err := FormatStringToNumber(numberWithoutLarge)
-		if err != nil{
+		numberWithoutLarge := strings.ReplaceAll(v, "<=", "")
+		formatNumber, err := FormatStringToNumber(numberWithoutLarge)
+		if err != nil {
 			continue
 		}
-		formatFloatNumber,err := GetFloatNumber(formatNumber)
-		if err != nil{
+		formatFloatNumber, err := GetFloatNumber(formatNumber)
+		if err != nil {
 			continue
 		}
 		deadNumber := formatFloatNumber + deadZone
-		deadNumberString := fmt.Sprintf("<=%f",deadNumber)
+		deadNumberString := fmt.Sprintf("<=%f", deadNumber)
 		//变量为替换为具体值
 		templateModelString = strings.ReplaceAll(templateModelString, v, deadNumberString)
 	}
@@ -1379,17 +1396,17 @@ func FormulaLogicMappingNumberValDead(templateModelString string,deadZone float6
 	templateMatchString = reg.FindAllString(templateModelString, -1)
 	for _, v := range templateMatchString {
 		//去除逻辑符号
-		numberWithoutLarge := strings.ReplaceAll(v,"<","")
-		formatNumber ,err := FormatStringToNumber(numberWithoutLarge)
-		if err != nil{
+		numberWithoutLarge := strings.ReplaceAll(v, "<", "")
+		formatNumber, err := FormatStringToNumber(numberWithoutLarge)
+		if err != nil {
 			continue
 		}
-		formatFloatNumber,err := GetFloatNumber(formatNumber)
-		if err != nil{
+		formatFloatNumber, err := GetFloatNumber(formatNumber)
+		if err != nil {
 			continue
 		}
 		deadNumber := formatFloatNumber + deadZone
-		deadNumberString := fmt.Sprintf("<=%f",deadNumber)
+		deadNumberString := fmt.Sprintf("<=%f", deadNumber)
 		//变量为替换为具体值
 		templateModelString = strings.ReplaceAll(templateModelString, v, deadNumberString)
 	}
