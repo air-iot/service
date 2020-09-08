@@ -342,8 +342,54 @@ eventloop:
 								if nodeMap, ok := nodeEle.(primitive.M); ok {
 									if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
 										if nodeID == nodeIDInSettings {
+											nodeInfo := bson.M{}
+											if initNode, ok := data["initNode"].(map[string]interface{}); ok {
+												nodeInfo = initNode
+											} else {
+												nodeInfo, err = logic.NodeLogic.FindLocalMapCache(nodeID)
+												if err != nil {
+													logger.Errorf(eventDeviceModifyLog, "事件(%s)的资产缓存(%+v)查询失败", eventID.Hex(), nodeID)
+													nodeInfo = bson.M{}
+													continue
+												}
+											}
+
+											departmentStringIDList, err := tools.ObjectIdListToStringList(departmentObjectIDList)
+											departmentMList, err := logic.DeptLogic.FindLocalCacheList(departmentStringIDList)
+											if err != nil {
+												logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
+												departmentMList = make([]map[string]interface{}, 0)
+											}
+
+											data["departmentName"] = tools.FormatKeyInfoMapList(departmentMList, "name")
+
+											modelEle, err := logic.ModelLogic.FindLocalMapCache(modelID)
+											if err != nil {
+												logger.Errorf(eventDeviceModifyLog, "事件(%s)的模型缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
+												continue
+											}
+
+											modelMList := make([]bson.M, 0)
+											modelMList = append(modelMList, modelEle)
+
+											data["modelName"] = tools.FormatKeyInfoList(modelMList, "name")
+											data["nodeName"] = tools.FormatKeyInfo(nodeInfo, "name")
+											data["nodeUid"] = tools.FormatKeyInfo(nodeInfo, "uid")
+											data["time"] = tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
+
 											data["content"] = content
+
+											switch modifyTypeAfterMapping {
+											case "编辑资产画面", "删除资产画面":
+												dashboardInfo, ok := data["dashboard"].(map[string]interface{})
+												if !ok {
+													logger.Errorf(eventDeviceModifyLog, "数据消息中dashboard字段不存在或类型错误")
+													continue
+												}
+												data["dashboardName"] = tools.FormatKeyInfo(dashboardInfo, "name")
+											}
 											sendMap := data
+
 											b, err := json.Marshal(sendMap)
 											if err != nil {
 												continue
