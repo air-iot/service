@@ -101,4 +101,12 @@ type Client interface {
 	// driver
 	ChangeCommand(id string, data, result interface{}) error
 	DriverConfig(driverId, serviceId string) ([]byte, error)
+
+	// gateway
+	FindGatewayQuery(query, result interface{}) error
+	FindGatewayById(id string, result interface{}) error
+	SaveGateway(data, result interface{}) error
+	DelGatewayById(id string, result interface{}) error
+	UpdateGatewayById(id string, data, result interface{}) error
+	ReplaceGatewayById(id string, data, result interface{}) error
 }

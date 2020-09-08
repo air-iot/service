@@ -9,13 +9,23 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/air-iot/service/traefik"
 	"testing"
 )
 
-var cli = NewClient("http", "iot.tmis.top", 31000, "b9bd592b-2d79-4f5c-d583-aad18ebe00ca", "c5de1068-79fd-b32b-a4f8-291c337111fa")
+func init() {
+	traefik.Host = "iot.tmis.top"
+	traefik.Port = 31000
+	traefik.Enable = true
+	traefik.AppKey = "b9bd592b-2d79-4f5c-d583-aad18ebe00ca"
+	traefik.AppSecret = "c5de1068-79fd-b32b-a4f8-291c337111fa"
+}
+
+var cli = NewClient()
 
 func TestClient_FindTagsById(t *testing.T) {
 	var r = make([]map[string]interface{}, 0)
+	cli = NewClient()
 	err := cli.FindTagsById("5f538604e7ddbc608c8b57f0", &r)
 	if err != nil {
 		t.Fatal(err)

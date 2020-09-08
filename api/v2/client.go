@@ -4,31 +4,40 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/air-iot/service/model"
+	"github.com/air-iot/service/traefik"
 	"net"
 	"net/url"
 	"strconv"
 	"time"
 
+	"github.com/air-iot/service/model"
 	"github.com/go-resty/resty/v2"
 	"github.com/sirupsen/logrus"
 )
 
 type client struct {
-	protocol string
-	host     string
-	ak       string
-	sk       string
-	Token    string
-	expires  int64
+	protocol  string
+	host      string
+	ak        string
+	sk        string
+	Token     string
+	expires   int64
+	isTraefik bool
+	headers   map[string]string
 }
 
-func NewClient(protocol, host string, port int, ak, sk string) Client {
+func NewClient() Client {
+	headers := map[string]string{
+		"Content-Type": "application/json",
+		"Request-Type": "service",
+	}
 	return &client{
-		protocol: protocol,
-		host:     net.JoinHostPort(host, strconv.Itoa(port)),
-		ak:       ak,
-		sk:       sk,
+		protocol:  traefik.Proto,
+		host:      net.JoinHostPort(traefik.Host, strconv.Itoa(traefik.Port)),
+		ak:        traefik.AppKey,
+		sk:        traefik.AppSecret,
+		isTraefik: traefik.Enable,
+		headers:   headers,
 	}
 }
 
@@ -58,12 +67,21 @@ func (p *client) findToken() {
 }
 
 func (p *client) Get(url url.URL, result interface{}) error {
-	p.checkToken()
-	resp, err := resty.New().SetTimeout(time.Minute*1).R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Authorization", p.Token).
-		SetResult(result).
-		Get(url.String())
+	var resp *resty.Response
+	var err error
+	if p.isTraefik {
+		p.checkToken()
+		p.headers["Authorization"] = p.Token
+		resp, err = resty.New().SetTimeout(time.Minute * 1).R().
+			SetHeaders(p.headers).
+			SetResult(result).
+			Get(url.String())
+	} else {
+		resp, err = resty.New().SetTimeout(time.Minute * 1).R().
+			SetHeaders(p.headers).
+			SetResult(result).
+			Get(url.String())
+	}
 
 	if err != nil {
 		return err
@@ -77,13 +95,25 @@ func (p *client) Get(url url.URL, result interface{}) error {
 }
 
 func (p *client) Post(url url.URL, data, result interface{}) error {
-	p.checkToken()
-	resp, err := resty.New().SetTimeout(time.Minute*1).R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Authorization", p.Token).
-		SetResult(result).
-		SetBody(data).
-		Post(url.String())
+	var resp *resty.Response
+	var err error
+	if p.isTraefik {
+		p.checkToken()
+		p.headers["Authorization"] = p.Token
+		resp, err = resty.New().SetTimeout(time.Minute * 1).R().
+			SetHeaders(p.headers).
+			SetResult(result).
+			SetBody(data).
+			Post(url.String())
+
+	} else {
+		resp, err = resty.New().SetTimeout(time.Minute * 1).R().
+			SetHeaders(p.headers).
+			SetResult(result).
+			SetBody(data).
+			Post(url.String())
+	}
+
 	if err != nil {
 		return err
 	}
@@ -94,12 +124,22 @@ func (p *client) Post(url url.URL, data, result interface{}) error {
 }
 
 func (p *client) Delete(url url.URL, result interface{}) error {
-	p.checkToken()
-	resp, err := resty.New().SetTimeout(time.Minute*1).R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Authorization", p.Token).
-		SetResult(result).
-		Delete(url.String())
+	var resp *resty.Response
+	var err error
+	if p.isTraefik {
+		p.checkToken()
+		p.headers["Authorization"] = p.Token
+		resp, err = resty.New().SetTimeout(time.Minute * 1).R().
+			SetHeaders(p.headers).
+			SetResult(result).
+			Delete(url.String())
+	} else {
+		resp, err = resty.New().SetTimeout(time.Minute * 1).R().
+			SetHeaders(p.headers).
+			SetResult(result).
+			Delete(url.String())
+	}
+
 	if err != nil {
 		return err
 	}
@@ -110,13 +150,23 @@ func (p *client) Delete(url url.URL, result interface{}) error {
 }
 
 func (p *client) Put(url url.URL, data, result interface{}) error {
-	p.checkToken()
-	resp, err := resty.New().SetTimeout(time.Minute*1).R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Authorization", p.Token).
-		SetResult(result).
-		SetBody(data).
-		Put(url.String())
+	var resp *resty.Response
+	var err error
+	if p.isTraefik {
+		p.checkToken()
+		p.headers["Authorization"] = p.Token
+		resp, err = resty.New().SetTimeout(time.Minute * 1).R().
+			SetHeaders(p.headers).
+			SetResult(result).
+			SetBody(data).
+			Put(url.String())
+	} else {
+		resp, err = resty.New().SetTimeout(time.Minute * 1).R().
+			SetHeaders(p.headers).
+			SetResult(result).
+			SetBody(data).
+			Put(url.String())
+	}
 	if err != nil {
 		return err
 	}
@@ -127,13 +177,23 @@ func (p *client) Put(url url.URL, data, result interface{}) error {
 }
 
 func (p *client) Patch(url url.URL, data, result interface{}) error {
-	p.checkToken()
-	resp, err := resty.New().SetTimeout(time.Minute*1).R().
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Authorization", p.Token).
-		SetResult(result).
-		SetBody(data).
-		Patch(url.String())
+	var resp *resty.Response
+	var err error
+	if p.isTraefik {
+		p.checkToken()
+		p.headers["Authorization"] = p.Token
+		resp, err = resty.New().SetTimeout(time.Minute * 1).R().
+			SetHeaders(p.headers).
+			SetResult(result).
+			SetBody(data).
+			Patch(url.String())
+	} else {
+		resp, err = resty.New().SetTimeout(time.Minute * 1).R().
+			SetHeaders(p.headers).
+			SetResult(result).
+			SetBody(data).
+			Patch(url.String())
+	}
 	if err != nil {
 		return err
 	}
@@ -157,7 +217,12 @@ func (p *client) GetLatest(query interface{}) (result []model.RealTimeData, err 
 	}
 	v := url.Values{}
 	v.Set("query", string(b))
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "core/data/latest"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/data/latest"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/data/latest"}
+	}
 	u.RawQuery = v.Encode()
 	result = make([]model.RealTimeData, 0)
 	if err := p.Get(u, &result); err != nil {
@@ -168,7 +233,13 @@ func (p *client) GetLatest(query interface{}) (result []model.RealTimeData, err 
 
 func (p *client) PostLatest(query interface{}) (result []model.RealTimeData, err error) {
 	result = make([]model.RealTimeData, 0)
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "core/data/latest"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/data/latest"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/data/latest"}
+	}
+
 	if err := p.Post(u, query, &result); err != nil {
 		return nil, err
 	}
@@ -180,7 +251,12 @@ func (p *client) GetQuery(query interface{}) (result *model.QueryData, err error
 	if err != nil {
 		return nil, err
 	}
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "core/data/query"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/data/query"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/data/query"}
+	}
 	v := url.Values{}
 	v.Set("query", string(b))
 	u.RawQuery = v.Encode()
@@ -192,7 +268,15 @@ func (p *client) GetQuery(query interface{}) (result *model.QueryData, err error
 }
 
 func (p *client) PostQuery(query interface{}) (result *model.QueryData, err error) {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "core/data/query"}
+	var u url.URL
+	if p.isTraefik {
+	} else {
+	}
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/data/query"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/data/query"}
+	}
 	result = new(model.QueryData)
 	if err := p.Post(u, query, &result); err != nil {
 		return nil, err
@@ -201,7 +285,12 @@ func (p *client) PostQuery(query interface{}) (result *model.QueryData, err erro
 }
 
 func (p *client) ChangeCommand(id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("driver/driver/%s/command", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("driver/driver/%s/command", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "driver:9000", Path: fmt.Sprintf("driver/driver/%s/command", id)}
+	}
 	return p.Post(u, data, &result)
 }
 
@@ -210,7 +299,12 @@ func (p *client) FindExtQuery(tableName string, query, result interface{}) error
 	if err != nil {
 		return err
 	}
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/ext/%s", tableName)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/ext/%s", tableName)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/ext/%s", tableName)}
+	}
 	v := url.Values{}
 	v.Set("query", string(b))
 	u.RawQuery = v.Encode()
@@ -218,32 +312,62 @@ func (p *client) FindExtQuery(tableName string, query, result interface{}) error
 }
 
 func (p *client) SaveExt(tableName string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/ext/%s", tableName)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/ext/%s", tableName)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/ext/%s", tableName)}
+	}
 	return p.Post(u, data, result)
 }
 
 func (p *client) SaveManyExt(tableName string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/ext/%s/many", tableName)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/ext/%s/many", tableName)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/ext/%s/many", tableName)}
+	}
 	return p.Post(u, data, result)
 }
 
 func (p *client) FindExtById(tableName, id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/ext/%s/%s", tableName, id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/ext/%s/%s", tableName, id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/ext/%s/%s", tableName, id)}
+	}
 	return p.Get(u, result)
 }
 
 func (p *client) DelExtById(tableName, id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/ext/%s/%s", tableName, id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/ext/%s/%s", tableName, id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/ext/%s/%s", tableName, id)}
+	}
 	return p.Delete(u, result)
 }
 
 func (p *client) UpdateExtById(tableName, id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/ext/%s/%s", tableName, id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/ext/%s/%s", tableName, id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/ext/%s/%s", tableName, id)}
+	}
 	return p.Patch(u, data, result)
 }
 
 func (p *client) ReplaceExtById(tableName, id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/ext/%s/%s", tableName, id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/ext/%s/%s", tableName, id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/ext/%s/%s", tableName, id)}
+	}
 	return p.Put(u, data, result)
 }
 
@@ -252,7 +376,12 @@ func (p *client) FindEventQuery(query, result interface{}) error {
 	if err != nil {
 		return err
 	}
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "event/event"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "event/event"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "event:9000", Path: "event/event"}
+	}
 	v := url.Values{}
 	v.Set("query", string(b))
 	u.RawQuery = v.Encode()
@@ -260,27 +389,52 @@ func (p *client) FindEventQuery(query, result interface{}) error {
 }
 
 func (p *client) FindEventById(id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("event/event/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("event/event/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "event:9000", Path: fmt.Sprintf("event/event/%s", id)}
+	}
 	return p.Get(u, result)
 }
 
 func (p *client) SaveEvent(data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "event/event"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "event/event"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "event:9000", Path: "event/event"}
+	}
 	return p.Post(u, data, result)
 }
 
 func (p *client) DelEventById(id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("event/event/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("event/event/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "event:9000", Path: fmt.Sprintf("event/event/%s", id)}
+	}
 	return p.Delete(u, result)
 }
 
 func (p *client) UpdateEventById(id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("event/event/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("event/event/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "event:9000", Path: fmt.Sprintf("event/event/%s", id)}
+	}
 	return p.Patch(u, data, result)
 }
 
 func (p *client) ReplaceEventById(id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("event/event/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("event/event/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "event:9000", Path: fmt.Sprintf("event/event/%s", id)}
+	}
 	return p.Put(u, data, result)
 }
 
@@ -289,7 +443,12 @@ func (p *client) FindHandlerQuery(query, result interface{}) error {
 	if err != nil {
 		return err
 	}
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "event/eventHandler"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "event/eventHandler"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "event:9000", Path: "event/eventHandler"}
+	}
 	v := url.Values{}
 	v.Set("query", string(b))
 	u.RawQuery = v.Encode()
@@ -297,27 +456,52 @@ func (p *client) FindHandlerQuery(query, result interface{}) error {
 }
 
 func (p *client) FindHandlerById(id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("event/eventHandler/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("event/eventHandler/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "event:9000", Path: fmt.Sprintf("event/eventHandler/%s", id)}
+	}
 	return p.Get(u, result)
 }
 
 func (p *client) SaveHandler(data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "event/eventHandler"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "event/eventHandler"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "event:9000", Path: "event/eventHandler"}
+	}
 	return p.Post(u, data, result)
 }
 
 func (p *client) DelHandlerById(id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("event/eventHandler/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("event/eventHandler/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "event:9000", Path: fmt.Sprintf("event/eventHandler/%s", id)}
+	}
 	return p.Delete(u, result)
 }
 
 func (p *client) UpdateHandlerById(id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("event/eventHandler/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("event/eventHandler/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "event:9000", Path: fmt.Sprintf("event/eventHandler/%s", id)}
+	}
 	return p.Patch(u, data, result)
 }
 
 func (p *client) ReplaceHandlerById(id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("event/eventHandler/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("event/eventHandler/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "event:9000", Path: fmt.Sprintf("event/eventHandler/%s", id)}
+	}
 	return p.Put(u, data, result)
 }
 
@@ -326,7 +510,12 @@ func (p *client) FindModelQuery(query, result interface{}) error {
 	if err != nil {
 		return err
 	}
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "core/model"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/model"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/model"}
+	}
 	v := url.Values{}
 	v.Set("query", string(b))
 	u.RawQuery = v.Encode()
@@ -334,27 +523,52 @@ func (p *client) FindModelQuery(query, result interface{}) error {
 }
 
 func (p *client) FindModelById(id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/model/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/model/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/model/%s", id)}
+	}
 	return p.Get(u, result)
 }
 
 func (p *client) SaveModel(data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "core/model"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/model"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/model"}
+	}
 	return p.Post(u, data, result)
 }
 
 func (p *client) DelModelById(id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/model/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/model/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/model/%s", id)}
+	}
 	return p.Delete(u, result)
 }
 
 func (p *client) UpdateModelById(id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/model/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/model/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/model/%s", id)}
+	}
 	return p.Patch(u, data, result)
 }
 
 func (p *client) ReplaceModelById(id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/model/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/model/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/model/%s", id)}
+	}
 	return p.Put(u, data, result)
 }
 
@@ -363,7 +577,12 @@ func (p *client) FindNodeQuery(query, result interface{}) error {
 	if err != nil {
 		return err
 	}
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "core/node"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/node"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/node"}
+	}
 	v := url.Values{}
 	v.Set("query", string(b))
 	u.RawQuery = v.Encode()
@@ -371,32 +590,63 @@ func (p *client) FindNodeQuery(query, result interface{}) error {
 }
 
 func (p *client) FindNodeById(id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/node/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/node/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/node/%s", id)}
+	}
 	return p.Get(u, result)
 }
 
 func (p *client) FindTagsById(id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/node/tag/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		println("--------------")
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/node/tag/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/node/tag/%s", id)}
+	}
 	return p.Get(u, result)
 }
 
 func (p *client) SaveNode(data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "core/node"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/node"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/node"}
+	}
 	return p.Post(u, data, result)
 }
 
 func (p *client) DelNodeById(id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/node/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/node/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/node/%s", id)}
+	}
 	return p.Delete(u, result)
 }
 
 func (p *client) UpdateNodeById(id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/node/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/node/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/node/%s", id)}
+	}
 	return p.Patch(u, data, result)
 }
 
 func (p *client) ReplaceNodeById(id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/node/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/node/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/node/%s", id)}
+	}
 	return p.Put(u, data, result)
 }
 
@@ -405,7 +655,12 @@ func (p *client) FindSettingQuery(query, result interface{}) error {
 	if err != nil {
 		return err
 	}
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "core/setting"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/setting"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/setting"}
+	}
 	v := url.Values{}
 	v.Set("query", string(b))
 	u.RawQuery = v.Encode()
@@ -413,27 +668,52 @@ func (p *client) FindSettingQuery(query, result interface{}) error {
 }
 
 func (p *client) FindSettingById(id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/setting/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/setting/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/setting/%s", id)}
+	}
 	return p.Get(u, result)
 }
 
 func (p *client) SaveSetting(data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "core/setting"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/setting"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/setting"}
+	}
 	return p.Post(u, data, result)
 }
 
 func (p *client) DelSettingById(id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/setting/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/setting/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/setting/%s", id)}
+	}
 	return p.Delete(u, result)
 }
 
 func (p *client) UpdateSettingById(id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/setting/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/setting/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/setting/%s", id)}
+	}
 	return p.Patch(u, data, result)
 }
 
 func (p *client) ReplaceSettingById(id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/setting/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/setting/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/setting/%s", id)}
+	}
 	return p.Put(u, data, result)
 }
 
@@ -442,7 +722,12 @@ func (p *client) FindTableQuery(query, result interface{}) error {
 	if err != nil {
 		return err
 	}
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "core/table"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/table"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/table"}
+	}
 	v := url.Values{}
 	v.Set("query", string(b))
 	u.RawQuery = v.Encode()
@@ -450,27 +735,52 @@ func (p *client) FindTableQuery(query, result interface{}) error {
 }
 
 func (p *client) FindTableById(id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/table/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/table/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/table/%s", id)}
+	}
 	return p.Get(u, result)
 }
 
 func (p *client) SaveTable(data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "core/table"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/table"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/table"}
+	}
 	return p.Post(u, data, result)
 }
 
 func (p *client) DelTableById(id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/table/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/table/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/table/%s", id)}
+	}
 	return p.Delete(u, result)
 }
 
 func (p *client) UpdateTableById(id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/table/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/table/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/table/%s", id)}
+	}
 	return p.Patch(u, data, result)
 }
 
 func (p *client) ReplaceTableById(id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/table/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/table/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/table/%s", id)}
+	}
 	return p.Put(u, data, result)
 }
 
@@ -479,7 +789,12 @@ func (p *client) FindUserQuery(query, result interface{}) error {
 	if err != nil {
 		return err
 	}
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "core/user"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/user"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/user"}
+	}
 	v := url.Values{}
 	v.Set("query", string(b))
 	u.RawQuery = v.Encode()
@@ -487,27 +802,52 @@ func (p *client) FindUserQuery(query, result interface{}) error {
 }
 
 func (p *client) FindUserById(id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/user/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/user/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/user/%s", id)}
+	}
 	return p.Get(u, result)
 }
 
 func (p *client) SaveUser(data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "core/user"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/user"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/user"}
+	}
 	return p.Post(u, data, result)
 }
 
 func (p *client) DelUserById(id string, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/user/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/user/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/user/%s", id)}
+	}
 	return p.Delete(u, result)
 }
 
 func (p *client) UpdateUserById(id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/user/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/user/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/user/%s", id)}
+	}
 	return p.Patch(u, data, result)
 }
 
 func (p *client) ReplaceUserById(id string, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/user/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/user/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/user/%s", id)}
+	}
 	return p.Put(u, data, result)
 }
 
@@ -516,7 +856,12 @@ func (p *client) FindWarnQuery(archive bool, query, result interface{}) error {
 	if err != nil {
 		return err
 	}
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "warning/warning"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "warning/warning"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "warning:9000", Path: "warning/warning"}
+	}
 	v := url.Values{}
 	v.Set("query", string(b))
 	v.Set("archive", strconv.FormatBool(archive))
@@ -525,7 +870,12 @@ func (p *client) FindWarnQuery(archive bool, query, result interface{}) error {
 }
 
 func (p *client) FindWarnById(id string, archive bool, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("warning/warning/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("warning/warning/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "warning:9000", Path: fmt.Sprintf("warning/warning/%s", id)}
+	}
 	v := url.Values{}
 	v.Set("archive", strconv.FormatBool(archive))
 	u.RawQuery = v.Encode()
@@ -533,7 +883,12 @@ func (p *client) FindWarnById(id string, archive bool, result interface{}) error
 }
 
 func (p *client) SaveWarn(data, archive bool, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: "warning/warning"}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "warning/warning"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "warning:9000", Path: "warning/warning"}
+	}
 	v := url.Values{}
 	v.Set("archive", strconv.FormatBool(archive))
 	u.RawQuery = v.Encode()
@@ -541,7 +896,12 @@ func (p *client) SaveWarn(data, archive bool, result interface{}) error {
 }
 
 func (p *client) DelWarnById(id string, archive bool, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("warning/warning/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("warning/warning/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "warning:9000", Path: fmt.Sprintf("warning/warning/%s", id)}
+	}
 	v := url.Values{}
 	v.Set("archive", strconv.FormatBool(archive))
 	u.RawQuery = v.Encode()
@@ -549,7 +909,12 @@ func (p *client) DelWarnById(id string, archive bool, result interface{}) error 
 }
 
 func (p *client) UpdateWarnById(id string, archive bool, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("warning/warning/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("warning/warning/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "warning:9000", Path: fmt.Sprintf("warning/warning/%s", id)}
+	}
 	v := url.Values{}
 	v.Set("archive", strconv.FormatBool(archive))
 	u.RawQuery = v.Encode()
@@ -557,7 +922,12 @@ func (p *client) UpdateWarnById(id string, archive bool, data, result interface{
 }
 
 func (p *client) ReplaceWarnById(id string, archive bool, data, result interface{}) error {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("warning/warning/%s", id)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("warning/warning/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "warning:9000", Path: fmt.Sprintf("warning/warning/%s", id)}
+	}
 	v := url.Values{}
 	v.Set("archive", strconv.FormatBool(archive))
 	u.RawQuery = v.Encode()
@@ -565,7 +935,12 @@ func (p *client) ReplaceWarnById(id string, archive bool, data, result interface
 }
 
 func (p *client) DriverConfig(driverId, serviceId string) ([]byte, error) {
-	u := url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("driver/driver/%s/%s/config", driverId, serviceId)}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("driver/driver/%s/%s/config", driverId, serviceId)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "driver:9000", Path: fmt.Sprintf("driver/driver/%s/%s/config", driverId, serviceId)}
+	}
 	// p.checkToken()
 	resp, err := resty.New().SetTimeout(time.Minute*1).R().
 		SetHeader("Content-Type", "application/json").
@@ -580,4 +955,71 @@ func (p *client) DriverConfig(driverId, serviceId string) ([]byte, error) {
 		return resp.Body(), nil
 	}
 	return nil, fmt.Errorf("请求状态:%d,响应:%s", resp.StatusCode(), resp.String())
+}
+
+func (p *client) FindGatewayQuery(query, result interface{}) error {
+	b, err := json.Marshal(query)
+	if err != nil {
+		return err
+	}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "gateway/gateway"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "gateway:9000", Path: "gateway/gateway"}
+	}
+	v := url.Values{}
+	v.Set("query", string(b))
+	u.RawQuery = v.Encode()
+	return p.Get(u, result)
+}
+
+func (p *client) FindGatewayById(id string, result interface{}) error {
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("gateway/gateway/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "gateway:9000", Path: fmt.Sprintf("gateway/gateway/%s", id)}
+	}
+	return p.Get(u, result)
+}
+
+func (p *client) SaveGateway(data, result interface{}) error {
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "gateway/gateway"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "gateway:9000", Path: "gateway/gateway"}
+	}
+	return p.Post(u, data, result)
+}
+
+func (p *client) DelGatewayById(id string, result interface{}) error {
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("gateway/gateway/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "gateway:9000", Path: fmt.Sprintf("gateway/gateway/%s", id)}
+	}
+	return p.Delete(u, result)
+}
+
+func (p *client) UpdateGatewayById(id string, data, result interface{}) error {
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("gateway/gateway/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "gateway:9000", Path: fmt.Sprintf("gateway/gateway/%s", id)}
+	}
+	return p.Patch(u, data, result)
+}
+
+func (p *client) ReplaceGatewayById(id string, data, result interface{}) error {
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("gateway/gateway/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "gateway:9000", Path: fmt.Sprintf("gateway/gateway/%s", id)}
+	}
+	return p.Put(u, data, result)
 }
