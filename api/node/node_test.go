@@ -7,7 +7,7 @@ import (
 
 func init() {
 	traefik.Host = "iot.tmis.top"
-	traefik.Port = 8010
+	traefik.Port = 31000
 	traefik.Enable = true
 	traefik.AppKey = "b9bd592b-2d79-4f5c-d583-aad18ebe00ca"
 	traefik.AppSecret = "c5de1068-79fd-b32b-a4f8-291c337111fa"
@@ -16,7 +16,8 @@ func init() {
 func TestModelClient_FindQuery(t *testing.T) {
 	cli := NewNodeClient()
 	var r = make([]map[string]interface{}, 0)
-	query := `{"filter":{"device.driver":"test","$lookups":[{"from":"node","localField":"_id","foreignField":"model","as":"devices"},{"from":"node","localField":"devices.parent","foreignField":"_id","as":"devicesParent"},{"from":"model","localField":"devicesParent.model","foreignField":"_id","as":"devicesParentModel"}]},"project":{"device":1,"devices":1,"devicesParent":1,"devicesParentModel":1}}`
+	//query := `{"filter":{"device.driver":"test","$lookups":[{"from":"node","localField":"_id","foreignField":"model","as":"devices"},{"from":"node","localField":"devices.parent","foreignField":"_id","as":"devicesParent"},{"from":"model","localField":"devicesParent.model","foreignField":"_id","as":"devicesParentModel"}]},"project":{"device":1,"devices":1,"devicesParent":1,"devicesParentModel":1}}`
+	query := `{"filter":{"name":"testnode0905"},"project":{"device":1,"devices":1,"devicesParent":1,"devicesParentModel":1}}`
 
 	queryMap := make(map[string]interface{})
 	err := json.Unmarshal([]byte(query), &queryMap)
@@ -30,10 +31,21 @@ func TestModelClient_FindQuery(t *testing.T) {
 	t.Log(r)
 }
 
+func TestNodeClient_FindTagById(t *testing.T) {
+	cli := NewNodeClient()
+	var r = make([]map[string]interface{}, 0)
+
+	err := cli.FindTagById("5f538604e7ddbc608c8b57f0", &r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(r)
+}
+
 func TestModelClient_FindById(t *testing.T) {
 	cli := NewNodeClient()
 	var r = make(map[string]interface{})
-	err := cli.FindById("5ecf1f423e951ef12218381d",&r)
+	err := cli.FindById("5ecf1f423e951ef12218381d", &r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +53,7 @@ func TestModelClient_FindById(t *testing.T) {
 }
 
 func TestModelClient_Save(t *testing.T) {
-	cli:= NewNodeClient()
+	cli := NewNodeClient()
 
 	var r = make(map[string]interface{})
 

@@ -1,9 +1,9 @@
 package api
 
 import (
-	"fmt"
-	"errors"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/resty.v1"
 	"net"
@@ -49,9 +49,12 @@ func Get(url1 url.URL, token string, query, result interface{}) error {
 	if err != nil {
 		return err
 	}
-	v := url.Values{}
-	v.Set("query", string(b))
-	u := fmt.Sprintf(`%s?%s`, url1.String(), v.Encode())
+	u := url1.String()
+	if query != nil {
+		v := url.Values{}
+		v.Set("query", string(b))
+		u = fmt.Sprintf(`%s?%s`, url1.String(), v.Encode())
+	}
 	logrus.Debugf("查询请求url:%s", u)
 	resp, err := resty.R().
 		SetHeader("Content-Type", "application/json").
