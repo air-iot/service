@@ -27,6 +27,7 @@ const (
 	ConfigSettingCache        = "config_setting_cache"
 	ConfigRoleCache           = "config_role_cache"
 	ConfigSystemVariableCache = "config_system_variable_cache"
+	ConfigOfflineCache        = "config_offline_cache"
 )
 
 type CacheM struct {
@@ -70,6 +71,10 @@ type SystemVariableCache struct {
 	SystemVariable    []model.SystemVariable   `json:"systemVariable"`
 }
 
+type OfflineStatusCache struct {
+	OfflineStatus map[string]interface{} `json:"offlineStatus"`
+}
+
 func Init() {
 	if !viper.GetBool("mqtt.enable") || !viper.GetBool("redis.enable") || !viper.GetBool("cache.enable") {
 		return
@@ -96,6 +101,7 @@ func Init() {
 	SystemVariableLogic.systemVariableCache = &sync.Map{}
 	SystemVariableLogic.systemVariableMapCache = &sync.Map{}
 	SystemVariableLogic.systemVariableNameValueMapCache = &sync.Map{}
+	OfflineStatusLogic.offlineStatusCache = &sync.Map{}
 
 	cache()
 	cacheEvent()
@@ -105,6 +111,7 @@ func Init() {
 	cacheSetting()
 	cacheRole()
 	cacheSystemVariable()
+	cacheOfflineStatus()
 	if token := mqtt.Client.Subscribe(ConfigCacheChannel, 0, func(client MQTT.Client, message MQTT.Message) {
 		logrus.Debugf("更新缓存:%s", string(message.Payload()))
 		switch string(message.Payload()) {
@@ -162,6 +169,13 @@ func Init() {
 				err := cacheSystemVariable()
 				if err != nil {
 					logrus.Errorf("更新系统变量缓存错误:%s", err.Error())
+				}
+			}()
+		case ConfigOfflineCache:
+			go func() {
+				err := cacheOfflineStatus()
+				if err != nil {
+					logrus.Errorf("更新掉线状态缓存错误:%s", err.Error())
 				}
 			}()
 		}
@@ -382,6 +396,21 @@ func cacheSystemVariable() error {
 		for _, n := range resultMap.SystemVariable {
 			SystemVariableLogic.systemVariableCache.Store(n.ID, n)
 			SystemVariableLogic.systemVariableNameValueMapCache.Store(n.Uid, n.Value)
+		}
+	}
+	return nil
+}
+
+func cacheOfflineStatus() error {
+	cmd := redis.Client.Get(ConfigOfflineCache)
+	if cmd.Err() == nil {
+		result := new(OfflineStatusCache)
+		if err := json.Unmarshal([]byte(cmd.Val()), &result); err != nil {
+			return fmt.Errorf("解析错误:%s", err.Error())
+		}
+
+		for k, v := range result.OfflineStatus {
+			OfflineStatusLogic.offlineStatusCache.Store(k, v)
 		}
 	}
 	return nil
