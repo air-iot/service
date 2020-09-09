@@ -32,6 +32,8 @@ func DefaultRealtimeUidDataHandler(uid string, handler func(topic string, payloa
 type MQService interface {
 	Publish(topic string, payload []byte) error
 	Consume(topic string, handler func(topic string, payload []byte)) error
+	UnSub(sub string) error
+	UnSubUid(uid string) error
 }
 
 type PublishFunc func(topic string, msg []byte)
@@ -53,6 +55,20 @@ func (*mqttService) Consume(topic string, handler func(topic string, payload []b
 	if token := mqtt.Client.Subscribe(topic, 0, func(client MQTT.Client, message MQTT.Message) {
 		handler(message.Topic(), message.Payload())
 	}); token.Wait() && token.Error() != nil {
+		return token.Error()
+	}
+	return nil
+}
+
+func (*mqttService) UnSub(topic string) error {
+	if token := mqtt.Client.Unsubscribe(topic); token.Wait() && token.Error() != nil {
+		return token.Error()
+	}
+	return nil
+}
+
+func (*mqttService) UnSubUid(uid string) error {
+	if token := mqtt.Client.Unsubscribe(mqtt.Topic + uid); token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
 	return nil
@@ -146,7 +162,7 @@ func (p *rabbitService) Consume(topic string, handler func(topic string, payload
 	}
 	messages, err := rabbit.Channel.Consume(
 		q.Name, // queue
-		"",     // consumer
+		topic,  // consumer
 		true,   // auto-ack
 		false,  // exclusive
 		false,  // no-local
@@ -163,4 +179,12 @@ func (p *rabbitService) Consume(topic string, handler func(topic string, payload
 		}
 	}()
 	return nil
+}
+
+func (p *rabbitService) UnSub(consume string) error {
+	return rabbit.Channel.Cancel(consume, true)
+}
+
+func (p *rabbitService) UnSubUid(uid string) error {
+	return rabbit.Channel.Cancel(rabbit.RoutingKey+uid, true)
 }
