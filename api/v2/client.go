@@ -602,7 +602,6 @@ func (p *client) FindNodeById(id string, result interface{}) error {
 func (p *client) FindTagsById(id string, result interface{}) error {
 	var u url.URL
 	if p.isTraefik {
-		println("--------------")
 		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/node/tag/%s", id)}
 	} else {
 		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/node/tag/%s", id)}
