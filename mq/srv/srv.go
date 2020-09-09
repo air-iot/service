@@ -20,6 +20,15 @@ func DefaultRealtimeDataHandler(handler func(topic string, payload []byte)) erro
 	}
 }
 
+func DefaultRealtimeUidDataHandler(uid string, handler func(topic string, payload []byte)) error {
+	switch viper.GetString("data.action") {
+	case "rabbit":
+		return NewRabbitService(viper.GetString("service.name"), "data").Consume(rabbit.RoutingKey+uid, handler)
+	default:
+		return NewMqttService().Consume(mqtt.Topic+uid, handler)
+	}
+}
+
 type MQService interface {
 	Publish(topic string, payload []byte) error
 	Consume(topic string, handler func(topic string, payload []byte)) error
