@@ -73,6 +73,7 @@ func (p *Gateway) ReceiveMQ(ctx context.Context, uids []string) error {
 			for {
 				select {
 				case <-ctx.Done():
+					logrus.Infoln("取消订阅,", uid)
 					switch viper.GetString("data.action") {
 					case "rabbit":
 						if err := rabbit.Channel.Cancel(rabbit.RoutingKey+uid, true); err != nil {
@@ -85,6 +86,7 @@ func (p *Gateway) ReceiveMQ(ctx context.Context, uids []string) error {
 							return
 						}
 					}
+					return
 				}
 			}
 		}(uid)
