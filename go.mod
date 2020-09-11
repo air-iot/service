@@ -3,6 +3,9 @@ module github.com/air-iot/service
 go 1.14
 
 require (
+	github.com/Masterminds/goutils v1.1.0 // indirect
+	github.com/Masterminds/semver v1.5.0 // indirect
+	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/aliyun/alibaba-cloud-sdk-go v1.61.98
 	github.com/armon/go-metrics v0.3.3 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
@@ -17,6 +20,8 @@ require (
 	github.com/hashicorp/go-immutable-radix v1.2.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/serf v0.9.0 // indirect
+	github.com/huandu/xstrings v1.3.2 // indirect
+	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/influxdata/influxdb1-client v0.0.0-20191209144304-8bf82d3c094d
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
 	github.com/jmoiron/sqlx v1.2.0
@@ -24,6 +29,7 @@ require (
 	github.com/klauspost/compress v1.10.4 // indirect
 	github.com/labstack/echo/v4 v4.1.16
 	github.com/michaelklishin/rabbit-hole/v2 v2.4.0
+	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.2.2 // indirect
 	github.com/onsi/ginkgo v1.12.0 // indirect
 	github.com/onsi/gomega v1.9.0 // indirect
