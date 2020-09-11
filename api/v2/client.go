@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/air-iot/service/traefik"
 	"net"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/air-iot/service/model"
+	"github.com/air-iot/service/traefik"
 	"github.com/go-resty/resty/v2"
 	"github.com/sirupsen/logrus"
 )
@@ -24,6 +25,7 @@ type client struct {
 	expires   int64
 	isTraefik bool
 	headers   map[string]string
+	mux       sync.Mutex
 }
 
 func NewClient() Client {
@@ -38,6 +40,7 @@ func NewClient() Client {
 		sk:        traefik.AppSecret,
 		isTraefik: traefik.Enable,
 		headers:   headers,
+		mux:       sync.Mutex{},
 	}
 }
 
@@ -71,7 +74,6 @@ func (p *client) Get(url url.URL, result interface{}) error {
 	var err error
 	if p.isTraefik {
 		p.checkToken()
-		p.headers["Authorization"] = p.Token
 		resp, err = resty.New().SetTimeout(time.Minute * 1).R().
 			SetHeaders(p.headers).
 			SetResult(result).
@@ -99,7 +101,6 @@ func (p *client) Post(url url.URL, data, result interface{}) error {
 	var err error
 	if p.isTraefik {
 		p.checkToken()
-		p.headers["Authorization"] = p.Token
 		resp, err = resty.New().SetTimeout(time.Minute * 1).R().
 			SetHeaders(p.headers).
 			SetResult(result).
@@ -128,7 +129,6 @@ func (p *client) Delete(url url.URL, result interface{}) error {
 	var err error
 	if p.isTraefik {
 		p.checkToken()
-		p.headers["Authorization"] = p.Token
 		resp, err = resty.New().SetTimeout(time.Minute * 1).R().
 			SetHeaders(p.headers).
 			SetResult(result).
@@ -154,7 +154,6 @@ func (p *client) Put(url url.URL, data, result interface{}) error {
 	var err error
 	if p.isTraefik {
 		p.checkToken()
-		p.headers["Authorization"] = p.Token
 		resp, err = resty.New().SetTimeout(time.Minute * 1).R().
 			SetHeaders(p.headers).
 			SetResult(result).
@@ -181,7 +180,6 @@ func (p *client) Patch(url url.URL, data, result interface{}) error {
 	var err error
 	if p.isTraefik {
 		p.checkToken()
-		p.headers["Authorization"] = p.Token
 		resp, err = resty.New().SetTimeout(time.Minute * 1).R().
 			SetHeaders(p.headers).
 			SetResult(result).
@@ -204,8 +202,11 @@ func (p *client) Patch(url url.URL, data, result interface{}) error {
 }
 
 func (p *client) checkToken() {
+	p.mux.Lock()
+	defer p.mux.Unlock()
 	if p.expires-5 < time.Now().Unix() {
 		p.findToken()
+		p.headers["Authorization"] = p.Token
 	}
 	return
 }
