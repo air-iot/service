@@ -63,4 +63,10 @@ type (
 	Results struct {
 		Series []Series `json:"series"`
 	}
+
+	RealTimeDataTemplate struct {
+		Data   []RealTimeData `json:"data"`
+		Length int            `json:"length"`
+		Time   int64          `json:"time"`
+	}
 )
