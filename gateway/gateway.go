@@ -23,7 +23,7 @@ import (
 )
 
 type Gateway struct {
-	ctx       context.Context
+	//ctx       *context.Context
 	apiClient api.Client
 	p         *pubsub.Publisher
 	c         *cron.Cron
@@ -31,11 +31,10 @@ type Gateway struct {
 
 type DataHandlerFunc func(*bytes.Buffer)
 
-func NewGateway(ctx context.Context, timeout time.Duration, bufferLen int) *Gateway {
+func NewGateway(timeout time.Duration, bufferLen int) *Gateway {
 	var gw = new(Gateway)
 	gw.apiClient = api.NewClient()
 	gw.p = pubsub.NewPublisher(timeout, bufferLen)
-	gw.ctx = ctx
 	gw.c = cron.New(cron.WithSeconds(), cron.WithChain(cron.DelayIfStillRunning(cron.DefaultLogger)))
 	gw.c.Start()
 	return gw
@@ -55,7 +54,7 @@ func (p *Gateway) FindGateway(gatewayType string, result interface{}) error {
 	return nil
 }
 
-func (p *Gateway) ReceiveMQ(uids []string) error {
+func (p *Gateway) ReceiveMQ(ctx context.Context, uids []string) error {
 	for _, uid := range uids {
 		err := srv.DefaultRealtimeUidDataHandler(uid, func(topic string, payload []byte) {
 			msg := model.DataMessage{}
@@ -73,7 +72,7 @@ func (p *Gateway) ReceiveMQ(uids []string) error {
 		go func(uid string) {
 			for {
 				select {
-				case <-p.ctx.Done():
+				case <-ctx.Done():
 					switch viper.GetString("data.action") {
 					case "rabbit":
 						if err := rabbit.Channel.Cancel(rabbit.RoutingKey+uid, true); err != nil {
@@ -93,7 +92,11 @@ func (p *Gateway) ReceiveMQ(uids []string) error {
 	return nil
 }
 
-func (p *Gateway) GatewayReceiveData(uids []string, templateName, templateText, messageType string, interval int, handler DataHandlerFunc) {
+func (p *Gateway) Stop() {
+	p.c.Stop()
+}
+
+func (p *Gateway) GatewayReceiveData(ctx context.Context, uids []string, gatewayName, templateText, messageType string, interval int, handler DataHandlerFunc) {
 	nodeDataMsgChan := p.p.SubscribeTopic(func(msg model.DataMessage) bool {
 		return tools.IsContain(uids, msg.Uid)
 	})
@@ -117,13 +120,28 @@ func (p *Gateway) GatewayReceiveData(uids []string, templateName, templateText, 
 						})
 					}
 
-					bufferData, err := p.Template(templateName, templateText, dataRes)
-					if err != nil {
-						logrus.Errorf("模版 %s 启动错误: %s", templateName, err.Error())
-						return
+					if templateText == "" {
+						b1, err := json.Marshal(&dataRes)
+						if err != nil {
+							logrus.Errorf("网关 %s 序列化错误: %s", gatewayName, err.Error())
+						} else {
+							bufferData := &bytes.Buffer{}
+							if _, err := bufferData.Write(b1); err != nil {
+								logrus.Errorf("网关 %s buffer write错误: %s", gatewayName, err.Error())
+							} else {
+								handler(bufferData)
+							}
+						}
+
+					} else {
+						bufferData, err := p.Template(gatewayName, templateText, dataRes)
+						if err != nil {
+							logrus.Errorf("网关 %s 启动错误: %s", gatewayName, err.Error())
+						} else {
+							handler(bufferData)
+						}
 					}
-					handler(bufferData)
-				case <-p.ctx.Done():
+				case <-ctx.Done():
 					return
 				}
 			}
@@ -153,15 +171,30 @@ func (p *Gateway) GatewayReceiveData(uids []string, templateName, templateText, 
 				cache.Delete(key)
 				return true
 			})
-			bufferData, err := p.Template(templateName, templateText, dataRes)
-			if err != nil {
-				logrus.Errorf("模版 %s 启动错误: %s", templateName, err.Error())
-				return
+			if templateText == "" {
+				b1, err := json.Marshal(&dataRes)
+				if err != nil {
+					logrus.Errorf("网关 %s 序列化错误: %s", gatewayName, err.Error())
+				} else {
+					bufferData := &bytes.Buffer{}
+					if _, err := bufferData.Write(b1); err != nil {
+						logrus.Errorf("网关 %s buffer write错误: %s", gatewayName, err.Error())
+					} else {
+						handler(bufferData)
+					}
+				}
+
+			} else {
+				bufferData, err := p.Template(gatewayName, templateText, dataRes)
+				if err != nil {
+					logrus.Errorf("网关 %s 启动错误: %s", gatewayName, err.Error())
+				} else {
+					handler(bufferData)
+				}
 			}
-			handler(bufferData)
 		})
 		if err != nil {
-			logrus.Errorf("模版 %s 定时启动错误: %s", templateName, err.Error())
+			logrus.Errorf("网关 %s 定时启动错误: %s", gatewayName, err.Error())
 			return
 		}
 
@@ -171,7 +204,7 @@ func (p *Gateway) GatewayReceiveData(uids []string, templateName, templateText, 
 				case msg := <-nodeDataMsgChan:
 					//handler(msg)
 					cacheDataFunc(msg)
-				case <-p.ctx.Done():
+				case <-ctx.Done():
 					p.c.Remove(entryId)
 					return
 				}
