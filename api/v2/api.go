@@ -109,4 +109,7 @@ type Client interface {
 	DelGatewayById(id string, result interface{}) error
 	UpdateGatewayById(id string, data, result interface{}) error
 	ReplaceGatewayById(id string, data, result interface{}) error
+
+	// license
+	CheckDriver(licenseType string) ([]byte, error)
 }

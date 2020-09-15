@@ -1023,3 +1023,26 @@ func (p *client) ReplaceGatewayById(id string, data, result interface{}) error {
 	}
 	return p.Put(u, data, result)
 }
+
+func (p *client) CheckDriver(licenseType string) ([]byte, error) {
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/license/driver?licenseType=%s", licenseType)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "driver:9000", Path: fmt.Sprintf("core/license/driver?licenseType=%s", licenseType)}
+	}
+	//p.checkToken()
+	resp, err := resty.New().SetTimeout(time.Minute*1).R().
+		//SetHeader("Content-Type", "application/json").
+		SetHeader("Authorization", p.Token).
+		Get(u.String())
+
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode() == 200 {
+		return resp.Body(), nil
+	}
+	return nil, fmt.Errorf("请求状态:%d,响应:%s", resp.StatusCode(), resp.String())
+}
