@@ -1029,14 +1029,15 @@ func (p *client) CheckDriver(licenseType string) (*model.License, error) {
 	license := new(model.License)
 	var u url.URL
 	if p.isTraefik {
-		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/license/driver?licenseType=%s", licenseType)}
+		p.checkToken()
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/license/driver"}
 	} else {
-		u = url.URL{Scheme: p.protocol, Host: "driver:9000", Path: fmt.Sprintf("core/license/driver?licenseType=%s", licenseType)}
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/license/driver"}
 	}
-	//p.checkToken()
 	resp, err := resty.New().SetTimeout(time.Minute*1).R().
 		//SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", p.Token).
+		SetQueryParam("licenseType", licenseType).
 		SetResult(license).
 		Get(u.String())
 
