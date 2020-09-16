@@ -111,5 +111,5 @@ type Client interface {
 	ReplaceGatewayById(id string, data, result interface{}) error
 
 	// license
-	CheckDriver(licenseType string) ([]byte, error)
+	CheckDriver(licenseType string) (*model.License, error)
 }
