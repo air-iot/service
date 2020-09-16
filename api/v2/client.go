@@ -984,6 +984,16 @@ func (p *client) FindGatewayById(id string, result interface{}) error {
 	return p.Get(u, result)
 }
 
+func (p *client) FindGatewayByType(typeName string, result interface{}) error {
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("gateway/gateway/type/%s", typeName)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "gateway:9000", Path: fmt.Sprintf("gateway/gateway/type/%s", typeName)}
+	}
+	return p.Get(u, result)
+}
+
 func (p *client) SaveGateway(data, result interface{}) error {
 	var u url.URL
 	if p.isTraefik {

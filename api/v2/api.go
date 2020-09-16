@@ -105,6 +105,7 @@ type Client interface {
 	// gateway
 	FindGatewayQuery(query, result interface{}) error
 	FindGatewayById(id string, result interface{}) error
+	FindGatewayByType(typeName string, result interface{}) error
 	SaveGateway(data, result interface{}) error
 	DelGatewayById(id string, result interface{}) error
 	UpdateGatewayById(id string, data, result interface{}) error

@@ -41,13 +41,7 @@ func NewGateway(timeout time.Duration, bufferLen int) *Gateway {
 }
 
 func (p *Gateway) FindGateway(gatewayType string, result interface{}) error {
-	err := p.apiClient.FindGatewayQuery(map[string]interface{}{
-		"filter": map[string]interface{}{"type": gatewayType},
-		"project": map[string]int{
-			"name":     1,
-			"type":     1,
-			"settings": 1,
-		}}, result)
+	err := p.apiClient.FindGatewayByType(gatewayType, result)
 	if err != nil {
 		return fmt.Errorf("查询网关数据错误,%s", err.Error())
 	}

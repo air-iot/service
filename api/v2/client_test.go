@@ -700,3 +700,18 @@ func TestLicense_CheckDriver(t *testing.T) {
 	}
 	t.Log(license)
 }
+
+func TestClient_FindGateway(t *testing.T) {
+	var r = make([]map[string]interface{}, 0)
+	traefik.Host = "iot.tmis.top"
+	traefik.Port = 31000
+	traefik.Enable = true
+	traefik.AppKey = "b9bd592b-2d79-4f5c-d583-aad18ebe00ca"
+	traefik.AppSecret = "c5de1068-79fd-b32b-a4f8-291c337111fa"
+	cli = NewClient()
+	err := cli.FindGatewayByTypeId("mqttClient", &r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log(r)
+}
