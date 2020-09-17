@@ -212,13 +212,13 @@ func (p *Gateway) GatewayReceiveData(ctx context.Context, uids []string, gateway
 func (p *Gateway) Template(templateName, templateText string, data []model.RealTimeData) (*bytes.Buffer, error) {
 	t := template.New(templateName).Funcs(sprig.FuncMap())
 	t = template.Must(t.Parse(templateText))
-	d1 := &model.RealTimeDataTemplate{
-		Length: len(data),
-		Data:   data,
-		Time:   time.Now().Unix(),
-	}
+	//d1 := &model.RealTimeDataTemplate{
+	//	Length: len(data),
+	//	Data:   data,
+	//	Time:   time.Now().Unix(),
+	//}
 	b := new(bytes.Buffer)
-	if err := t.Execute(b, d1); err != nil {
+	if err := t.Execute(b, &data); err != nil {
 		return nil, err
 	}
 	return b, nil
