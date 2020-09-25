@@ -93,7 +93,7 @@ func init() {
 
 	viper.SetDefault("taos.enable", false)
 	viper.SetDefault("taos.host", "taos")
-	viper.SetDefault("taos.port", 6035)
+	viper.SetDefault("taos.port", 0)
 	viper.SetDefault("taos.username", "root")
 	viper.SetDefault("taos.password", "taosdata")
 	viper.SetDefault("taos.db", "tsdb")
