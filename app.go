@@ -119,6 +119,7 @@ func init() {
 	viper.SetDefault("rabbit.password", "public")
 	viper.SetDefault("rabbit.vhost", "")
 	viper.SetDefault("rabbit.routingKey", "data.")
+	viper.SetDefault("rabbit.queueRand", false)
 
 	viper.SetDefault("traefik.host", "traefik")
 	viper.SetDefault("traefik.port", 80)

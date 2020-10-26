@@ -1,6 +1,7 @@
 package srv
 
 import (
+	"github.com/air-iot/service/tools"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/spf13/viper"
 	"github.com/streadway/amqp"
@@ -14,7 +15,11 @@ var DataAction = "mqtt"
 func DefaultRealtimeDataHandler(handler func(topic string, payload []byte)) error {
 	switch viper.GetString("data.action") {
 	case "rabbit":
-		return NewRabbitService(viper.GetString("service.name"), "data").Consume(rabbit.RoutingKey+"#", handler)
+		if viper.GetBool("rabbit.queueRand") {
+			return NewRabbitService(viper.GetString("service.name")+tools.GetRandomString(10), "data").Consume(rabbit.RoutingKey+"#", handler)
+		} else {
+			return NewRabbitService(viper.GetString("service.name"), "data").Consume(rabbit.RoutingKey+"#", handler)
+		}
 	default:
 		return NewMqttService().Consume(mqtt.Topic+"#", handler)
 	}
@@ -23,7 +28,11 @@ func DefaultRealtimeDataHandler(handler func(topic string, payload []byte)) erro
 func DefaultRealtimeUidDataHandler(uid string, handler func(topic string, payload []byte)) error {
 	switch viper.GetString("data.action") {
 	case "rabbit":
-		return NewRabbitService(viper.GetString("service.name"), "data").Consume(rabbit.RoutingKey+uid, handler)
+		if viper.GetBool("rabbit.queueRand") {
+			return NewRabbitService(viper.GetString("service.name")+tools.GetRandomString(10), "data").Consume(rabbit.RoutingKey+uid, handler)
+		} else {
+			return NewRabbitService(viper.GetString("service.name"), "data").Consume(rabbit.RoutingKey+uid, handler)
+		}
 	default:
 		return NewMqttService().Consume(mqtt.Topic+uid, handler)
 	}
