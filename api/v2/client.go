@@ -1047,7 +1047,7 @@ func (p *client) CheckDriver(licenseType string) (*model.License, error) {
 	resp, err := resty.New().SetTimeout(time.Minute*1).R().
 		//SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", p.Token).
-		SetQueryParam("licenseType", licenseType).
+		SetQueryParam("licenseName", licenseType).
 		SetResult(license).
 		Get(u.String())
 
