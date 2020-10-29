@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"testing"
 	"time"
 
 	"github.com/google/uuid"
@@ -49,6 +50,10 @@ var (
 )
 
 func init() {
+	var _ = func() bool {
+		testing.Init()
+		return true
+	}()
 	flag.Parse()
 	viper.SetDefault("log.level", "ERROR")
 
