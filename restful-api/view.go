@@ -9,7 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/air-iot/service/model"
+	"github.com/go-redis/redis/v8"
 	_ "github.com/influxdata/influxdb1-client" // this is important because of the bug in go mod
 	"github.com/influxdata/influxdb1-client/v2"
 	"github.com/zhgqiang/jsonpath"
@@ -18,7 +19,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/air-iot/service/model"
+	iredis "github.com/air-iot/service/db/redis"
 )
 
 type (
@@ -1934,16 +1935,20 @@ func FindCount(ctx context.Context, col *mongo.Collection, pipeLine mongo.Pipeli
 //============Redis==================
 
 // SaveRedis 存储Redis值
-func (p *APIView) SaveRedis(client *redis.Client, key, value string, t int) error {
-	return client.Set(key, value, time.Duration(t)).Err()
+func (p *APIView) SaveRedis(key, value string, t int) error {
+	if iredis.ClusterBool {
+		return iredis.ClusterClient.Set(context.Background(), key, value, time.Duration(t)).Err()
+	} else {
+		return iredis.Client.Set(context.Background(), key, value, time.Duration(t)).Err()
+	}
 }
 
 // SaveRedisByPath 使用jsonpath的方式存储Redis值
-func (p *APIView) SaveRedisByPath(client *redis.Client, key string, data map[string]interface{}, t int) error {
+func (p *APIView) SaveRedisByPath(key string, data map[string]interface{}, t int) error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	valStr, err := p.FindByRedisKey(client, key)
+	valStr, err := p.FindByRedisKey(key)
 	if err != nil {
 		return err
 	}
@@ -1960,7 +1965,7 @@ func (p *APIView) SaveRedisByPath(client *redis.Client, key string, data map[str
 		}
 	}
 
-	err = p.SaveRedisMap(client, key, valMap, t)
+	err = p.SaveRedisMap(key, valMap, t)
 	if err != nil {
 		return fmt.Errorf("redis整体数据保存失败：%s", err)
 	}
@@ -1968,22 +1973,31 @@ func (p *APIView) SaveRedisByPath(client *redis.Client, key string, data map[str
 }
 
 // SaveRedisMap 存储Redis值(存储map)
-func (p *APIView) SaveRedisMap(client *redis.Client, key string, data map[string]interface{}, t int) error {
+func (p *APIView) SaveRedisMap(key string, data map[string]interface{}, t int) error {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
-	return p.SaveRedis(client, key, string(b), t)
+	return p.SaveRedis(key, string(b), t)
 }
 
 // DeleteByRedisKey 删除Redis的Key
-func (p *APIView) DeleteByRedisKey(client *redis.Client, keys ...string) (err error) {
-	return client.Del(keys...).Err()
+func (p *APIView) DeleteByRedisKey(keys ...string) (err error) {
+	if iredis.ClusterBool {
+		return iredis.ClusterClient.Del(context.Background(), keys...).Err()
+	} else {
+		return iredis.Client.Del(context.Background(), keys...).Err()
+	}
 }
 
 // FindByRedisKey 使用Key获取Redis值
-func (p *APIView) FindByRedisKey(client *redis.Client, key string) (string, error) {
-	cmd := client.Get(key)
+func (p *APIView) FindByRedisKey(key string) (string, error) {
+	var cmd *redis.StringCmd
+	if iredis.ClusterBool {
+		cmd = iredis.ClusterClient.Get(context.Background(), key)
+	} else {
+		cmd = iredis.Client.Get(context.Background(), key)
+	}
 	if cmd.Err() != nil {
 		return "", cmd.Err()
 	}
@@ -1991,10 +2005,16 @@ func (p *APIView) FindByRedisKey(client *redis.Client, key string) (string, erro
 }
 
 // FindLockByRedisKey 使用Key获取Redis值（带锁）
-func (p *APIView) FindLockByRedisKey(client *redis.Client, key string) (string, error) {
+func (p *APIView) FindLockByRedisKey(key string) (string, error) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
-	cmd := client.Get(key)
+
+	var cmd *redis.StringCmd
+	if iredis.ClusterBool {
+		cmd = iredis.ClusterClient.Get(context.Background(), key)
+	} else {
+		cmd = iredis.Client.Get(context.Background(), key)
+	}
 	if cmd.Err() != nil {
 		return "", cmd.Err()
 	}
