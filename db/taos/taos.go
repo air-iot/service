@@ -12,7 +12,7 @@ import (
 var DB Pool
 
 func Init() {
-	if !viper.GetBool("taos.enable") || viper.GetString("taos.version") != "v1" {
+	if !viper.GetBool("taos.enable") {
 		return
 	}
 	var (

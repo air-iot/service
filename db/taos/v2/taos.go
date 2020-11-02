@@ -11,7 +11,7 @@ var DB *sqlx.DB
 
 // 初始化taos数据库
 func Init() {
-	if !viper.GetBool("taos.enable") || viper.GetString("taos.version") != "v2" {
+	if !viper.GetBool("taos.enable") {
 		return
 	}
 	var (

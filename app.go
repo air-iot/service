@@ -28,7 +28,8 @@ import (
 	"github.com/air-iot/service/db/mongo"
 	"github.com/air-iot/service/db/redis"
 	"github.com/air-iot/service/db/sql"
-	"github.com/air-iot/service/db/taos"
+	"github.com/air-iot/service/db/taos/rest"
+	"github.com/air-iot/service/db/taos/v2"
 	"github.com/air-iot/service/logger"
 	"github.com/air-iot/service/logic"
 	imw "github.com/air-iot/service/middleware"
@@ -104,11 +105,13 @@ func init() {
 	viper.SetDefault("taos.username", "root")
 	viper.SetDefault("taos.password", "taosdata")
 	viper.SetDefault("taos.db", "tsdb")
-	viper.SetDefault("taos.version", "v1")
 	viper.SetDefault("taos.initialCap", 8)
 	viper.SetDefault("taos.maxIdleConn", 10)
 	viper.SetDefault("taos.maxOpenConn", 20)
 	viper.SetDefault("taos.idleTimeout", 15)
+	viper.SetDefault("taos.token", "cm9vdDp0YW9zZGF0YQ==")
+	viper.SetDefault("taos.httpPort", 6041)
+	viper.SetDefault("taos.httpProto", "http")
 
 	viper.SetDefault("mqtt.enable", false)
 	viper.SetDefault("mqtt.host", "mqtt")
@@ -187,6 +190,7 @@ func NewApp() App {
 	traefik.Init()
 	influx.Init()
 	taos.Init()
+	taos_rest.Init()
 	mongo.Init()
 	redis.Init()
 	sql.Init()
