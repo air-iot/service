@@ -1,18 +1,19 @@
 package logic
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
 	"time"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	_ "github.com/influxdata/influxdb1-client" // this is important because of the bug in go mod
 	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/sirupsen/logrus"
 
 	"github.com/air-iot/service/db/influx"
-	ir "github.com/air-iot/service/db/redis"
+	iredis "github.com/air-iot/service/db/redis"
 	"github.com/air-iot/service/model"
 )
 
@@ -21,7 +22,12 @@ var DataLogic = new(dataLogic)
 type dataLogic struct{}
 
 func (*dataLogic) FindCacheByUIDAndTagID(uid, tagID string) (result *model.Cache, err error) {
-	cmd := ir.Client.HGetAll(fmt.Sprintf("%s|%s", uid, tagID))
+	var cmd *redis.StringStringMapCmd
+	if iredis.ClusterBool {
+		cmd = iredis.ClusterClient.HGetAll(context.Background(), fmt.Sprintf("%s|%s", uid, tagID))
+	} else {
+		cmd = iredis.Client.HGetAll(context.Background(), fmt.Sprintf("%s|%s", uid, tagID))
+	}
 	if cmd.Err() != nil {
 		return nil, cmd.Err()
 	}
@@ -35,7 +41,7 @@ func (*dataLogic) FindCacheByUIDAndTagID(uid, tagID string) (result *model.Cache
 	if !ok1 || !ok2 {
 		return nil, errors.New("未查询到相关数据值")
 	}
-	//v2, err := strconv.ParseFloat(v1, 64)
+	//v2, err := strconv.ParseFloat(v2, 64)
 	//if err != nil {
 	//	return nil, fmt.Errorf("值解析错误:%s", err.Error())
 	//}
@@ -49,12 +55,17 @@ func (*dataLogic) FindCacheByUIDAndTagID(uid, tagID string) (result *model.Cache
 // uid 及 数据点列表查询
 func (*dataLogic) FindCacheByUIDAndTagIDs(uid string, tagIDs []string) (result map[string]model.Cache, err error) {
 	result1 := make(map[string]*redis.StringStringMapCmd)
-	p := ir.Client.Pipeline()
+	var p redis.Pipeliner
+	if iredis.ClusterBool {
+		p = iredis.ClusterClient.Pipeline()
+	} else {
+		p = iredis.Client.Pipeline()
+	}
 	for _, tagID := range tagIDs {
-		cmd := p.HGetAll(fmt.Sprintf("%s|%s", uid, tagID))
+		cmd := p.HGetAll(context.Background(), fmt.Sprintf("%s|%s", uid, tagID))
 		result1[tagID] = cmd
 	}
-	_, err = p.Exec()
+	_, err = p.Exec(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +88,7 @@ func (*dataLogic) FindCacheByUIDAndTagIDs(uid string, tagIDs []string) (result m
 			logrus.Warnf("数据点:%s 未查询到相关数据值", tagID)
 			continue
 		}
-		//v2, err := strconv.ParseFloat(v1, 64)
+		//v2, err := strconv.ParseFloat(v2, 64)
 		//if err != nil {
 		//	logrus.Warnf("数据点:%s 值解析错误:%s", tagID, err.Error())
 		//	continue
@@ -94,44 +105,60 @@ func (*dataLogic) FindCacheByUIDAndTagIDs(uid string, tagIDs []string) (result m
 }
 
 func (*dataLogic) SaveCacheByUIDAndTagID(uid, tagID string, data map[string]interface{}) error {
-	cmd := ir.Client.HMSet(fmt.Sprintf("%s|%s", uid, tagID), data)
-	if cmd.Err() != nil {
-		return cmd.Err()
+	if iredis.ClusterBool {
+		cmd := iredis.ClusterClient.HMSet(context.Background(), fmt.Sprintf("%s|%s", uid, tagID), data)
+		if cmd.Err() != nil {
+			return cmd.Err()
+		}
+	} else {
+		cmd := iredis.Client.HMSet(context.Background(), fmt.Sprintf("%s|%s", uid, tagID), data)
+		if cmd.Err() != nil {
+			return cmd.Err()
+		}
 	}
 	return nil
 }
 
 func (*dataLogic) SaveCacheByUID(uid string, t time.Time, data map[string]interface{}) error {
 	//d := make(map[string]map[string]interface{})
-	p := ir.Client.TxPipeline()
+	var p redis.Pipeliner
+	if iredis.ClusterBool {
+		p = iredis.ClusterClient.Pipeline()
+	} else {
+		p = iredis.Client.TxPipeline()
+	}
+
 	for k, v := range data {
-		p.HMSet(fmt.Sprintf("%s|%s", uid, k), map[string]interface{}{
+		p.HMSet(context.Background(), fmt.Sprintf("%s|%s", uid, k), map[string]interface{}{
 			"time":  t.Unix(),
 			"value": v,
 		})
 	}
-	if _, err := p.Exec(); err != nil {
+	if _, err := p.Exec(context.Background()); err != nil {
 		return err
 	}
 	return nil
 }
 
-
-func (*dataLogic) SaveDifferenceCacheByUID(uid string, t time.Time, data map[string]interface{},interval string) error {
+func (*dataLogic) SaveDifferenceCacheByUID(uid string, t time.Time, data map[string]interface{}, interval string) error {
 	//d := make(map[string]map[string]interface{})
-	p := ir.Client.TxPipeline()
+	var p redis.Pipeliner
+	if iredis.ClusterBool {
+		p = iredis.ClusterClient.Pipeline()
+	} else {
+		p = iredis.Client.TxPipeline()
+	}
 	for k, v := range data {
-		p.HMSet(fmt.Sprintf("%s|%s|%s", uid, k,interval), map[string]interface{}{
+		p.HMSet(context.Background(), fmt.Sprintf("%s|%s|%s", uid, k, interval), map[string]interface{}{
 			"time":  t.Unix(),
 			"value": v,
 		})
 	}
-	if _, err := p.Exec(); err != nil {
+	if _, err := p.Exec(context.Background()); err != nil {
 		return err
 	}
 	return nil
 }
-
 
 func (p *dataLogic) SaveInflux(modelID, nodeID, uid string, data map[string]interface{}) error {
 	node, err := NodeLogic.FindLocalCache(nodeID)

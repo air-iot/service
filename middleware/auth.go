@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"net/http"
 	"regexp"
 	"strings"
@@ -93,7 +95,12 @@ func AuthFilter() echo.MiddlewareFunc {
 				}
 			}
 			//根据用户id查询用户权限信息（Redis）
-			cmd := iredis.Client.Get(userId)
+			var cmd *redis.StringCmd
+			if iredis.ClusterBool {
+				cmd = iredis.ClusterClient.Get(context.Background(), userId)
+			} else {
+				cmd = iredis.Client.Get(context.Background(), userId)
+			}
 			if cmd.Err() != nil {
 				return restfulapi.NewHTTPError(http.StatusBadRequest, "auth", cmd.Err().Error())
 			}
@@ -279,7 +286,6 @@ func generateSpecialPermissionMap(data string) map[string]string {
 			data + "+" + http.MethodPatch:  "data.edit",
 		}
 	default:
-		return map[string]string{
-		}
+		return map[string]string{}
 	}
 }

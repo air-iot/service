@@ -422,8 +422,7 @@ func (p *APIView) FindFilter(ctx context.Context, col *mongo.Collection, result 
 								hasGroup = true
 								break
 								//pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
-							} else
-							if _, ok := lookup.(primitive.M)["$project"]; ok {
+							} else if _, ok := lookup.(primitive.M)["$project"]; ok {
 								if _, projectOk := lookup.(primitive.M)["$project"].(bson.M); !projectOk {
 									return 0, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
 								}
@@ -751,8 +750,7 @@ func (p *APIView) FindFilterDeptQuery(ctx context.Context, col *mongo.Collection
 								hasGroup = true
 								break
 								//pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
-							} else
-							if _, ok := lookup.(primitive.M)["$project"]; ok {
+							} else if _, ok := lookup.(primitive.M)["$project"]; ok {
 								if _, projectOk := lookup.(primitive.M)["$project"].(bson.M); !projectOk {
 									return 0, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
 								}
@@ -1292,8 +1290,7 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 										hasGroup = true
 										break
 										//pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
-									} else
-									if _, ok := lookup.(primitive.M)["$project"]; ok {
+									} else if _, ok := lookup.(primitive.M)["$project"]; ok {
 										if _, projectOk := lookup.(primitive.M)["$project"].(bson.M); !projectOk {
 											return 0, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
 										}
@@ -1467,8 +1464,7 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 										hasGroup = true
 										break
 										//pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
-									} else
-									if _, ok := lookup.(primitive.M)["$project"]; ok {
+									} else if _, ok := lookup.(primitive.M)["$project"]; ok {
 										if _, projectOk := lookup.(primitive.M)["$project"].(bson.M); !projectOk {
 											return 0, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
 										}
@@ -2086,7 +2082,7 @@ func (p *APIView) InfluxResultConvert(results []client.Result) ([][]map[string]i
 					r := make(map[string]interface{})
 					if v1.Tags != nil && len(v1.Tags) >= 0 {
 						r["id"] = v1.Tags["id"]
-						//r[TIME] = v1.Tags[TIME]
+						//r[TIME] = v2.Tags[TIME]
 					}
 					for i := 0; i < len(v1.Columns); i++ {
 						err := p.setInfluxResult(r, v1.Columns[i], v2[i])
@@ -2119,7 +2115,7 @@ func (p *APIView) influxResultConvert(results []client.Result) ([][]map[string]i
 					r := make(map[string]interface{})
 					if v1.Tags != nil && len(v1.Tags) >= 0 {
 						r["id"] = v1.Tags["id"]
-						//r[TIME] = v1.Tags[TIME]
+						//r[TIME] = v2.Tags[TIME]
 					}
 					for i := 0; i < len(v1.Columns); i++ {
 						err := p.setInfluxResult(r, v1.Columns[i], v2[i])

@@ -1,17 +1,21 @@
 package redis
 
 import (
+	"context"
 	"net"
 	"strconv"
 	"time"
 
-	"github.com/go-redis/redis"
+	//"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
 var Client *redis.Client
+var ClusterClient *redis.ClusterClient
 var PoolSize int
+var ClusterBool = false
 
 func Init() {
 	if !viper.GetBool("redis.enable") {
@@ -20,12 +24,43 @@ func Init() {
 	var (
 		host     = viper.GetString("redis.host")
 		port     = viper.GetInt("redis.port")
+		username = viper.GetString("redis.username")
 		password = viper.GetString("redis.password")
 		db       = viper.GetInt("redis.db")
 	)
+	addr := net.JoinHostPort(host, strconv.Itoa(port))
 	PoolSize = viper.GetInt("redis.poolSize")
+	ClusterBool = viper.GetBool("redis.cluster")
+	if ClusterBool {
+		clusterNodes := make([]redis.ClusterNode, 0)
+		clusterNode := viper.GetStringSlice("redis.clusterNode")
+		for _, n := range clusterNode {
+			clusterNodes = append(clusterNodes, redis.ClusterNode{
+				Addr: n,
+			})
+		}
+
+		ClusterClient = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs:    []string{addr},
+			Username: username,
+			Password: password, // no password set
+			ClusterSlots: func(ctx context.Context) ([]redis.ClusterSlot, error) {
+				return []redis.ClusterSlot{
+					{
+						Nodes: clusterNodes,
+					},
+				}, nil
+			},
+		})
+		p := ClusterClient.Ping(context.Background())
+		if p.Err() != nil {
+			panic(p.Err())
+		}
+		return
+	}
 	Client = redis.NewClient(&redis.Options{
-		Addr:     net.JoinHostPort(host, strconv.Itoa(port)),
+		Addr:     addr,
+		Username: username,
 		Password: password, // no password set
 		DB:       db,       // use default DB
 		PoolSize: PoolSize,
@@ -36,9 +71,9 @@ func Init() {
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	})
-	p := Client.Ping()
+	p := Client.Ping(context.Background())
 	if p.Err() != nil {
-		logrus.Panic(p.Err())
+		panic(p.Err())
 	}
 }
 
@@ -54,9 +89,9 @@ func Close() {
 func Set(c *redis.Client, data map[string]interface{}, expire time.Duration) error {
 	p := c.TxPipeline()
 	for k, v := range data {
-		p.Set(k, v, expire)
+		p.Set(context.Background(), k, v, expire)
 	}
-	if _, err := p.Exec(); err != nil {
+	if _, err := p.Exec(context.Background()); err != nil {
 		return err
 	}
 	return nil
@@ -68,9 +103,9 @@ func Get(c *redis.Client, keys ...string) (map[string]string, error) {
 
 	query := make(map[string]*redis.StringCmd)
 	for _, key := range keys {
-		query[key] = p.Get(key)
+		query[key] = p.Get(context.Background(), key)
 	}
-	if _, err := p.Exec(); err != nil {
+	if _, err := p.Exec(context.Background()); err != nil {
 		return nil, err
 	}
 	results := make(map[string]string)
@@ -86,7 +121,7 @@ func Get(c *redis.Client, keys ...string) (map[string]string, error) {
 
 // SetMap 保存map数据
 func SetMap(c *redis.Client, key string, value map[string]interface{}) error {
-	if cmd := c.HMSet(key, value); cmd.Err() != nil {
+	if cmd := c.HMSet(context.Background(), key, value); cmd.Err() != nil {
 		return cmd.Err()
 	}
 	return nil
@@ -96,9 +131,9 @@ func SetMap(c *redis.Client, key string, value map[string]interface{}) error {
 func SetMaps(c *redis.Client, data map[string]map[string]interface{}) error {
 	p := c.TxPipeline()
 	for k, v := range data {
-		p.HMSet(k, v)
+		p.HMSet(context.Background(), k, v)
 	}
-	if _, err := p.Exec(); err != nil {
+	if _, err := p.Exec(context.Background()); err != nil {
 		return err
 	}
 	return nil
@@ -110,9 +145,9 @@ func GetMaps(c *redis.Client, keys ...string) (map[string]map[string]string, err
 
 	query := make(map[string]*redis.StringStringMapCmd)
 	for _, key := range keys {
-		query[key] = p.HGetAll(key)
+		query[key] = p.HGetAll(context.Background(), key)
 	}
-	if _, err := p.Exec(); err != nil {
+	if _, err := p.Exec(context.Background()); err != nil {
 		return nil, err
 	}
 	results := make(map[string]map[string]string)

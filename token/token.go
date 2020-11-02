@@ -1,14 +1,17 @@
 package token
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dgrijalva/jwt-go/request"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"github.com/labstack/echo/v4"
+
+	iredis "github.com/air-iot/service/db/redis"
 )
 
 const key = "iot_jwt_hmac_key"
@@ -59,7 +62,7 @@ func GetHMACKey() []byte {
 }
 
 // GetUserInfo 获取缓存的用户数据.
-func GetUserInfo(echoContext echo.Context, client *redis.Client) (*map[string]interface{}, error) {
+func GetUserInfo(echoContext echo.Context) (*map[string]interface{}, error) {
 	//从请求中解析出token
 	token, err := request.ParseFromRequest(echoContext.Request(), request.AuthorizationHeaderExtractor, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -88,8 +91,13 @@ func GetUserInfo(echoContext echo.Context, client *redis.Client) (*map[string]in
 		}
 	}
 
+	var cmd *redis.StringCmd
 	//根据用户id查询用户权限信息（Redis）
-	cmd := client.Get(userId)
+	if iredis.ClusterBool {
+		cmd = iredis.ClusterClient.Get(context.Background(), userId)
+	} else {
+		cmd = iredis.Client.Get(context.Background(), userId)
+	}
 	if cmd.Err() != nil {
 		return nil, cmd.Err()
 	}

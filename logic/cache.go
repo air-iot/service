@@ -1,15 +1,17 @@
 package logic
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
 	MQTT "github.com/eclipse/paho.mqtt.golang"
+	"github.com/go-redis/redis/v8"
 	"github.com/json-iterator/go"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
-	"github.com/air-iot/service/db/redis"
+	iredis "github.com/air-iot/service/db/redis"
 	"github.com/air-iot/service/model"
 	"github.com/air-iot/service/mq/mqtt"
 	"github.com/air-iot/service/tools"
@@ -186,7 +188,12 @@ func Init() {
 }
 
 func cache() error {
-	cmd := redis.Client.Get(ConfigCache)
+	var cmd *redis.StringCmd
+	if iredis.ClusterBool {
+		cmd = iredis.ClusterClient.Get(context.Background(), ConfigCache)
+	} else {
+		cmd = iredis.Client.Get(context.Background(), ConfigCache)
+	}
 	if cmd.Err() == nil {
 		result := new(Cache)
 		if err := json.Unmarshal([]byte(cmd.Val()), &result); err != nil {
@@ -232,7 +239,12 @@ func cache() error {
 }
 
 func cacheEvent() error {
-	cmd := redis.Client.Get(ConfigEventCache)
+	var cmd *redis.StringCmd
+	if iredis.ClusterBool {
+		cmd = iredis.ClusterClient.Get(context.Background(), ConfigEventCache)
+	} else {
+		cmd = iredis.Client.Get(context.Background(), ConfigEventCache)
+	}
 	if cmd.Err() == nil {
 		result := new(EventCache)
 		if err := json.Unmarshal([]byte(cmd.Val()), &result); err != nil {
@@ -264,7 +276,12 @@ func cacheEvent() error {
 }
 
 func cacheEventHandler() error {
-	cmd := redis.Client.Get(ConfigEventHandlerCache)
+	var cmd *redis.StringCmd
+	if iredis.ClusterBool {
+		cmd = iredis.ClusterClient.Get(context.Background(), ConfigEventHandlerCache)
+	} else {
+		cmd = iredis.Client.Get(context.Background(), ConfigEventHandlerCache)
+	}
 	if cmd.Err() == nil {
 		result := new(EventHandlerCache)
 		if err := json.Unmarshal([]byte(cmd.Val()), &result); err != nil {
@@ -288,7 +305,12 @@ func cacheEventHandler() error {
 }
 
 func cacheDept() error {
-	cmd := redis.Client.Get(ConfigDeptCache)
+	var cmd *redis.StringCmd
+	if iredis.ClusterBool {
+		cmd = iredis.ClusterClient.Get(context.Background(), ConfigDeptCache)
+	} else {
+		cmd = iredis.Client.Get(context.Background(), ConfigDeptCache)
+	}
 	if cmd.Err() == nil {
 		result := new(DeptCacheM)
 		if err := json.Unmarshal([]byte(cmd.Val()), &result); err != nil {
@@ -305,7 +327,12 @@ func cacheDept() error {
 }
 
 func cacheUser() error {
-	cmd := redis.Client.Get(ConfigUserCache)
+	var cmd *redis.StringCmd
+	if iredis.ClusterBool {
+		cmd = iredis.ClusterClient.Get(context.Background(), ConfigUserCache)
+	} else {
+		cmd = iredis.Client.Get(context.Background(), ConfigUserCache)
+	}
 	if cmd.Err() == nil {
 		resultMap := new(UserCacheM)
 		if err := json.Unmarshal([]byte(cmd.Val()), &resultMap); err != nil {
@@ -341,7 +368,12 @@ func cacheUser() error {
 }
 
 func cacheSetting() error {
-	cmd := redis.Client.Get(ConfigSettingCache)
+	var cmd *redis.StringCmd
+	if iredis.ClusterBool {
+		cmd = iredis.ClusterClient.Get(context.Background(), ConfigSettingCache)
+	} else {
+		cmd = iredis.Client.Get(context.Background(), ConfigSettingCache)
+	}
 	if cmd.Err() == nil {
 		result := new(SettingCache)
 		if err := json.Unmarshal([]byte(cmd.Val()), &result); err != nil {
@@ -361,7 +393,12 @@ func cacheSetting() error {
 }
 
 func cacheRole() error {
-	cmd := redis.Client.Get(ConfigRoleCache)
+	var cmd *redis.StringCmd
+	if iredis.ClusterBool {
+		cmd = iredis.ClusterClient.Get(context.Background(), ConfigRoleCache)
+	} else {
+		cmd = iredis.Client.Get(context.Background(), ConfigRoleCache)
+	}
 	if cmd.Err() == nil {
 		resultMap := new(RoleCache)
 		if err := json.Unmarshal([]byte(cmd.Val()), &resultMap); err != nil {
@@ -381,7 +418,12 @@ func cacheRole() error {
 }
 
 func cacheSystemVariable() error {
-	cmd := redis.Client.Get(ConfigSystemVariableCache)
+	var cmd *redis.StringCmd
+	if iredis.ClusterBool {
+		cmd = iredis.ClusterClient.Get(context.Background(), ConfigSystemVariableCache)
+	} else {
+		cmd = iredis.Client.Get(context.Background(), ConfigSystemVariableCache)
+	}
 	if cmd.Err() == nil {
 		resultMap := new(SystemVariableCache)
 		if err := json.Unmarshal([]byte(cmd.Val()), &resultMap); err != nil {
@@ -402,7 +444,12 @@ func cacheSystemVariable() error {
 }
 
 func cacheOfflineStatus() error {
-	cmd := redis.Client.Get(ConfigOfflineCache)
+	var cmd *redis.StringCmd
+	if iredis.ClusterBool {
+		cmd = iredis.ClusterClient.Get(context.Background(), ConfigOfflineCache)
+	} else {
+		cmd = iredis.Client.Get(context.Background(), ConfigOfflineCache)
+	}
 	if cmd.Err() == nil {
 		result := new(OfflineStatusCache)
 		if err := json.Unmarshal([]byte(cmd.Val()), &result); err != nil {

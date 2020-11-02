@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"github.com/jmoiron/sqlx"
 )
 
 var DB Pool
 
 func Init() {
-	if !viper.GetBool("taos.enable") {
+	if !viper.GetBool("taos.enable") || viper.GetString("taos.version") != "v1" {
 		return
 	}
 	var (
@@ -28,7 +28,9 @@ func Init() {
 	)
 	var err error
 
-	factory := func() (*sqlx.DB, error) { return sqlx.Open("taosSql", fmt.Sprintf(`%s:%s@/tcp(%s:%d)/%s`, username, password, host, port, db)) }
+	factory := func() (*sqlx.DB, error) {
+		return sqlx.Open("taosSql", fmt.Sprintf(`%s:%s@/tcp(%s:%d)/%s`, username, password, host, port, db))
+	}
 	close := func(v *sqlx.DB) error { return v.Close() }
 	poolConfig := &Config{
 		InitialCap: initialCap,

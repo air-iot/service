@@ -5,39 +5,39 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 
 	"github.com/air-iot/service/model"
 )
 
 // InterfaceTypeToRedisMethod 数值类型的redis查询结果转为对应类型
-func InterfaceTypeToRedisMethod(t *redis.StringCmd) (interface{},error) {
-	if res,err := t.Float64();err == nil{
-		return res,nil
+func InterfaceTypeToRedisMethod(t *redis.StringCmd) (interface{}, error) {
+	if res, err := t.Float64(); err == nil {
+		return res, nil
 	}
-	if res,err := t.Int64();err == nil{
-		return res,nil
+	if res, err := t.Int64(); err == nil {
+		return res, nil
 	}
-	if res,err := t.Int();err == nil{
-		return res,nil
+	if res, err := t.Int(); err == nil {
+		return res, nil
 	}
-	if res,err := t.Uint64();err == nil{
-		return res,nil
+	if res, err := t.Uint64(); err == nil {
+		return res, nil
 	}
-	return nil,fmt.Errorf("redis查出的数值无法判断为具体数值类型")
+	return nil, fmt.Errorf("redis查出的数值无法判断为具体数值类型")
 }
 
 func InterfaceTypeToString(t interface{}) string {
-	if t == nil{
+	if t == nil {
 		return ""
 	}
 	switch reflect.TypeOf(t).String() {
-	case "uint","uintptr","uint8","uint16","uint32","uint64":
-		return strconv.FormatUint(reflect.ValueOf(t).Uint(),10)
-	case "int","int8","int16","int32","int64":
-		return strconv.FormatInt(reflect.ValueOf(t).Int(),10)
-	case "float32","float64":
-		return strconv.FormatFloat(reflect.ValueOf(t).Float(),'f', -1,64)
+	case "uint", "uintptr", "uint8", "uint16", "uint32", "uint64":
+		return strconv.FormatUint(reflect.ValueOf(t).Uint(), 10)
+	case "int", "int8", "int16", "int32", "int64":
+		return strconv.FormatInt(reflect.ValueOf(t).Int(), 10)
+	case "float32", "float64":
+		return strconv.FormatFloat(reflect.ValueOf(t).Float(), 'f', -1, 64)
 	case "bool":
 		return strconv.FormatBool(reflect.ValueOf(t).Bool())
 	case "string":
@@ -58,7 +58,6 @@ func MergeNodeDataMap(key string, value model.Node, dataMap *map[string][]model.
 		(*dataMap)[key] = []model.Node{value}
 	}
 }
-
 
 // MergeEventDataMap 融合映射Map
 func MergeEventDataMap(key string, value model.Event, dataMap *map[string][]model.Event) {

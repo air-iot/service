@@ -14,7 +14,7 @@ import (
 	cmodel "github.com/air-iot/service/model"
 	imqtt "github.com/air-iot/service/mq/mqtt"
 	"github.com/air-iot/service/tools"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -90,7 +90,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 		settings := eventInfo.Settings
 
 		//判断是否已经失效
-		if invalid, ok := settings["invalid"].(bool); ok{
+		if invalid, ok := settings["invalid"].(bool); ok {
 			if invalid {
 				logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
 				continue
@@ -211,12 +211,17 @@ func TriggerComputed(data cmodel.DataMessage) error {
 										}
 									}
 									cmdList := make([]*redis.StringCmd, 0)
-									pipe := iredis.Client.Pipeline()
+									var pipe redis.Pipeliner
+									if iredis.ClusterBool {
+										pipe = iredis.ClusterClient.Pipeline()
+									} else {
+										pipe = iredis.Client.Pipeline()
+									}
 									for _, tagIDInList := range tagIDList {
 										//不在fieldsMap中的tagId就去查redis
 										if nodeUIDNodeMap[uidInMap] != nodeID {
 											hashKey := uidInMap + "|" + tagIDInList
-											cmd := pipe.HGet(hashKey, "value")
+											cmd := pipe.HGet(context.Background(), hashKey, "value")
 											cmdList = append(cmdList, cmd)
 										} else {
 											if fieldsVal, ok := fieldsMap[tagIDInList]; !ok {
@@ -226,7 +231,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 													continue
 												} else {
 													hashKey := uidInMap + "|" + tagIDInList
-													cmd := pipe.HGet(hashKey, "value")
+													cmd := pipe.HGet(context.Background(), hashKey, "value")
 													cmdList = append(cmdList, cmd)
 												}
 											} else {
@@ -234,7 +239,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 											}
 										}
 									}
-									_, err = pipe.Exec()
+									_, err = pipe.Exec(context.Background())
 									if err != nil {
 										logger.Errorf(eventComputeLogicLog, "Redis批量查询tag最新数据(指令为:%+v)失败:%s", cmdList, err.Error())
 										continue
@@ -378,12 +383,17 @@ func TriggerComputed(data cmodel.DataMessage) error {
 									}
 								}
 								cmdList := make([]*redis.StringCmd, 0)
-								pipe := iredis.Client.Pipeline()
+								var pipe redis.Pipeliner
+								if iredis.ClusterBool {
+									pipe = iredis.ClusterClient.Pipeline()
+								} else {
+									pipe = iredis.Client.Pipeline()
+								}
 								for _, tagIDInList := range tagIDList {
 									//不在fieldsMap中的tagId就去查redis
 									if nodeUIDNodeMap[uidInMap] != nodeID {
 										hashKey := uidInMap + "|" + tagIDInList
-										cmd := pipe.HGet(hashKey, "value")
+										cmd := pipe.HGet(context.Background(), hashKey, "value")
 										cmdList = append(cmdList, cmd)
 									} else {
 										if fieldsVal, ok := fieldsMap[tagIDInList]; !ok {
@@ -393,7 +403,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 												continue
 											} else {
 												hashKey := uidInMap + "|" + tagIDInList
-												cmd := pipe.HGet(hashKey, "value")
+												cmd := pipe.HGet(context.Background(), hashKey, "value")
 												cmdList = append(cmdList, cmd)
 											}
 										} else {
@@ -401,7 +411,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 										}
 									}
 								}
-								_, err = pipe.Exec()
+								_, err = pipe.Exec(context.Background())
 								if err != nil {
 									logger.Errorf(eventComputeLogicLog, "Redis批量查询tag最新数据(指令为:%+v)失败:%s", cmdList, err.Error())
 									continue
