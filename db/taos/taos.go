@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -46,7 +45,7 @@ func Init() {
 
 	//DB, err = sqlx.Open("taosSql", fmt.Sprintf(`%s:%s@/tcp(%s:%d)/%s`, username, password, host, port, db))
 	if err != nil {
-		logrus.Panic(err)
+		panic(err)
 	}
 	//DB.DB.SetMaxIdleConns(maxIdleConn)
 	//DB.DB.SetMaxOpenConns(maxOpenConn)
