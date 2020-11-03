@@ -19,7 +19,7 @@ var proto = "http"
 
 func Init() {
 	host = viper.GetString("taos.host")
-	port = viper.GetInt("taos.port")
+	port = viper.GetInt("taos.httpPort")
 	token = viper.GetString("taos.token")
 	DB = viper.GetString("taos.db")
 	proto = viper.GetString("taos.httpProto")
