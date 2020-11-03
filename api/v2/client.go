@@ -1034,9 +1034,9 @@ func (p *client) ReplaceGatewayById(id string, data, result interface{}) error {
 	return p.Put(u, data, result)
 }
 
-func (p *client) CheckDriver(licenseType string) (*model.License, error) {
+func (p *client) CheckDriver(licenseName string) (*model.Signature, error) {
 
-	license := new(model.License)
+	signature := new(model.Signature)
 	var u url.URL
 	if p.isTraefik {
 		p.checkToken()
@@ -1047,8 +1047,8 @@ func (p *client) CheckDriver(licenseType string) (*model.License, error) {
 	resp, err := resty.New().SetTimeout(time.Minute*1).R().
 		//SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", p.Token).
-		SetQueryParam("licenseName", licenseType).
-		SetResult(license).
+		SetQueryParam("licenseName", licenseName).
+		SetResult(signature).
 		Get(u.String())
 
 	if err != nil {
@@ -1056,7 +1056,7 @@ func (p *client) CheckDriver(licenseType string) (*model.License, error) {
 	}
 
 	if resp.StatusCode() == 200 {
-		return license, nil
+		return signature, nil
 	}
 	return nil, fmt.Errorf("请求状态:%d,响应:%s", resp.StatusCode(), resp.String())
 }
