@@ -5,3 +5,8 @@ type License struct {
 	Trial    bool   `json:"trial" desc:"是否试用"`
 	Message  string `json:"message"`
 }
+
+type Signature struct {
+	License       *License `json:"license"`
+	SignatureText []byte   `json:"signatureText"`
+}
