@@ -2,13 +2,11 @@ package taos_rest
 
 import (
 	"fmt"
+	"github.com/go-resty/resty/v2"
+	"github.com/spf13/viper"
 	"net"
 	"net/url"
 	"strconv"
-	"time"
-
-	"github.com/go-resty/resty/v2"
-	"github.com/spf13/viper"
 )
 
 var host = "taos"
@@ -27,7 +25,7 @@ func Init() {
 
 func Exec(sql string, result interface{}) (*resty.Response, error) {
 	u := url.URL{Scheme: proto, Host: net.JoinHostPort(host, strconv.Itoa(port)), Path: "/rest/sql"}
-	return resty.New().SetTimeout(time.Second * 30).R().
+	return resty.New().R().
 		SetHeaders(map[string]string{"Content-Type": "application/json", "Authorization": fmt.Sprintf("Basic %s", token)}).
 		SetBody(sql).
 		SetResult(result).
