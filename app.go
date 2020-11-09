@@ -138,6 +138,8 @@ func init() {
 	viper.SetDefault("traefik.enable", false)
 	viper.SetDefault("traefik.schema", "http")
 
+	viper.SetDefault("service.enable", true)
+	viper.SetDefault("service.pprofEnable", false)
 	viper.SetDefault("service.port", 9000)
 	viper.SetDefault("service.rpcPort", 9010)
 	viper.SetDefault("service.pprofPort", 19000)
@@ -175,16 +177,18 @@ type App interface {
 }
 
 type app struct {
-	id         string
-	name       string
-	host       string
-	port       int
-	pprofPort  int
-	rpcPort    int
-	rpcEnable  bool
-	tags       []string
-	httpServer *echo.Echo
-	grpcServer *grpc.Server
+	id                 string
+	name               string
+	host               string
+	port               int
+	pprofPort          int
+	rpcPort            int
+	rpcEnable          bool
+	serviceEnable      bool
+	servicePprofEnable bool
+	tags               []string
+	httpServer         *echo.Echo
+	grpcServer         *grpc.Server
 }
 
 func NewApp() App {
@@ -202,14 +206,16 @@ func NewApp() App {
 	rabbit.InitApi()
 	logic.Init()
 	var (
-		serviceID        = viper.GetString("service.id")
-		serviceName      = viper.GetString("service.name")
-		serviceHost      = viper.GetString("service.host")
-		servicePort      = viper.GetInt("service.port")
-		servicePprofPort = viper.GetInt("service.pprofPort")
-		serviceTag       = viper.GetString("service.tag")
-		rpcPort          = viper.GetInt("service.rpcPort")
-		rpcEnable        = viper.GetBool("service.rpcEnable")
+		serviceID          = viper.GetString("service.id")
+		serviceName        = viper.GetString("service.name")
+		serviceHost        = viper.GetString("service.host")
+		servicePort        = viper.GetInt("service.port")
+		servicePprofPort   = viper.GetInt("service.pprofPort")
+		serviceTag         = viper.GetString("service.tag")
+		rpcPort            = viper.GetInt("service.rpcPort")
+		rpcEnable          = viper.GetBool("service.rpcEnable")
+		serviceEnable      = viper.GetBool("service.enable")
+		servicePprofEnable = viper.GetBool("service.pprofEnable")
 	)
 
 	srv.DataAction = viper.GetString("data.action")
@@ -253,16 +259,18 @@ func NewApp() App {
 		r = grpc.NewServer()
 	}
 	a := &app{
-		id:         serviceID,
-		name:       serviceName,
-		host:       serviceHost,
-		port:       servicePort,
-		rpcPort:    rpcPort,
-		pprofPort:  servicePprofPort,
-		rpcEnable:  rpcEnable,
-		tags:       tags,
-		grpcServer: r,
-		httpServer: e,
+		id:                 serviceID,
+		name:               serviceName,
+		host:               serviceHost,
+		port:               servicePort,
+		rpcPort:            rpcPort,
+		pprofPort:          servicePprofPort,
+		rpcEnable:          rpcEnable,
+		serviceEnable:      serviceEnable,
+		servicePprofEnable: servicePprofEnable,
+		tags:               tags,
+		grpcServer:         r,
+		httpServer:         e,
 	}
 	if viper.GetBool("consul.enable") {
 		if err := a.register(); err != nil {
@@ -279,17 +287,21 @@ func (p *app) Run(handlers ...Handler) {
 		handler.Start()
 	}
 
-	go func() {
-		//  路径/debug/pprof/
-		logrus.Errorln(http.ListenAndServe(fmt.Sprintf(":%d", p.pprofPort), nil))
-	}()
+	if p.servicePprofEnable {
+		go func() {
+			//  路径/debug/pprof/
+			logrus.Errorln(http.ListenAndServe(fmt.Sprintf(":%d", p.pprofPort), nil))
+		}()
+	}
 
-	go func() {
-		if err := p.httpServer.Start(net.JoinHostPort(p.host, strconv.Itoa(p.port))); err != nil {
-			logrus.Errorln(err)
-			os.Exit(1)
-		}
-	}()
+	if p.serviceEnable {
+		go func() {
+			if err := p.httpServer.Start(net.JoinHostPort(p.host, strconv.Itoa(p.port))); err != nil {
+				logrus.Errorln(err)
+				os.Exit(1)
+			}
+		}()
+	}
 
 	if p.rpcEnable {
 		lis, err := net.Listen("tcp", net.JoinHostPort(p.host, strconv.Itoa(p.rpcPort)))
