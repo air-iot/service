@@ -22,6 +22,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
+	_ "net/http/pprof"
 
 	"github.com/air-iot/service/consul"
 	"github.com/air-iot/service/db/influx"
@@ -139,6 +140,7 @@ func init() {
 
 	viper.SetDefault("service.port", 9000)
 	viper.SetDefault("service.rpcPort", 9010)
+	viper.SetDefault("service.pprofPort", 19000)
 	viper.SetDefault("service.rpcEnable", false)
 
 	viper.SetDefault("cache.enable", true)
@@ -177,6 +179,7 @@ type app struct {
 	name       string
 	host       string
 	port       int
+	pprofPort  int
 	rpcPort    int
 	rpcEnable  bool
 	tags       []string
@@ -199,13 +202,14 @@ func NewApp() App {
 	rabbit.InitApi()
 	logic.Init()
 	var (
-		serviceID   = viper.GetString("service.id")
-		serviceName = viper.GetString("service.name")
-		serviceHost = viper.GetString("service.host")
-		servicePort = viper.GetInt("service.port")
-		serviceTag  = viper.GetString("service.tag")
-		rpcPort     = viper.GetInt("service.rpcPort")
-		rpcEnable   = viper.GetBool("service.rpcEnable")
+		serviceID        = viper.GetString("service.id")
+		serviceName      = viper.GetString("service.name")
+		serviceHost      = viper.GetString("service.host")
+		servicePort      = viper.GetInt("service.port")
+		servicePprofPort = viper.GetInt("service.pprofPort")
+		serviceTag       = viper.GetString("service.tag")
+		rpcPort          = viper.GetInt("service.rpcPort")
+		rpcEnable        = viper.GetBool("service.rpcEnable")
 	)
 
 	srv.DataAction = viper.GetString("data.action")
@@ -254,6 +258,7 @@ func NewApp() App {
 		host:       serviceHost,
 		port:       servicePort,
 		rpcPort:    rpcPort,
+		pprofPort:  servicePprofPort,
 		rpcEnable:  rpcEnable,
 		tags:       tags,
 		grpcServer: r,
@@ -273,6 +278,12 @@ func (p *app) Run(handlers ...Handler) {
 	for _, handler := range handlers {
 		handler.Start()
 	}
+
+	go func() {
+		//  路径/debug/pprof/
+		logrus.Errorln(http.ListenAndServe(fmt.Sprintf(":%d", p.pprofPort), nil))
+	}()
+
 	go func() {
 		if err := p.httpServer.Start(net.JoinHostPort(p.host, strconv.Itoa(p.port))); err != nil {
 			logrus.Errorln(err)
