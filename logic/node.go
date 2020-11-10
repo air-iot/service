@@ -22,9 +22,8 @@ type nodeLogic struct {
 	nodeCache            *sync.Map
 	nodeMapCache         *sync.Map
 	nodeCacheWithModelID *sync.Map
-	nodeUidMapCache         *sync.Map
+	nodeUidMapCache      *sync.Map
 }
-
 
 func (p *nodeLogic) FindLocalCacheUid(uid string) (result *model.Node, err error) {
 	a, b := p.nodeUidMapCache.Load(uid)
@@ -93,9 +92,10 @@ func (p *nodeLogic) FindLocalCacheList(nodeIDs []string) (result map[string]*mod
 			} else {
 				return nil, errors.New("结构不正确")
 			}
-		} else {
-			return nil, errors.New("未查询到相关数据")
 		}
+		//} else {
+		//	return nil, errors.New("未查询到相关数据")
+		//}
 	}
 	return result, nil
 }
