@@ -126,7 +126,7 @@ func (p *nodeLogic) FindCacheTag(nodeID, tagID string) (result *model.Tag, err e
 
 func (*nodeLogic) FindByPipeline(pipeLine mongo.Pipeline) (result []model.NodeMongo, err error) {
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 	AllowDiskUse := true
 	cur, err := imo.Database.Collection(model.NODE).Aggregate(ctx, pipeLine,
@@ -149,7 +149,7 @@ func (*nodeLogic) FindByPipeline(pipeLine mongo.Pipeline) (result []model.NodeMo
 }
 
 func (*nodeLogic) FindBsonMByPipeline(pipeLine mongo.Pipeline) (result []bson.M, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 	AllowDiskUse := true
 	cur, err := imo.Database.Collection(model.NODE).Aggregate(ctx, pipeLine,
