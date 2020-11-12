@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"net"
 	"net/url"
 	"strconv"
@@ -20,6 +21,7 @@ type ModelClient interface {
 	DelById(id string, result interface{}) error
 	UpdateById(id string, data, result interface{}) error
 	ReplaceById(id string, data, result interface{}) error
+	FindTagById(id string, result interface{}) error
 }
 
 type modelClient struct {
@@ -64,4 +66,15 @@ func (p *modelClient) UpdateById(id string, data, result interface{}) error {
 
 func (p *modelClient) ReplaceById(id string, data, result interface{}) error {
 	return api.Put(p.url, p.token, id, data, result)
+}
+
+func (p *modelClient) FindTagById(id string, result interface{}) error {
+	var u url.URL
+	if traefik.Enable {
+		u = url.URL{Host: net.JoinHostPort(traefik.Host, strconv.Itoa(traefik.Port)), Path: fmt.Sprintf("core/model/tag/%s", id)}
+	} else {
+		u = url.URL{Host: "core:9000", Path: fmt.Sprintf("core/model/tag/%s", id)}
+	}
+	u.Scheme = traefik.Proto
+	return api.Get(u, p.token, nil, result)
 }
