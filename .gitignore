@@ -1,3 +1,4 @@
 /.idea
 
 handler/handler_schedulebak\.go
+db/taos/v2/taos.go.bak

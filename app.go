@@ -196,7 +196,9 @@ func NewApp() App {
 	consul.Init()
 	traefik.Init()
 	influx.Init()
-	taos.Init()
+	if err := taos.DB.Init(); err != nil {
+		panic(err)
+	}
 	taos_rest.Init()
 	mongo.Init()
 	redis.Init()
@@ -347,7 +349,9 @@ func (p *app) stop() {
 	sql.Close()
 	mqtt.Close()
 	rabbit.Close()
-	taos.Close()
+	if err := taos.DB.Close(); err != nil {
+		logrus.Errorln("关闭taos错误,", err)
+	}
 	if p.grpcServer != nil {
 		p.grpcServer.Stop()
 	}

@@ -1,19 +1,30 @@
 package taos
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
+	"sync"
+
 	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
-var DB *sqlx.DB
+var DB = new(db)
+
+type db struct {
+	sync.RWMutex
+	db *sqlx.DB
+}
 
 // 初始化taos数据库
-func Init() {
+func (p *db) Init() error {
 	if !viper.GetBool("taos.enable") {
-		return
+		return errors.New("enable false")
 	}
+	p.Lock()
+	defer p.Unlock()
 	var (
 		username = viper.GetString("taos.username")
 		password = viper.GetString("taos.password")
@@ -26,13 +37,35 @@ func Init() {
 		//idleTimeout = viper.GetInt("taos.idleTimeout")
 	)
 	var err error
-
-	DB, err = sqlx.Open("taosSql", fmt.Sprintf(`%s:%s@/tcp(%s:%d)/%s`, username, password, host, port, db))
+	p.db, err = sqlx.Open("taosSql", fmt.Sprintf(`%s:%s@/tcp(%s:%d)/%s`, username, password, host, port, db))
 	if err != nil {
-		panic(err)
+		return err
 	}
-	DB.SetMaxIdleConns(maxIdleConn)
-	DB.SetMaxOpenConns(maxOpenConn)
+	p.db.SetMaxIdleConns(maxIdleConn)
+	p.db.SetMaxOpenConns(maxOpenConn)
+	return nil
+}
+
+func (p *db) GetDB() *sqlx.DB {
+	return p.db
+}
+
+func (p *db) Exec(query string, args ...interface{}) (sql.Result, error) {
+	p.RLock()
+	defer p.RUnlock()
+	if p.db == nil {
+		return nil, errors.New("db未初始化")
+	}
+	return p.db.Exec(query, args...)
+}
+
+func (p *db) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	p.RLock()
+	defer p.RUnlock()
+	if p.db == nil {
+		return nil, errors.New("db未初始化")
+	}
+	return p.db.Query(query, args...)
 }
 
 func GetDB() (*sqlx.DB, error) {
@@ -46,10 +79,14 @@ func GetDB() (*sqlx.DB, error) {
 	return sqlx.Open("taosSql", fmt.Sprintf(`%s:%s@/tcp(%s:%d)/%s`, username, password, host, port, db))
 }
 
-func Close() {
-	if DB != nil {
-		if err := DB.Close(); err != nil {
+func (p *db) Close() error {
+	p.Lock()
+	defer p.Unlock()
+	if p.db != nil {
+		if err := p.db.Close(); err != nil {
 			logrus.Errorf("taos 关闭失败:%s", err.Error())
+			return err
 		}
 	}
+	return nil
 }
