@@ -1,6 +1,7 @@
 package taos
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -59,6 +60,15 @@ func (p *db) Exec(query string, args ...interface{}) (sql.Result, error) {
 	return p.db.Exec(query, args...)
 }
 
+func (p *db) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	p.RLock()
+	defer p.RUnlock()
+	if p.db == nil {
+		return nil, errors.New("db未初始化")
+	}
+	return p.db.ExecContext(ctx, query, args...)
+}
+
 func (p *db) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	p.RLock()
 	defer p.RUnlock()
@@ -66,6 +76,15 @@ func (p *db) Query(query string, args ...interface{}) (*sql.Rows, error) {
 		return nil, errors.New("db未初始化")
 	}
 	return p.db.Query(query, args...)
+}
+
+func (p *db) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	p.RLock()
+	defer p.RUnlock()
+	if p.db == nil {
+		return nil, errors.New("db未初始化")
+	}
+	return p.db.QueryContext(ctx, query, args...)
 }
 
 func GetDB() (*sqlx.DB, error) {
