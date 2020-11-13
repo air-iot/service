@@ -22,7 +22,7 @@ type db struct {
 // 初始化taos数据库
 func (p *db) Init() error {
 	if !viper.GetBool("taos.enable") {
-		return errors.New("enable false")
+		return nil
 	}
 	p.Lock()
 	defer p.Unlock()
