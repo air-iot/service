@@ -102,22 +102,22 @@ func (p *Gateway) GatewayReceiveData(ctx context.Context, uids []string, gateway
 			for {
 				select {
 				case msg := <-nodeDataMsgChan:
-					dataRes := make([]model.RealTimeData, 0)
-					currentTime := time.Now().Local()
-					if msg.Time > 0 {
-						currentTime = time.Unix(0, msg.Time*int64(time.Millisecond))
-					}
-					for k, v := range msg.Fields {
-						dataRes = append(dataRes, model.RealTimeData{
-							TagId: k,
-							Uid:   msg.Uid,
-							Time:  currentTime.UnixNano() / 10e6,
-							Value: v,
-						})
-					}
+					//dataRes := make([]model.RealTimeData, 0)
+					//currentTime := time.Now().Local()
+					//if msg.Time > 0 {
+					//	currentTime = time.Unix(0, msg.Time*int64(time.Millisecond))
+					//}
+					//for k, v := range msg.Fields {
+					//	dataRes = append(dataRes, model.RealTimeData{
+					//		TagId: k,
+					//		Uid:   msg.Uid,
+					//		Time:  currentTime.UnixNano() / 10e6,
+					//		Value: v,
+					//	})
+					//}
 
 					if templateText == "" {
-						b1, err := json.Marshal(&dataRes)
+						b1, err := json.Marshal(&msg)
 						if err != nil {
 							logrus.Errorf("网关 %s 序列化错误: %s", gatewayName, err.Error())
 						} else {
@@ -130,7 +130,7 @@ func (p *Gateway) GatewayReceiveData(ctx context.Context, uids []string, gateway
 						}
 
 					} else {
-						bufferData, err := p.Template(gatewayName, templateText, dataRes)
+						bufferData, err := p.TemplateRealData(gatewayName, templateText, msg)
 						if err != nil {
 							logrus.Errorf("网关 %s 启动错误: %s", gatewayName, err.Error())
 						} else {
@@ -224,7 +224,7 @@ func (p *Gateway) Template(templateName, templateText string, data []model.RealT
 	return b, nil
 }
 
-func (p *Gateway) TemplateRealData(templateName, templateText string, data model.RealTimeData) (*bytes.Buffer, error) {
+func (p *Gateway) TemplateRealData(templateName, templateText string, data model.DataMessage) (*bytes.Buffer, error) {
 	t := template.New(templateName).Funcs(sprig.FuncMap())
 	t = template.Must(t.Parse(templateText))
 	b := new(bytes.Buffer)
