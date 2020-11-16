@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/air-iot/service/global"
 	"log"
 	"net"
 	"net/http"
@@ -46,9 +47,6 @@ var (
 	// Version 版本号
 	Version       = "2.0"
 	privateBlocks []*net.IPNet
-	configPath    = flag.String("config", "./etc/", "配置文件所属文件夹路径,默认:./etc/")
-	configName    = flag.String("configName", "config", "配置文件名称,默认:config")
-	configSuffix  = flag.String("configSuffix", "ini", "配置文件后缀类型,默认:ini")
 )
 
 func init() {
@@ -56,6 +54,12 @@ func init() {
 		testing.Init()
 		return true
 	}()
+	var (
+		configPath   = flag.String("config", global.ConfigRoot, "配置文件所属文件夹路径,默认:./etc/")
+		configName   = flag.String("configName", "config", "配置文件名称,默认:config")
+		configSuffix = flag.String("configSuffix", "ini", "配置文件后缀类型,默认:ini")
+	)
+
 	flag.Parse()
 	viper.SetDefault("log.level", "ERROR")
 
