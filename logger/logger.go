@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"os"
@@ -30,12 +31,25 @@ const (
 
 func Init() {
 	var tmpLogLevel = viper.GetString("log.level")
+	var file = viper.GetString("log.file")
 	l, err := logrus.ParseLevel(tmpLogLevel)
 	if err != nil {
 		l = logrus.ErrorLevel
 	}
 	// logrus.SetFormatter(&logrus.JSONFormatter{TimestampFormat: "2006-01-02 15:04:05"})
-	logrus.SetOutput(os.Stdout)
+	if file != "" {
+		err := os.MkdirAll("logs", 0666)
+		if err != nil {
+			panic(fmt.Sprintf("log dir: %s", err.Error()))
+		}
+		f, err := os.OpenFile("logs/"+file, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
+		if err != nil {
+			panic(fmt.Sprintf("log: %s", err.Error()))
+		}
+		logrus.SetOutput(f)
+	} else {
+		logrus.SetOutput(os.Stdout)
+	}
 	logrus.SetLevel(l)
 
 }
