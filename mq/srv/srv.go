@@ -1,24 +1,23 @@
 package srv
 
 import (
-	"github.com/air-iot/service/tools"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
-	"github.com/spf13/viper"
 	"github.com/streadway/amqp"
 
 	"github.com/air-iot/service/mq/mqtt"
 	"github.com/air-iot/service/mq/rabbit"
+	"github.com/air-iot/service/tools"
 )
 
 var DataAction = "mqtt"
 
 func DefaultRealtimeDataHandler(handler func(topic string, payload []byte)) error {
-	switch viper.GetString("data.action") {
+	switch DataAction {
 	case "rabbit":
-		if viper.GetBool("rabbit.queueRand") {
-			return NewRabbitService(viper.GetString("service.name")+tools.GetRandomString(10), "data").Consume(rabbit.RoutingKey+"#", handler)
+		if rabbit.Queue == "" {
+			return NewRabbitService("queue"+tools.GetRandomString(10), "data").Consume(rabbit.RoutingKey+"#", handler)
 		} else {
-			return NewRabbitService(viper.GetString("service.name"), "data").Consume(rabbit.RoutingKey+"#", handler)
+			return NewRabbitService(rabbit.Queue, "data").Consume(rabbit.RoutingKey+"#", handler)
 		}
 	default:
 		return NewMqttService().Consume(mqtt.Topic+"#", handler)
@@ -26,12 +25,12 @@ func DefaultRealtimeDataHandler(handler func(topic string, payload []byte)) erro
 }
 
 func DefaultRealtimeUidDataHandler(uid string, handler func(topic string, payload []byte)) error {
-	switch viper.GetString("data.action") {
+	switch DataAction {
 	case "rabbit":
-		if viper.GetBool("rabbit.queueRand") {
-			return NewRabbitService(viper.GetString("service.name")+tools.GetRandomString(10), "data").Consume(rabbit.RoutingKey+uid, handler)
+		if rabbit.Queue == "" {
+			return NewRabbitService("queue"+tools.GetRandomString(10), "data").Consume(rabbit.RoutingKey+uid, handler)
 		} else {
-			return NewRabbitService(viper.GetString("service.name"), "data").Consume(rabbit.RoutingKey+uid, handler)
+			return NewRabbitService(rabbit.Queue, "data").Consume(rabbit.RoutingKey+uid, handler)
 		}
 	default:
 		return NewMqttService().Consume(mqtt.Topic+uid, handler)
@@ -97,13 +96,13 @@ func NewRabbitService(queue, exchange string) MQService {
 
 func NewRabbitEnvService() MQService {
 	return &rabbitService{
-		viper.GetString("service.queue"),
+		rabbit.Queue,
 		"data",
 	}
 }
 
 func DefaultRabbitService() MQService {
-	return &rabbitService{viper.GetString("service.name"), "data"}
+	return &rabbitService{rabbit.Queue, "data"}
 }
 
 func (p *rabbitService) newQueue() (amqp.Queue, error) {

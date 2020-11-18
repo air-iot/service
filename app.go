@@ -1,30 +1,25 @@
 package service
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"strconv"
-	"strings"
 	"syscall"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
-	consulApi "github.com/hashicorp/consul/api"
 	"github.com/labstack/echo/v4"
 	mw "github.com/labstack/echo/v4/middleware"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
-	_ "net/http/pprof"
 
-	"github.com/air-iot/service/consul"
 	"github.com/air-iot/service/db/influx"
 	"github.com/air-iot/service/db/mongo"
 	"github.com/air-iot/service/db/redis"
@@ -38,7 +33,6 @@ import (
 	"github.com/air-iot/service/mq/rabbit"
 	"github.com/air-iot/service/mq/srv"
 	restfulapi "github.com/air-iot/service/restful-api"
-	"github.com/air-iot/service/tools"
 	"github.com/air-iot/service/traefik"
 )
 
@@ -63,9 +57,9 @@ func init() {
 	viper.SetDefault("data.save", "influx")
 	viper.SetDefault("data.mqApiEnable", false)
 
-	viper.SetDefault("consul.enable", true)
-	viper.SetDefault("consul.host", "consul")
-	viper.SetDefault("consul.port", 8500)
+	//viper.SetDefault("consul.enable", false)
+	//viper.SetDefault("consul.host", "consul")
+	//viper.SetDefault("consul.port", 8500)
 
 	viper.SetDefault("influx.enable", false)
 	viper.SetDefault("influx.host", "influx")
@@ -131,7 +125,7 @@ func init() {
 	viper.SetDefault("rabbit.password", "public")
 	viper.SetDefault("rabbit.vhost", "")
 	viper.SetDefault("rabbit.routingKey", "data.")
-	viper.SetDefault("rabbit.queueRand", false)
+	viper.SetDefault("rabbit.queue", "")
 
 	viper.SetDefault("traefik.host", "traefik")
 	viper.SetDefault("traefik.port", 80)
@@ -177,8 +171,6 @@ type App interface {
 }
 
 type app struct {
-	id                 string
-	name               string
 	host               string
 	port               int
 	pprofPort          int
@@ -186,14 +178,12 @@ type app struct {
 	rpcEnable          bool
 	serviceEnable      bool
 	servicePprofEnable bool
-	tags               []string
 	httpServer         *echo.Echo
 	grpcServer         *grpc.Server
 }
 
 func NewApp() App {
 	logger.Init()
-	consul.Init()
 	traefik.Init()
 	influx.Init()
 	if err := taos.DB.Init(); err != nil {
@@ -208,12 +198,9 @@ func NewApp() App {
 	rabbit.InitApi()
 	logic.Init()
 	var (
-		serviceID          = viper.GetString("service.id")
-		serviceName        = viper.GetString("service.name")
 		serviceHost        = viper.GetString("service.host")
 		servicePort        = viper.GetInt("service.port")
 		servicePprofPort   = viper.GetInt("service.pprofPort")
-		serviceTag         = viper.GetString("service.tag")
 		rpcPort            = viper.GetInt("service.rpcPort")
 		rpcEnable          = viper.GetBool("service.rpcEnable")
 		serviceEnable      = viper.GetBool("service.enable")
@@ -221,18 +208,6 @@ func NewApp() App {
 	)
 
 	srv.DataAction = viper.GetString("data.action")
-	if serviceName == "" {
-		logrus.Panic("服务name不能为空")
-	}
-	if serviceID == "" {
-		// logrus.Panic("服务id不能为空")
-		serviceID = fmt.Sprintf("%s_%s", serviceName, tools.GetRandomString(8))
-	}
-	var err error
-	serviceHost, err = Extract(serviceHost)
-	if err != nil {
-		serviceHost = "127.0.0.1"
-	}
 	e := echo.New()
 	e.Use(mw.CORSWithConfig(mw.CORSConfig{
 		AllowMethods:  []string{http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodPost, http.MethodDelete},
@@ -245,24 +220,17 @@ func NewApp() App {
 		e.Use(imw.AuthFilter())
 	}
 	e.HTTPErrorHandler = restfulapi.HTTPErrorHandler
-	e.GET("/check", func(c echo.Context) error {
-		return c.NoContent(http.StatusOK)
-	})
-	e.GET(fmt.Sprintf(`/%s/heart`, serviceName), func(c echo.Context) error {
-		return c.NoContent(http.StatusOK)
-	})
-	tags := strings.Split(serviceTag, ",")
-	tags = append(tags, "traefik.enable=true")
-	tags = append(tags, fmt.Sprintf("traefik.http.routers.%s.rule=PathPrefix(`/%s`)", serviceName, serviceName))
-	tags = append(tags, fmt.Sprintf("traefik.http.routers.%s.middlewares=auth", serviceName))
-
+	//e.GET("/check", func(c echo.Context) error {
+	//	return c.NoContent(http.StatusOK)
+	//})
+	//e.GET(fmt.Sprintf(`/%s/heart`, serviceName), func(c echo.Context) error {
+	//	return c.NoContent(http.StatusOK)
+	//})
 	var r *grpc.Server
 	if rpcEnable {
 		r = grpc.NewServer()
 	}
 	a := &app{
-		id:                 serviceID,
-		name:               serviceName,
 		host:               serviceHost,
 		port:               servicePort,
 		rpcPort:            rpcPort,
@@ -270,15 +238,10 @@ func NewApp() App {
 		rpcEnable:          rpcEnable,
 		serviceEnable:      serviceEnable,
 		servicePprofEnable: servicePprofEnable,
-		tags:               tags,
 		grpcServer:         r,
 		httpServer:         e,
 	}
-	if viper.GetBool("consul.enable") {
-		if err := a.register(); err != nil {
-			logrus.Panic(err)
-		}
-	}
+
 	return a
 }
 
@@ -360,114 +323,4 @@ func (p *app) stop() {
 			logrus.Errorln("关闭http错误,", err)
 		}
 	}
-	if viper.GetBool("consul.enable") {
-		p.deregister()
-	}
-}
-
-// Register 服务注册
-func (p *app) register() error {
-	var check = &consulApi.AgentServiceCheck{
-		CheckID: p.id,
-		HTTP:    fmt.Sprintf("http://%s:%d/check", p.host, p.port),
-		// TCP:                            fmt.Sprintf("%s:%d", p.node.Address, p.node.Port),
-		Interval:                       fmt.Sprintf("%v", 10*time.Second),
-		Timeout:                        fmt.Sprintf("%v", 30*time.Second),
-		DeregisterCriticalServiceAfter: fmt.Sprintf("%v", p.getDeregisterTTL(30*time.Second)),
-	}
-
-	// register the service
-	asr := &consulApi.AgentServiceRegistration{
-		ID:      p.id,
-		Name:    p.name,
-		Tags:    p.tags,
-		Port:    p.port,
-		Address: p.host,
-		Check:   check,
-	}
-
-	// Specify consul connect
-	asr.Connect = &consulApi.AgentServiceConnect{
-		Native: true,
-	}
-
-	if err := consul.Client.Agent().ServiceRegister(asr); err != nil {
-		return err
-	}
-
-	// save our hash and time check of the service
-	// pass the healthcheck
-	return consul.Client.Agent().CheckDeregister("service:" + p.id)
-}
-
-func (*app) getDeregisterTTL(t time.Duration) time.Duration {
-	// splay slightly for the watcher?
-	splay := time.Second * 5
-	deregTTL := t + splay
-	// consul has a minimum timeout on deregistration of 1 minute.
-	if t < time.Minute {
-		deregTTL = time.Minute + splay
-	}
-	return deregTTL
-}
-
-// Deregister 服务断开
-func (p *app) deregister() {
-	if err := consul.Client.Agent().ServiceDeregister(p.id); err != nil {
-		logrus.Errorln("服务断开错误", err.Error())
-	}
-}
-
-// extract returns a real ip
-func Extract(addr string) (string, error) {
-	// if addr specified then its returned
-	if len(addr) > 0 && (addr != "0.0.0.0" && addr != "[::]") {
-		return addr, nil
-	}
-
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return "", fmt.Errorf("获取地址失败: %s", err.Error())
-	}
-
-	var ipAddr []byte
-
-	for _, rawAddr := range addrs {
-		var ip net.IP
-		switch addr := rawAddr.(type) {
-		case *net.IPAddr:
-			ip = addr.IP
-		case *net.IPNet:
-			ip = addr.IP
-		default:
-			continue
-		}
-
-		if ip.To4() == nil {
-			continue
-		}
-
-		if !isPrivateIP(ip.String()) {
-			continue
-		}
-
-		ipAddr = ip
-		break
-	}
-
-	if ipAddr == nil {
-		return "", errors.New("找不到私有IP地址")
-	}
-
-	return net.IP(ipAddr).String(), nil
-}
-
-func isPrivateIP(ipAddr string) bool {
-	ip := net.ParseIP(ipAddr)
-	for _, priv := range privateBlocks {
-		if priv.Contains(ip) {
-			return true
-		}
-	}
-	return false
 }
