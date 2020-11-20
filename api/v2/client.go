@@ -941,10 +941,12 @@ func (p *client) DriverConfig(driverId, serviceId string) ([]byte, error) {
 	} else {
 		u = url.URL{Scheme: p.protocol, Host: "driver:9000", Path: fmt.Sprintf("driver/driver/%s/%s/config", driverId, serviceId)}
 	}
+
 	// p.checkToken()
 	resp, err := resty.New().SetTimeout(time.Minute*1).R().
 		SetHeader("Content-Type", "application/json").
-		// SetHeader("Authorization", p.Token).
+		SetHeader("Request-Type", "service").
+		//SetHeader("Authorization", p.Token).
 		Get(u.String())
 
 	if err != nil {
@@ -1039,24 +1041,35 @@ func (p *client) CheckDriver(licenseName string) (*model.Signature, error) {
 	signature := new(model.Signature)
 	var u url.URL
 	if p.isTraefik {
-		p.checkToken()
+		//p.checkToken()
 		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/license/driver"}
 	} else {
 		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/license/driver"}
 	}
-	resp, err := resty.New().SetTimeout(time.Minute*1).R().
-		//SetHeader("Content-Type", "application/json").
-		SetHeader("Authorization", p.Token).
-		SetQueryParam("licenseName", licenseName).
-		SetResult(signature).
-		Get(u.String())
+	v := url.Values{}
+	v.Set("licenseName", licenseName)
 
+	u.RawQuery = v.Encode()
+
+	err := p.Get(u, signature)
 	if err != nil {
 		return nil, err
 	}
-
-	if resp.StatusCode() == 200 {
-		return signature, nil
-	}
-	return nil, fmt.Errorf("请求状态:%d,响应:%s", resp.StatusCode(), resp.String())
+	return signature, nil
+	//resp, err := resty.New().SetTimeout(time.Minute*1).R().
+	//	SetHeader("Content-Type", "application/json").
+	//	SetHeader("Request-Type", "service").
+	//	SetHeader("Authorization", p.Token).
+	//	SetQueryParam("").
+	//	SetResult(signature).
+	//	Get(u.String())
+	//
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//if resp.StatusCode() == 200 {
+	//	return signature, nil
+	//}
+	//return nil, fmt.Errorf("请求状态:%d,响应:%s", resp.StatusCode(), resp.String())
 }
