@@ -55,6 +55,7 @@ func Init() {
 		p := ClusterClient.Ping(context.Background())
 		if p.Err() != nil {
 			panic(p.Err())
+			logrus.Fatalf("Redis Cluster客户端创建错误: %s", p.Err().Error())
 		}
 		return
 	}
@@ -73,7 +74,7 @@ func Init() {
 	})
 	p := Client.Ping(context.Background())
 	if p.Err() != nil {
-		panic(p.Err())
+		logrus.Fatalf("Redis 客户端创建错误: %s", p.Err().Error())
 	}
 }
 

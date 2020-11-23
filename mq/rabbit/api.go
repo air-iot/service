@@ -10,6 +10,7 @@ package rabbit
 import (
 	"fmt"
 	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -38,7 +39,7 @@ func InitApi() {
 	var err error
 	rmqc, err := rabbithole.NewClient(fmt.Sprintf("http://%s:%d", host, port), username, password)
 	if err != nil {
-		panic(err)
+		logrus.Fatalf("Rabbit Api 客户端创建错误: %s", err.Error())
 	}
 	ApiClient = rmqc
 }

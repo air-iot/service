@@ -22,7 +22,7 @@ func Init() {
 	var err error
 	DB, err = sql.Open(driverName, dataSourceName)
 	if err != nil {
-		logrus.Panic(err)
+		logrus.Fatalf("DB 客户端创建错误: %s", err.Error())
 	}
 	DB.SetMaxIdleConns(maxIdleConn)
 	DB.SetMaxOpenConns(maxOpenConn)

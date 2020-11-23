@@ -30,11 +30,11 @@ func Init() {
 	var err error
 	conn, err = amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%d/%s", username, password, host, port, vhost))
 	if err != nil {
-		logrus.Panic(err)
+		logrus.Fatalf("Rabbit客户端创建错误: %s", err.Error())
 	}
 	Channel, err = conn.Channel()
 	if err != nil {
-		logrus.Panic(err)
+		logrus.Fatalf("Rabbit Channel创建错误: %s", err.Error())
 	}
 }
 

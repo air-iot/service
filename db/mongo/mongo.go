@@ -39,18 +39,17 @@ func Init() {
 	)).SetMaxPoolSize(uint64(poolSize)).SetHeartbeatInterval(30 * time.Second).SetMaxConnIdleTime(30 * time.Second)
 	Client, err = mongo.NewClient(opts)
 	if err != nil {
-		logrus.Panic(err)
+		logrus.Fatalf("Mongo客户端创建错误: %s", err.Error())
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	err = Client.Connect(ctx)
 	if err != nil {
-		logrus.Panic(err)
-
+		logrus.Fatalf("Mongo客户端连接错误: %s", err.Error())
 	}
-	err = Client.Ping(context.Background(),nil)
+	err = Client.Ping(context.Background(), nil)
 	if err != nil {
-		logrus.Panic(err)
+		logrus.Fatalf("Mongo客户端 Ping 错误: %s", err.Error())
 	}
 	Database = Client.Database(DB)
 }

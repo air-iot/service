@@ -35,14 +35,14 @@ func Init() {
 	//opts.SetConnectionLostHandler()
 	opts.SetConnectionLostHandler(func(client MQTT.Client, e error) {
 		if e != nil {
-			logrus.Panic(e)
+			logrus.Fatalf("MQTT Lost Handler错误: %s", e.Error())
 		}
 	})
 	opts.SetOrderMatters(false)
 	// Start the connection
 	Client = MQTT.NewClient(opts)
 	if token := Client.Connect(); token.Wait() && token.Error() != nil {
-		logrus.Panic(token.Error())
+		logrus.Fatalf("MQTT 客户端创建错误: %s", token.Error().Error())
 	}
 }
 

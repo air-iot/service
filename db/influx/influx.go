@@ -39,14 +39,14 @@ func Init() {
 		Password: password,
 	})
 	if err != nil {
-		logrus.Panic(err)
+		logrus.Fatalf("Influx HTTP客户端创建错误: %s", err.Error())
 	}
 	if Mod == "udp" {
 		UDPClient, err = client.NewUDPClient(client.UDPConfig{
 			Addr: net.JoinHostPort(host, strconv.Itoa(udpPort)),
 		})
 		if err != nil {
-			logrus.Panic(err)
+			logrus.Fatalf("Influx UDP客户端创建错误: %s", err.Error())
 		}
 	}
 }

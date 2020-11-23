@@ -1,9 +1,9 @@
 package logger
 
 import (
-	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"log"
 	"os"
 )
 
@@ -40,11 +40,11 @@ func Init() {
 	if file != "" {
 		err := os.MkdirAll("logs", 0666)
 		if err != nil {
-			panic(fmt.Sprintf("log dir: %s", err.Error()))
+			log.Fatalf("log dir: %s \n", err.Error())
 		}
 		f, err := os.OpenFile("logs/"+file, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
 		if err != nil {
-			panic(fmt.Sprintf("log: %s", err.Error()))
+			log.Fatalf("log open: %s \n", err.Error())
 		}
 		logrus.SetOutput(f)
 	} else {
