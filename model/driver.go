@@ -3,8 +3,9 @@ package model
 type (
 	// Driver 定义驱动结构体
 	Driver struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
+		ID       string   `json:"id"`
+		Name     string   `json:"name"`
+		Services []string `json:"services"`
 	}
 	// DriverConfigModel ...
 	DriverConfigModel struct {
