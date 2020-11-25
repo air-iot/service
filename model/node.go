@@ -18,6 +18,10 @@ type Node struct {
 	TimeoutTime string   `json:"timeoutTime"`
 	Status      string   `json:"status"`
 	Type        string   `json:"type"`
+	Custom     struct {
+		IntervalTime int `json:"intervalTime"`
+		YPMC string `json:"YPMC"`
+	} `json:"custom"`
 }
 
 // NodeCommand
@@ -31,6 +35,7 @@ type NodeMongo struct {
 	Device     DeviceMongo          `json:"device" bson:"device"`
 	Custom     struct {
 		IntervalTime int `json:"intervalTime"  bson:"intervalTime"`
+		YPMC string `json:"YPMC"  bson:"YPMC"`
 	} `json:"custom" bson:"custom"`
 	Models      []ModelMongo         `json:"models" bson:"models"`
 	Child       []primitive.ObjectID `json:"child" bson:"child"`

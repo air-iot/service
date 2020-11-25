@@ -11,6 +11,7 @@ type Setting struct {
 	Email Email `json:"email"`
 	// Wechat Wechat发送配置
 	Wechat Wechat `json:"wechat"`
+	PropTag string `json:"propTag"`
 }
 
 type WarningSetting struct {
@@ -48,6 +49,7 @@ type SettingMongo struct {
 	EmailMongo primitive.M `json:"email" bson:"email"`
 	// Wechat Wechat发送配置
 	WechatMongo primitive.M `json:"wechat" bson:"wechat"`
+	PropTag string `json:"propTag" bson:"propTag"`
 }
 
 type WarningSettingMongo struct {
