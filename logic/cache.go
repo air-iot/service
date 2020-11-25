@@ -380,7 +380,7 @@ func cacheSetting() error {
 			return fmt.Errorf("解析错误:%s", err.Error())
 		}
 
-		SettingLogic.settingCache.Store("setting", *result)
+		SettingLogic.settingCache.Store("setting", result.Setting)
 
 		for _, warnKind := range result.Setting.Warning.WarningKind {
 			if warnKind.ID != "" {
