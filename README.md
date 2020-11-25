@@ -2,7 +2,7 @@
 
 ## 安装
 ```
-go get -u github.com/air-iot/service
+go get -u github.com/air-iot/service@master
 ```
 
 
