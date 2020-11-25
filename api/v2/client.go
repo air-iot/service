@@ -17,6 +17,7 @@ import (
 )
 
 type client struct {
+	sync.Mutex
 	protocol  string
 	host      string
 	ak        string
@@ -25,22 +26,19 @@ type client struct {
 	expires   int64
 	isTraefik bool
 	headers   map[string]string
-	mux       sync.Mutex
 }
 
 func NewClient() Client {
-	headers := map[string]string{
-		"Content-Type": "application/json",
-		"Request-Type": "service",
-	}
 	return &client{
 		protocol:  traefik.Proto,
 		host:      net.JoinHostPort(traefik.Host, strconv.Itoa(traefik.Port)),
 		ak:        traefik.AppKey,
 		sk:        traefik.AppSecret,
 		isTraefik: traefik.Enable,
-		headers:   headers,
-		mux:       sync.Mutex{},
+		headers: map[string]string{
+			"Content-Type": "application/json",
+			"Request-Type": "service",
+		},
 	}
 }
 
@@ -202,8 +200,8 @@ func (p *client) Patch(url url.URL, data, result interface{}) error {
 }
 
 func (p *client) checkToken() {
-	p.mux.Lock()
-	defer p.mux.Unlock()
+	p.Lock()
+	defer p.Unlock()
 	if p.expires-5 < time.Now().Unix() {
 		p.findToken()
 		p.headers["Authorization"] = p.Token
