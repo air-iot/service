@@ -1,18 +1,16 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/air-iot/service/restful-api"
-	"github.com/air-iot/service/tools"
-	"go.mongodb.org/mongo-driver/bson"
 	"time"
 
+	"github.com/air-iot/service/api/v2"
 	"github.com/air-iot/service/logger"
-	imqtt "github.com/air-iot/service/mq/mqtt"
-	idb "github.com/air-iot/service/db/mongo"
 	clogic "github.com/air-iot/service/logic"
+	imqtt "github.com/air-iot/service/mq/mqtt"
+	"github.com/air-iot/service/tools"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 type EventType string
@@ -68,7 +66,7 @@ func Trigger(eventType EventType, data map[string]interface{}) error {
 		settings := eventInfo.Settings
 
 		//判断是否已经失效
-		if invalid, ok := settings["invalid"].(bool); ok{
+		if invalid, ok := settings["invalid"].(bool); ok {
 			if invalid {
 				logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
 				continue
@@ -122,7 +120,9 @@ func Trigger(eventType EventType, data map[string]interface{}) error {
 								logger.Debugf(eventLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
 								//修改事件为失效
 								updateMap := bson.M{"settings.invalid": true}
-								_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+								var r = make(map[string]interface{})
+								err := api.Cli.UpdateEventById(eventID, updateMap, &r)
 								if err != nil {
 									logger.Errorf(eventLog, "失效事件(%s)失败:%s", eventID, err.Error())
 									continue
@@ -157,7 +157,9 @@ func Trigger(eventType EventType, data map[string]interface{}) error {
 				logger.Warnln(eventLog, "事件(%s)为只执行一次的事件", eventID)
 				//修改事件为失效
 				updateMap := bson.M{"settings.invalid": true}
-				_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+				var r = make(map[string]interface{})
+				err := api.Cli.UpdateEventById(eventID, updateMap, &r)
 				if err != nil {
 					logger.Errorf(eventLog, "失效事件(%s)失败:%s", eventID, err.Error())
 					continue

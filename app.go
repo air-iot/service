@@ -3,6 +3,7 @@ package service
 import (
 	"flag"
 	"fmt"
+	"github.com/air-iot/service/api/v2"
 	"log"
 	"net"
 	"net/http"
@@ -132,7 +133,7 @@ func init() {
 	viper.SetDefault("traefik.enable", false)
 	viper.SetDefault("traefik.schema", "http")
 
-	viper.SetDefault("service.enable", true)
+	viper.SetDefault("service.enable", false)
 	viper.SetDefault("service.pprofEnable", false)
 	viper.SetDefault("service.port", 9000)
 	viper.SetDefault("service.rpcPort", 9010)
@@ -197,6 +198,7 @@ func NewApp() App {
 	rabbit.Init()
 	rabbit.InitApi()
 	logic.Init()
+	api.Init()
 	var (
 		serviceHost        = viper.GetString("service.host")
 		servicePort        = viper.GetInt("service.port")
