@@ -49,7 +49,8 @@ func (p *Gateway) FindGateway(gatewayType string, result interface{}) error {
 }
 
 func (p *Gateway) ReceiveMQ(ctx context.Context, uids []string) error {
-	for _, uid := range uids {
+	for i, _ := range uids {
+		uid := uids[i]
 		err := srv.DefaultRealtimeUidDataHandler(uid, func(topic string, payload []byte) {
 			msg := model.DataMessage{}
 			if err := json.Unmarshal(payload, &msg); err != nil {
