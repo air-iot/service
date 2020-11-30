@@ -16,11 +16,13 @@ type Node struct {
 	Warning     Warning  `json:"warning"`
 	Offined     bool     `json:"offlined"`
 	TimeoutTime string   `json:"timeoutTime"`
+	ConnectTime string   `json:"connectTime"`
+	CreateTime  string   `json:"createTime"`
 	Status      string   `json:"status"`
 	Type        string   `json:"type"`
-	Custom     struct {
-		IntervalTime int `json:"intervalTime"`
-		YPMC string `json:"YPMC"`
+	Custom      struct {
+		IntervalTime int    `json:"intervalTime"`
+		YPMC         string `json:"YPMC"`
 	} `json:"custom"`
 }
 
@@ -34,8 +36,8 @@ type NodeMongo struct {
 	Department []primitive.ObjectID `json:"department" bson:"department"`
 	Device     DeviceMongo          `json:"device" bson:"device"`
 	Custom     struct {
-		IntervalTime int `json:"intervalTime"  bson:"intervalTime"`
-		YPMC string `json:"YPMC"  bson:"YPMC"`
+		IntervalTime int    `json:"intervalTime"  bson:"intervalTime"`
+		YPMC         string `json:"YPMC"  bson:"YPMC"`
 	} `json:"custom" bson:"custom"`
 	Models      []ModelMongo         `json:"models" bson:"models"`
 	Child       []primitive.ObjectID `json:"child" bson:"child"`
@@ -44,6 +46,8 @@ type NodeMongo struct {
 	Warning     WarningMongo         `json:"warning" bson:"warning"`
 	Offined     bool                 `json:"offlined" bson:"offlined"`
 	TimeoutTime interface{}          `json:"timeoutTime" bson:"timeoutTime"`
+	ConnectTime interface{}          `json:"connectTime" bson:"connectTime"`
+	CreateTime  interface{}          `json:"createTime" bson:"createTime"`
 	Status      string               `json:"status" bson:"status"`
 	Type        string               `json:"type" bson:"type"`
 }
