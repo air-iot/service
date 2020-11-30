@@ -1,21 +1,17 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/air-iot/service/logic"
 	"time"
 
+	"github.com/air-iot/service/api/v2"
+	"github.com/air-iot/service/logger"
+	"github.com/air-iot/service/logic"
+	imqtt "github.com/air-iot/service/mq/mqtt"
+	"github.com/air-iot/service/tools"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-
-	idb "github.com/air-iot/service/db/mongo"
-	"github.com/air-iot/service/logger"
-	imqtt "github.com/air-iot/service/mq/mqtt"
-	"github.com/air-iot/service/restful-api"
-	"github.com/air-iot/service/tools"
 )
 
 var eventDeviceModifyLog = map[string]interface{}{"name": "模型资产事件触发"}
@@ -23,8 +19,8 @@ var eventDeviceModifyLog = map[string]interface{}{"name": "模型资产事件触
 func TriggerDeviceModify(data map[string]interface{}) error {
 	//logger.Debugf(eventDeviceModifyLog, "开始执行资产修改事件触发器")
 	//logger.Debugf(eventDeviceModifyLog, "传入参数为:%+v", data)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30)*time.Second)
-	defer cancel()
+	//ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30)*time.Second)
+	//defer cancel()
 
 	nodeID, ok := data["node"].(string)
 	if !ok {
@@ -89,56 +85,75 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 
 	//logger.Debugf(eventDeviceModifyLog, "开始获取当前资产修改内容类型的资产修改逻辑事件")
 	//获取当前资产修改内容类型的资产修改逻辑事件=============================================
-	paramMatch := bson.D{
-		bson.E{
-			Key: "$match",
-			Value: bson.M{
-				"type":                DeviceModify,
-				"settings.eventType":  modifyTypeAfterMapping,
-				"settings.eventRange": "node",
-				//"$or":
-				//bson.A{
-				//	bson.D{{
-				//		"settings.node.id", nodeID,
-				//	}},
-				//	bson.D{
-				//		{
-				//			"settings.department.id", bson.M{"$in": departmentList},
-				//		},
-				//		{
-				//			"settings.model.id", modelID,
-				//		},
-				//	},
-				//	bson.D{
-				//		{
-				//			"settings.department.id", bson.M{"$in": departmentList},
-				//		},
-				//	},
-				//	bson.D{
-				//		{
-				//			"settings.model.id", modelID,
-				//		},
-				//	},
-				//},
-			},
-		},
-	}
-	paramLookup := bson.D{
-		bson.E{
-			Key: "$lookup",
-			Value: bson.M{
-				"from":         "eventhandler",
-				"localField":   "_id",
-				"foreignField": "event",
-				"as":           "handlers",
+	//paramMatch := bson.D{
+	//	bson.E{
+	//		Key: "$match",
+	//		Value: bson.M{
+	//			"type":                DeviceModify,
+	//			"settings.eventType":  modifyTypeAfterMapping,
+	//			"settings.eventRange": "node",
+	//			//"$or":
+	//			//bson.A{
+	//			//	bson.D{{
+	//			//		"settings.node.id", nodeID,
+	//			//	}},
+	//			//	bson.D{
+	//			//		{
+	//			//			"settings.department.id", bson.M{"$in": departmentList},
+	//			//		},
+	//			//		{
+	//			//			"settings.model.id", modelID,
+	//			//		},
+	//			//	},
+	//			//	bson.D{
+	//			//		{
+	//			//			"settings.department.id", bson.M{"$in": departmentList},
+	//			//		},
+	//			//	},
+	//			//	bson.D{
+	//			//		{
+	//			//			"settings.model.id", modelID,
+	//			//		},
+	//			//	},
+	//			//},
+	//		},
+	//	},
+	//}
+	//paramLookup := bson.D{
+	//	bson.E{
+	//		Key: "$lookup",
+	//		Value: bson.M{
+	//			"from":         "eventhandler",
+	//			"localField":   "_id",
+	//			"foreignField": "event",
+	//			"as":           "handlers",
+	//		},
+	//	},
+	//}
+	//
+	//pipeline := mongo.Pipeline{}
+	//pipeline = append(pipeline, paramMatch, paramLookup)
+	eventInfoList := make([]bson.M, 0)
+	//err = restfulapi.FindPipeline(ctx, idb.Database.Collection("event"), &eventInfoList, pipeline, nil)
+
+	query := map[string]interface{}{
+		"filter": map[string]interface{}{
+			"type":                DeviceModify,
+			"settings.eventType":  modifyTypeAfterMapping,
+			"settings.eventRange": "node",
+			"$lookups": []map[string]interface{}{
+				{
+					"from":         "eventhandler",
+					"localField":   "_id",
+					"foreignField": "event",
+					"as":           "handlers",
+				},
 			},
 		},
 	}
 
-	pipeline := mongo.Pipeline{}
-	pipeline = append(pipeline, paramMatch, paramLookup)
-	eventInfoList := make([]bson.M, 0)
-	err = restfulapi.FindPipeline(ctx, idb.Database.Collection("event"), &eventInfoList, pipeline, nil)
+	err = api.Cli.FindEventQuery(query, &eventInfoList)
+
 	if err != nil {
 		return fmt.Errorf("获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
 	}
@@ -276,7 +291,9 @@ eventloop:
 										logger.Debugf(eventDeviceModifyLog, "事件(%s)的定时任务结束时间已到，不执行", eventID.Hex())
 										//修改事件为失效
 										updateMap := bson.M{"settings.invalid": true}
-										_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+										//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+										var r = make(map[string]interface{})
+										err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
 										if err != nil {
 											logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
 											continue
@@ -555,7 +572,9 @@ eventloop:
 						logger.Warnln(eventDeviceModifyLog, "事件(%s)为只执行一次的事件", eventID.Hex())
 						//修改事件为失效
 						updateMap := bson.M{"settings.invalid": true}
-						_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+						var r = make(map[string]interface{})
+						err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
 						if err != nil {
 							logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
 							continue
@@ -573,8 +592,8 @@ eventloop:
 func TriggerModelModify(data map[string]interface{}) error {
 	//logger.Debugf(eventDeviceModifyLog, "开始执行资产修改事件触发器")
 	//logger.Debugf(eventDeviceModifyLog, "传入参数为:%+v", data)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30)*time.Second)
-	defer cancel()
+	//ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30)*time.Second)
+	//defer cancel()
 
 	//nodeID, ok := data["node"].(string)
 	//if !ok {
@@ -638,56 +657,74 @@ func TriggerModelModify(data map[string]interface{}) error {
 
 	//logger.Debugf(eventDeviceModifyLog, "开始获取当前资产修改内容类型的资产修改逻辑事件")
 	//获取当前资产修改内容类型的资产修改逻辑事件=============================================
-	paramMatch := bson.D{
-		bson.E{
-			Key: "$match",
-			Value: bson.M{
-				"type":                DeviceModify,
-				"settings.eventType":  modifyTypeAfterMapping,
-				"settings.eventRange": "model",
-				//"$or":
-				//bson.A{
-				//	bson.D{{
-				//		"settings.node.id", nodeID,
-				//	}},
-				//	bson.D{
-				//		{
-				//			"settings.department.id", bson.M{"$in": departmentList},
-				//		},
-				//		{
-				//			"settings.model.id", modelID,
-				//		},
-				//	},
-				//	bson.D{
-				//		{
-				//			"settings.department.id", bson.M{"$in": departmentList},
-				//		},
-				//	},
-				//	bson.D{
-				//		{
-				//			"settings.model.id", modelID,
-				//		},
-				//	},
-				//},
-			},
-		},
-	}
-	paramLookup := bson.D{
-		bson.E{
-			Key: "$lookup",
-			Value: bson.M{
-				"from":         "eventhandler",
-				"localField":   "_id",
-				"foreignField": "event",
-				"as":           "handlers",
+	//paramMatch := bson.D{
+	//	bson.E{
+	//		Key: "$match",
+	//		Value: bson.M{
+	//			"type":                DeviceModify,
+	//			"settings.eventType":  modifyTypeAfterMapping,
+	//			"settings.eventRange": "model",
+	//			//"$or":
+	//			//bson.A{
+	//			//	bson.D{{
+	//			//		"settings.node.id", nodeID,
+	//			//	}},
+	//			//	bson.D{
+	//			//		{
+	//			//			"settings.department.id", bson.M{"$in": departmentList},
+	//			//		},
+	//			//		{
+	//			//			"settings.model.id", modelID,
+	//			//		},
+	//			//	},
+	//			//	bson.D{
+	//			//		{
+	//			//			"settings.department.id", bson.M{"$in": departmentList},
+	//			//		},
+	//			//	},
+	//			//	bson.D{
+	//			//		{
+	//			//			"settings.model.id", modelID,
+	//			//		},
+	//			//	},
+	//			//},
+	//		},
+	//	},
+	//}
+	//paramLookup := bson.D{
+	//	bson.E{
+	//		Key: "$lookup",
+	//		Value: bson.M{
+	//			"from":         "eventhandler",
+	//			"localField":   "_id",
+	//			"foreignField": "event",
+	//			"as":           "handlers",
+	//		},
+	//	},
+	//}
+
+	//pipeline := mongo.Pipeline{}
+	//pipeline = append(pipeline, paramMatch, paramLookup)
+	eventInfoList := make([]bson.M, 0)
+	//err = restfulapi.FindPipeline(ctx, idb.Database.Collection("event"), &eventInfoList, pipeline, nil)
+
+	query := map[string]interface{}{
+		"filter": map[string]interface{}{
+			"type":                DeviceModify,
+			"settings.eventType":  modifyTypeAfterMapping,
+			"settings.eventRange": "model",
+			"$lookups": []map[string]interface{}{
+				{
+					"from":         "eventhandler",
+					"localField":   "_id",
+					"foreignField": "event",
+					"as":           "handlers",
+				},
 			},
 		},
 	}
 
-	pipeline := mongo.Pipeline{}
-	pipeline = append(pipeline, paramMatch, paramLookup)
-	eventInfoList := make([]bson.M, 0)
-	err = restfulapi.FindPipeline(ctx, idb.Database.Collection("event"), &eventInfoList, pipeline, nil)
+	err = api.Cli.FindEventQuery(query, &eventInfoList)
 	if err != nil {
 		logger.Errorf(eventDeviceModifyLog, "获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
 		return fmt.Errorf("获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
@@ -825,7 +862,9 @@ func TriggerModelModify(data map[string]interface{}) error {
 										logger.Debugf(eventDeviceModifyLog, "事件(%s)的定时任务结束时间已到，不执行", eventID.Hex())
 										//修改事件为失效
 										updateMap := bson.M{"settings.invalid": true}
-										_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+										//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+										var r = make(map[string]interface{})
+										err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
 										if err != nil {
 											logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
 											continue
@@ -929,7 +968,9 @@ func TriggerModelModify(data map[string]interface{}) error {
 						logger.Warnln(eventDeviceModifyLog, "事件(%s)为只执行一次的事件", eventID.Hex())
 						//修改事件为失效
 						updateMap := bson.M{"settings.invalid": true}
-						_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+						var r = make(map[string]interface{})
+						err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
 						if err != nil {
 							logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
 							continue

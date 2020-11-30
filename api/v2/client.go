@@ -28,6 +28,12 @@ type client struct {
 	headers   map[string]string
 }
 
+var Cli Client
+
+func Init() {
+	Cli = NewClient()
+}
+
 func NewClient() Client {
 	return &client{
 		protocol:  traefik.Proto,
@@ -1070,4 +1076,71 @@ func (p *client) CheckDriver(licenseName string) (*model.Signature, error) {
 	//	return signature, nil
 	//}
 	//return nil, fmt.Errorf("请求状态:%d,响应:%s", resp.StatusCode(), resp.String())
+}
+
+func (p *client) FindLogQuery(query, result interface{}) error {
+	b, err := json.Marshal(query)
+	if err != nil {
+		return err
+	}
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/log"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/log"}
+	}
+	v := url.Values{}
+	v.Set("query", string(b))
+	u.RawQuery = v.Encode()
+	return p.Get(u, result)
+}
+
+func (p *client) FindLogById(id string, result interface{}) error {
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/log/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/log/%s", id)}
+	}
+	return p.Get(u, result)
+}
+
+func (p *client) SaveLog(data, result interface{}) error {
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: "core/log"}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: "core/log"}
+	}
+	return p.Post(u, data, result)
+}
+
+func (p *client) DelLogById(id string, result interface{}) error {
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/log/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/log/%s", id)}
+	}
+	return p.Delete(u, result)
+}
+
+func (p *client) UpdateLogById(id string, data, result interface{}) error {
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/log/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/log/%s", id)}
+	}
+	return p.Patch(u, data, result)
+}
+
+func (p *client) ReplaceLogById(id string, data, result interface{}) error {
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/log/%s", id)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/log/%s", id)}
+	}
+	return p.Put(u, data, result)
 }

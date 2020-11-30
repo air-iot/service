@@ -4,10 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/air-iot/service/restful-api"
 	"time"
 
-	idb "github.com/air-iot/service/db/mongo"
+	"github.com/air-iot/service/api/v2"
 	iredis "github.com/air-iot/service/db/redis"
 	"github.com/air-iot/service/logger"
 	clogic "github.com/air-iot/service/logic"
@@ -144,7 +143,9 @@ func TriggerComputed(data cmodel.DataMessage) error {
 								logger.Debugf(eventComputeLogicLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
 								//修改事件为失效
 								updateMap := bson.M{"settings.invalid": true}
-								_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+								var r = make(map[string]interface{})
+								err := api.Cli.UpdateEventById(eventID, updateMap, &r)
 								if err != nil {
 									logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
 									continue
@@ -503,7 +504,9 @@ func TriggerComputed(data cmodel.DataMessage) error {
 				logger.Warnln(eventComputeLogicLog, "事件(%s)为只执行一次的事件", eventID)
 				//修改事件为失效
 				updateMap := bson.M{"settings.invalid": true}
-				_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+				var r = make(map[string]interface{})
+				err := api.Cli.UpdateEventById(eventID, updateMap, &r)
 				if err != nil {
 					logger.Errorf(eventComputeLogicLog, "失效事件(%s)失败:%s", eventID, err.Error())
 					continue

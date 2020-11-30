@@ -1,13 +1,11 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/air-iot/service/restful-api"
 	"time"
 
-	idb "github.com/air-iot/service/db/mongo"
+	"github.com/air-iot/service/api/v2"
 	"github.com/air-iot/service/logger"
 	clogic "github.com/air-iot/service/logic"
 	imqtt "github.com/air-iot/service/mq/mqtt"
@@ -45,7 +43,6 @@ func TriggerExecCmd(data map[string]interface{}) error {
 	if !ok {
 		return fmt.Errorf("数据消息中cmdStatus字段不存在或类型错误")
 	}
-
 
 	//modelObjectID, err := primitive.ObjectIDFromHex(modelID)
 	//if err != nil {
@@ -87,7 +84,6 @@ func TriggerExecCmd(data map[string]interface{}) error {
 		}
 	}
 
-
 	//logger.Debugf(eventExecCmdLog, "开始遍历事件列表")
 	for _, eventInfo := range *eventInfoList {
 		logger.Debugf(eventExecCmdLog, "事件信息为:%+v", eventInfo)
@@ -100,7 +96,7 @@ func TriggerExecCmd(data map[string]interface{}) error {
 		settings := eventInfo.Settings
 
 		//判断是否已经失效
-		if invalid, ok := settings["invalid"].(bool); ok{
+		if invalid, ok := settings["invalid"].(bool); ok {
 			if invalid {
 				logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
 				continue
@@ -154,7 +150,9 @@ func TriggerExecCmd(data map[string]interface{}) error {
 								logger.Debugf(eventExecCmdLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
 								//修改事件为失效
 								updateMap := bson.M{"settings.invalid": true}
-								_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+								var r = make(map[string]interface{})
+								err := api.Cli.UpdateEventById(eventID, updateMap, &r)
 								if err != nil {
 									logger.Errorf(eventExecCmdLog, "失效事件(%s)失败:%s", eventID, err.Error())
 									continue
@@ -192,9 +190,9 @@ func TriggerExecCmd(data map[string]interface{}) error {
 
 		isValidStatus := false
 		if cmdStatusInSetting, ok := settings["cmdStatus"].(string); ok {
-           if cmdStatus == cmdStatusInSetting{
-			   isValidStatus = true
-		   }
+			if cmdStatus == cmdStatusInSetting {
+				isValidStatus = true
+			}
 		}
 
 		if !isValidStatus {
@@ -239,7 +237,9 @@ func TriggerExecCmd(data map[string]interface{}) error {
 				logger.Warnln(eventExecCmdLog, "事件(%s)为只执行一次的事件", eventID)
 				//修改事件为失效
 				updateMap := bson.M{"settings.invalid": true}
-				_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+				var r = make(map[string]interface{})
+				err := api.Cli.UpdateEventById(eventID, updateMap, &r)
 				if err != nil {
 					logger.Errorf(eventExecCmdLog, "失效事件(%s)失败:%s", eventID, err.Error())
 					continue

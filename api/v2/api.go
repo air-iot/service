@@ -113,4 +113,12 @@ type Client interface {
 
 	// license
 	CheckDriver(licenseName string) (*model.Signature, error)
+
+	// log
+	FindLogQuery(query, result interface{}) error
+	FindLogById(id string, result interface{}) error
+	SaveLog(data, result interface{}) error
+	DelLogById(id string, result interface{}) error
+	UpdateLogById(id string, data, result interface{}) error
+	ReplaceLogById(id string, data, result interface{}) error
 }
