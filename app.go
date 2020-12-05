@@ -66,8 +66,8 @@ func init() {
 	viper.SetDefault("influx.host", "influx")
 	viper.SetDefault("influx.port", 8086)
 	viper.SetDefault("influx.udpPort", 8089)
-	viper.SetDefault("influx.username", "admin")
-	viper.SetDefault("influx.password", "dell123")
+	viper.SetDefault("influx.username", "") //admin
+	viper.SetDefault("influx.password", "") //dell123
 	viper.SetDefault("influx.mode", "http")
 	viper.SetDefault("influx.db", "tsdb")
 
@@ -84,7 +84,7 @@ func init() {
 	viper.SetDefault("redis.host", "redis")
 	viper.SetDefault("redis.port", 6379)
 	viper.SetDefault("redis.username", "")
-	viper.SetDefault("redis.password", "dell123")
+	viper.SetDefault("redis.password", "") //dell123
 	viper.SetDefault("redis.db", 0)
 	viper.SetDefault("redis.poolSize", 100)
 	viper.SetDefault("redis.cluster", false)
