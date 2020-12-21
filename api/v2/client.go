@@ -356,6 +356,16 @@ func (p *client) DelExtById(tableName, id string, result interface{}) error {
 	return p.Delete(u, result)
 }
 
+func (p *client) DelExtAll(tableName, result interface{}) error {
+	var u url.URL
+	if p.isTraefik {
+		u = url.URL{Scheme: p.protocol, Host: p.host, Path: fmt.Sprintf("core/ext/%s", tableName)}
+	} else {
+		u = url.URL{Scheme: p.protocol, Host: "core:9000", Path: fmt.Sprintf("core/ext/%s", tableName)}
+	}
+	return p.Delete(u, result)
+}
+
 func (p *client) UpdateExtById(tableName, id string, data, result interface{}) error {
 	var u url.URL
 	if p.isTraefik {

@@ -59,6 +59,7 @@ type Client interface {
 	DelExtById(collection, id string, result interface{}) error
 	UpdateExtById(collection, id string, data, result interface{}) error
 	ReplaceExtById(collection, id string, data, result interface{}) error
+	DelExtAll(tableName, result interface{}) error
 
 	// event
 	FindEventQuery(query, result interface{}) error
