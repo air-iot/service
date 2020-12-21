@@ -10,9 +10,22 @@ type Setting struct {
 	// Email 邮件发送配置
 	Email Email `json:"email"`
 	// Wechat Wechat发送配置
-	Wechat      Wechat `json:"wechat"`
-	PropTag     string `json:"propTag"`
-	OnlineCheck bool   `json:"onlineCheck"`
+	Wechat      Wechat   `json:"wechat"`
+	PropTag     string   `json:"propTag"`
+	OnlineCheck bool     `json:"onlineCheck"`
+	Dingtalk    Dingtalk `json:"dingtalk"`
+}
+
+type Dingtalk struct {
+	AgentID   string `json:"agentid"`
+	AppKey    string `json:"appKey"`
+	AppSecret string `json:"appSecret"`
+}
+
+type DingtalkMongo struct {
+	AgentID   string `json:"agentid" bson:"agentid"`
+	AppKey    string `json:"appKey" bson:"appKey"`
+	AppSecret string `json:"appSecret" bson:"appSecret"`
 }
 
 type WarningSetting struct {
@@ -49,9 +62,10 @@ type SettingMongo struct {
 	// Email 邮件发送配置
 	EmailMongo primitive.M `json:"email" bson:"email"`
 	// Wechat Wechat发送配置
-	WechatMongo primitive.M `json:"wechat" bson:"wechat"`
-	PropTag     string      `json:"propTag" bson:"propTag"`
-	OnlineCheck bool        `json:"onlineCheck" bson:"onlineCheck"`
+	WechatMongo   primitive.M `json:"wechat" bson:"wechat"`
+	PropTag       string      `json:"propTag" bson:"propTag"`
+	OnlineCheck   bool        `json:"onlineCheck" bson:"onlineCheck"`
+	DingtalkMongo primitive.M `json:"dingtalk" bson:"dingtalk"`
 }
 
 type WarningSettingMongo struct {

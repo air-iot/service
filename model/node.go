@@ -139,6 +139,10 @@ type TagMongo struct {
 	StatsInterval string      `json:"statsInterval" bson:"statsInterval"`
 	Mapping       primitive.M `json:"mapping" bson:"mapping"`
 	Rules         primitive.M `json:"rules" bson:"rules"`
+	IntervalType  string      `json:"intervalType" bson:"intervalType"`
+	Interval      interface{} `json:"interval" bson:"interval"`
+	StartTime     primitive.M `json:"startTime" bson:"startTime"`
+	StatsVal      interface{} `json:"statsVal" bson:"statsVal"`
 }
 
 type NodeIDUidForRedis struct {
