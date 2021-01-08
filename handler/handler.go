@@ -36,6 +36,7 @@ const (
 	//HandlerInputData EventHandlerType = "data"
 	//HandlerDirect    EventHandlerType = "direct"
 
+	HandlerDingtalk  EventHandlerType = "发送钉钉"
 	HandlerEmail     EventHandlerType = "发送邮件"
 	HandlerWechat    EventHandlerType = "发送微信"
 	HandlerSMS       EventHandlerType = "发送短信"
