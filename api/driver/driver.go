@@ -49,7 +49,7 @@ func Command(url url.URL, token, id string, data, result interface{}) error {
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Authorization", token).
 		SetHeader("Request-Type", "service").
-		SetResult(result).
+		//SetResult(result).
 		SetBody(data).
 		Post(fmt.Sprintf(`%s/%s/command`, url.String(), id))
 	if err != nil {
