@@ -58,8 +58,8 @@ type Device struct {
 }
 
 type Settings struct {
-	//Interval float64 `json:"interval"`
-	Network Network `json:"network"`
+	Interval float64 `json:"interval"`
+	Network  Network `json:"network"`
 }
 
 type Network struct {
