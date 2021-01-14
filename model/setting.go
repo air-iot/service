@@ -14,6 +14,12 @@ type Setting struct {
 	PropTag     string   `json:"propTag"`
 	OnlineCheck bool     `json:"onlineCheck"`
 	Dingtalk    Dingtalk `json:"dingtalk"`
+	Sms         Sms      `json:"sms"`
+}
+
+type Sms struct {
+	AppKey    string `json:"appKey"`
+	AppSecret string `json:"appSecret"`
 }
 
 type Dingtalk struct {
