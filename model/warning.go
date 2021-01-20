@@ -29,6 +29,7 @@ type WarningMessage struct {
 	Other          map[string]interface{}   `json:"other"`
 	Driver         []primitive.ObjectID     `json:"driver"`
 	HandleUserName string                   `json:"handleUserName"`
+	WarnTag        map[string]interface{}   `json:"warnTag"`
 }
 
 type WarningSaveMessage struct {
@@ -51,6 +52,7 @@ type WarningSaveMessage struct {
 	Alert      bool                     `json:"alert"`
 	Other      map[string]interface{}   `json:"other"`
 	Driver     []primitive.ObjectID     `json:"driver"`
+	WarnTag    map[string]interface{}   `json:"warnTag"`
 }
 
 type WarningSendMessage struct {
@@ -74,6 +76,7 @@ type WarningSendMessage struct {
 	Alert      bool                   `json:"alert"`
 	Other      map[string]interface{} `json:"other"`
 	Driver     interface{}            `json:"driver"`
+	WarnTag    map[string]interface{} `json:"warnTag"`
 }
 
 type WarningUnmarshalMessage struct {
@@ -99,4 +102,5 @@ type WarningUnmarshalMessage struct {
 	Alert      bool                     `json:"alert"`
 	Other      map[string]interface{}   `json:"other"`
 	Driver     interface{}              `json:"driver"`
+	WarnTag    map[string]interface{}   `json:"warnTag"`
 }
