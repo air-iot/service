@@ -35,6 +35,7 @@ type DingtalkMongo struct {
 }
 
 type WarningSetting struct {
+	WarnTag     bool          `json:"warnTag"`
 	Audio       string        `json:"audio"`
 	WarningKind []WarningKind `json:"warningkind"`
 }
@@ -75,6 +76,7 @@ type SettingMongo struct {
 }
 
 type WarningSettingMongo struct {
+	WarnTag     bool               `json:"warnTag" bson:"warnTag"`
 	Audio       string             `json:"audio" bson:"audio"`
 	WarningKind []WarningKindMongo `json:"warningkind" bson:"warningkind"`
 }
