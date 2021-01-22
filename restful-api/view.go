@@ -614,6 +614,8 @@ func (p *APIView) FindFilter(ctx context.Context, col *mongo.Collection, result 
 				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
 			}
 		}
+	}else{
+		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
 	}
 
 	if skip, ok := query["skip"]; ok {
@@ -1255,6 +1257,8 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
 					}
 				}
+			}else{
+				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
 			}
 
 			if skip, ok := query["skip"]; ok {
@@ -1428,6 +1432,8 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
 					}
 				}
+			}else{
+				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
 			}
 
 			if skip, ok := query["skip"]; ok {
@@ -1603,6 +1609,8 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
 				}
 			}
+		}else{
+			pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
 		}
 
 		if skip, ok := query["skip"]; ok {
