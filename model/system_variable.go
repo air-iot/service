@@ -1,7 +1,5 @@
 package model
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
-
 // SystemVariable
 type SystemVariable struct {
 	ID    string      `json:"id"`

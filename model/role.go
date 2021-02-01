@@ -1,7 +1,5 @@
 package model
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
-
 // Role
 type Role struct {
 	ID          string   `json:"id"`

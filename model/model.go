@@ -1,7 +1,5 @@
 package model
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
-
 // Model
 type Model struct {
 	ID        string    `json:"id"`
