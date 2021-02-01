@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	restfulapi "github.com/air-iot/service/restful-api"
@@ -100,10 +99,10 @@ func calcPointNum(ctx context.Context) (int32, error) {
 		for tagKey, tagValue := range tagMap {
 			switch tagKey {
 			case "id":
-				if _, ok := tagValue.(string); !ok {
+				if tagValueStr, ok := tagValue.(string); !ok {
 					tagCountMapKey = ""
 				} else {
-					tagCountMapKey = tagValue.(string).Hex()
+					tagCountMapKey = tagValueStr
 				}
 			case "sizeOfTags", "sizeOfProps":
 				if _, ok := tagValue.(int32); ok {
@@ -120,10 +119,10 @@ func calcPointNum(ctx context.Context) (int32, error) {
 		for tagKey, tagValue := range nodeMap {
 			switch tagKey {
 			case "id":
-				if _, ok := tagValue.(string); !ok {
+				if tagValueStr, ok := tagValue.(string); !ok {
 					nodeCountMapKey = ""
 				} else {
-					nodeCountMapKey = tagValue.(string).Hex()
+					nodeCountMapKey = tagValueStr
 				}
 			case "count":
 				if _, ok := tagValue.(int32); !ok {

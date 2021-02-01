@@ -90,7 +90,7 @@ func AddNonRepTagMongoByLoop(slc []cmodel.TagMongo, addEle cmodel.TagMongo) []cm
 func AddNonRepObjectIDByLoop(slc []string, addEle string) []string {
 	flag := true
 	for i := range slc {
-		if slc[i].Hex() == addEle.Hex() {
+		if slc[i] == addEle {
 			flag = false // 存在重复元素，标识为false
 		}
 	}
