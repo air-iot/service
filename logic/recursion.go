@@ -11,9 +11,9 @@ import (
 )
 
 // recursionFindIDList 递归ID列表
-func RecursionFindIDList(ctx context.Context, objectIDList []primitive.ObjectID, collection *mongo.Collection, recursionKey string) (*[]primitive.ObjectID, error) {
+func RecursionFindIDList(ctx context.Context, objectIDList []string, collection *mongo.Collection, recursionKey string) (*[]string, error) {
 	//查询该用户所属的部门
-	objectIDCombineList := make([]primitive.ObjectID, 0)
+	objectIDCombineList := make([]string, 0)
 	objectIDCombineList = append(objectIDCombineList, objectIDList...)
 	for _, v := range objectIDList {
 		err := recursionFindOps(ctx, &objectIDCombineList, v, collection, recursionKey)
@@ -26,7 +26,7 @@ func RecursionFindIDList(ctx context.Context, objectIDList []primitive.ObjectID,
 }
 
 // recursionFindOps 递归查询
-func recursionFindOps(ctx context.Context, checkedList *[]primitive.ObjectID, data primitive.ObjectID, collection *mongo.Collection, recursionKey string) error {
+func recursionFindOps(ctx context.Context, checkedList *[]string, data string, collection *mongo.Collection, recursionKey string) error {
 	//CallCount++
 	//递归查询
 	objectList := new([]bson.M)
@@ -52,7 +52,7 @@ func recursionFindOps(ctx context.Context, checkedList *[]primitive.ObjectID, da
 	}
 
 	for _, v := range *objectList {
-		id := v["id"].(primitive.ObjectID)
+		id := v["id"].(string)
 		//fmt.Println("objectIdList V:", id)
 		flag := false
 		for _, val := range *checkedList {

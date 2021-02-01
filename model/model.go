@@ -13,7 +13,7 @@ type Model struct {
 }
 
 type ModelMongo struct {
-	ID        primitive.ObjectID `json:"id" bson:"_id"`
+	ID        string `json:"id" bson:"_id"`
 	Name      string             `json:"name" bson:"name"`
 	Computed  ComputedMongo      `json:"computed" bson:"computed"`
 	Device    DeviceMongo        `json:"device" bson:"device"`
@@ -22,8 +22,8 @@ type ModelMongo struct {
 }
 
 type RelationsMongo struct {
-	Child  []primitive.ObjectID `json:"child" bson:"child"`
-	Parent []primitive.ObjectID `json:"parent" bson:"parent"`
+	Child  []string `json:"child" bson:"child"`
+	Parent []string `json:"parent" bson:"parent"`
 }
 
 type Relations struct {

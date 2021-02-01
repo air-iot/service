@@ -87,7 +87,7 @@ func AddNonRepTagMongoByLoop(slc []cmodel.TagMongo, addEle cmodel.TagMongo) []cm
 }
 
 // AddNonRepObjectIDByLoop 通过循环添加非重复元素
-func AddNonRepObjectIDByLoop(slc []primitive.ObjectID, addEle primitive.ObjectID) []primitive.ObjectID {
+func AddNonRepObjectIDByLoop(slc []string, addEle string) []string {
 	flag := true
 	for i := range slc {
 		if slc[i].Hex() == addEle.Hex() {
@@ -104,13 +104,13 @@ func AddNonRepObjectIDByLoop(slc []primitive.ObjectID, addEle primitive.ObjectID
 func AddNonRepBsonMByLoop(slc []bson.M, addEle bson.M) []bson.M {
 	flag := true
 	for i := range slc {
-		if _, ok := slc[i]["id"].(primitive.ObjectID); !ok {
+		if _, ok := slc[i]["id"].(string); !ok {
 			return slc
 		}
-		if _, ok := addEle["id"].(primitive.ObjectID); !ok {
+		if _, ok := addEle["id"].(string); !ok {
 			return slc
 		}
-		if slc[i]["id"].(primitive.ObjectID) == addEle["id"].(primitive.ObjectID) {
+		if slc[i]["id"].(string) == addEle["id"].(string) {
 			flag = false // 存在重复元素，标识为false
 		}
 	}
@@ -120,27 +120,27 @@ func AddNonRepBsonMByLoop(slc []bson.M, addEle bson.M) []bson.M {
 	return slc
 }
 
-// StringListToObjectIdList 字符串数组转ObjectId数组
-func StringListToObjectIdList(idStringList []string) ([]primitive.ObjectID, error) {
-	idObjectList := make([]primitive.ObjectID, 0)
-	for _, v := range idStringList {
-		objectId, err := primitive.ObjectIDFromHex(v)
-		if err != nil {
-			return nil, err
-		}
-		idObjectList = append(idObjectList, objectId)
-	}
-	return idObjectList, nil
-}
-
-// ObjectIdListToStringList 字符串数组转ObjectId数组
-func ObjectIdListToStringList(idObjectList []primitive.ObjectID) ([]string, error) {
-	idStringList := make([]string, 0)
-	for _, v := range idObjectList {
-		idStringList = append(idStringList, v.Hex())
-	}
-	return idStringList, nil
-}
+//// StringListToObjectIdList 字符串数组转ObjectId数组
+//func StringListToObjectIdList(idStringList []string) ([]primitive.ObjectID, error) {
+//	idObjectList := make([]primitive.ObjectID, 0)
+//	for _, v := range idStringList {
+//		objectId, err := primitive.ObjectIDFromHex(v)
+//		if err != nil {
+//			return nil, err
+//		}
+//		idObjectList = append(idObjectList, objectId)
+//	}
+//	return idObjectList, nil
+//}
+//
+//// ObjectIdListToStringList 字符串数组转ObjectId数组
+//func ObjectIdListToStringList(idObjectList []primitive.ObjectID) ([]string, error) {
+//	idStringList := make([]string, 0)
+//	for _, v := range idObjectList {
+//		idStringList = append(idStringList, v.Hex())
+//	}
+//	return idStringList, nil
+//}
 
 // StringListToInterfaceList 字符串数组转Interface数组
 func StringListToInterfaceList(stringList []string) ([]interface{}) {
@@ -159,7 +159,9 @@ func InterfaceListToStringList(params []interface{}) ([]string) {
 			paramSlice = append(paramSlice, param.(string))
 		} else {
 			//默认是走这条分支
-			paramSlice = append(paramSlice, param.(primitive.ObjectID).Hex())
+			if paramRaw,ok := param.(primitive.ObjectID);ok{
+				paramSlice = append(paramSlice, paramRaw.Hex())
+			}
 		}
 	}
 	return paramSlice
@@ -247,11 +249,7 @@ func FormatObjectIDList(doc *bson.M, key string, formatKey string) error {
 			} else {
 				return fmt.Errorf("%s需要格式化的Key:%s，数值格式错误", key, formatKey)
 			}
-			oid, err := primitive.ObjectIDFromHex(stringID)
-			if err != nil {
-				return err
-			}
-			(*doc)[key] = oid
+			(*doc)[key] = stringID
 		}
 		//return fmt.Errorf("%s的类型不是[]interface{}", key)
 	} else {
@@ -274,11 +272,7 @@ func FormatObjectIDList(doc *bson.M, key string, formatKey string) error {
 				return fmt.Errorf("需要格式化的Key:%s，数值格式错误", formatKey)
 			}
 		}
-		oidList, err := StringListToObjectIdList(stringList)
-		if err != nil {
-			return err
-		}
-		(*doc)[key] = oidList
+		(*doc)[key] = stringList
 	}
 	return nil
 }
@@ -334,11 +328,7 @@ func FormatObjectIDPrimitiveList(doc *bson.M, key string, formatKey string) erro
 						return fmt.Errorf("需要格式化的Key:%s，数值格式错误", formatKey)
 					}
 				}
-				oidList, err := StringListToObjectIdList(stringList)
-				if err != nil {
-					return err
-				}
-				(*doc)[key] = oidList
+				(*doc)[key] = stringList
 			} else {
 				stringID := ""
 				if ele, ok := interfaceObject.(primitive.ObjectID); ok {
@@ -358,31 +348,8 @@ func FormatObjectIDPrimitiveList(doc *bson.M, key string, formatKey string) erro
 				} else {
 					return fmt.Errorf("%s需要格式化的Key:%s，数值格式错误", key, formatKey)
 				}
-				oid, err := primitive.ObjectIDFromHex(stringID)
-				if err != nil {
-					return err
-				}
-				(*doc)[key] = oid
+				(*doc)[key] = stringID
 			}
-			//stringID := ""
-			//if ele, ok := interfaceObject.(primitive.ObjectID); ok {
-			//	stringID = ele.Hex()
-			//} else if ele, ok := interfaceObject.(string); ok {
-			//	stringID = ele
-			//} else if _, ok := interfaceObject.(primitive.M)[formatKey]; !ok {
-			//	return fmt.Errorf("%s需要格式化的Key:%s，不存在", key, formatKey)
-			//} else if ele, ok := interfaceObject.(primitive.M)[formatKey].(string); ok {
-			//	stringID = ele
-			//} else if ele, ok := interfaceObject.(primitive.M)[formatKey].(primitive.ObjectID); ok {
-			//	stringID = ele.Hex()
-			//} else {
-			//	return fmt.Errorf("%s需要格式化的Key:%s，数值格式错误", key, formatKey)
-			//}
-			//oid, err := primitive.ObjectIDFromHex(stringID)
-			//if err != nil {
-			//	return err
-			//}
-			//(*doc)[key] = oid
 		}
 		//return fmt.Errorf("%s的类型不是[]interface{}", key)
 	} else {
@@ -405,11 +372,7 @@ func FormatObjectIDPrimitiveList(doc *bson.M, key string, formatKey string) erro
 				return fmt.Errorf("需要格式化的Key:%s，数值格式错误", formatKey)
 			}
 		}
-		oidList, err := StringListToObjectIdList(stringList)
-		if err != nil {
-			return err
-		}
-		(*doc)[key] = oidList
+		(*doc)[key] = stringList
 	}
 	return nil
 }
@@ -489,31 +452,8 @@ func FormatObjectIDPrimitiveNameList(doc *bson.M, key string, formatKey string) 
 				} else {
 					return fmt.Errorf("%s需要格式化的Key:%s，数值格式错误", key, formatKey)
 				}
-				//oid, err := primitive.ObjectIDFromHex(stringID)
-				//if err != nil {
-				//	return err
-				//}
 				(*doc)[key] = stringID
 			}
-			//stringID := ""
-			//if ele, ok := interfaceObject.(primitive.ObjectID); ok {
-			//	stringID = ele.Hex()
-			//} else if ele, ok := interfaceObject.(string); ok {
-			//	stringID = ele
-			//} else if _, ok := interfaceObject.(primitive.M)[formatKey]; !ok {
-			//	return fmt.Errorf("%s需要格式化的Key:%s，不存在", key, formatKey)
-			//} else if ele, ok := interfaceObject.(primitive.M)[formatKey].(string); ok {
-			//	stringID = ele
-			//} else if ele, ok := interfaceObject.(primitive.M)[formatKey].(primitive.ObjectID); ok {
-			//	stringID = ele.Hex()
-			//} else {
-			//	return fmt.Errorf("%s需要格式化的Key:%s，数值格式错误", key, formatKey)
-			//}
-			//oid, err := primitive.ObjectIDFromHex(stringID)
-			//if err != nil {
-			//	return err
-			//}
-			//(*doc)[key] = oid
 		}
 		//return fmt.Errorf("%s的类型不是[]interface{}", key)
 	} else {
@@ -597,11 +537,7 @@ func FormatObjectIDListMap(doc *map[string]interface{}, key string, formatKey st
 						return fmt.Errorf("需要格式化的Key:%s，数值格式错误", formatKey)
 					}
 				}
-				oidList, err := StringListToObjectIdList(stringList)
-				if err != nil {
-					return err
-				}
-				(*doc)[key] = oidList
+				(*doc)[key] = stringList
 			} else {
 				if ele, ok := interfaceObject.(primitive.ObjectID); ok {
 					stringID = ele.Hex()
@@ -620,11 +556,7 @@ func FormatObjectIDListMap(doc *map[string]interface{}, key string, formatKey st
 				} else {
 					return fmt.Errorf("需要格式化的Key:%s，数值格式错误", formatKey)
 				}
-				oid, err := primitive.ObjectIDFromHex(stringID)
-				if err != nil {
-					return err
-				}
-				(*doc)[key] = oid
+				(*doc)[key] = stringID
 			}
 		}
 		//return fmt.Errorf("%s的类型不是[]interface{}", key)
@@ -648,95 +580,7 @@ func FormatObjectIDListMap(doc *map[string]interface{}, key string, formatKey st
 				return fmt.Errorf("需要格式化的Key:%s，数值格式错误", formatKey)
 			}
 		}
-		oidList, err := StringListToObjectIdList(stringList)
-		if err != nil {
-			return err
-		}
-		(*doc)[key] = oidList
-	}
-	return nil
-}
-
-// FormatObjectIDListMap 格式化对象数组为string数组（转换的字段为ObjectID类型或string类型）(doc为map类型)
-func FormatObjectIDListMapBak(doc *map[string]interface{}, key string, formatKey string) error {
-	if _, ok := (*doc)[key]; !ok {
-		//(*doc)[key] = make([]string, 0)
-		return nil
-	}
-	if (*doc)[key] == nil {
-		(*doc)[key] = ""
-		return nil
-	}
-	interfaceList, ok := (*doc)[key].([]interface{})
-	if !ok {
-		if stringKey, stringOk := (*doc)[key].(string); stringOk {
-			if stringKey == "" {
-				return nil
-			}
-		}
-		interfaceObject, objOk := (*doc)[key].(interface{})
-		if !objOk {
-			return fmt.Errorf("%s的类型不是interface{}或[]interface{}", key)
-		} else {
-			if emptyObject, ok := interfaceObject.(map[string]interface{}); ok {
-				flag := false
-				for range emptyObject {
-					flag = true
-				}
-				if !flag {
-					return nil
-				}
-			}
-			if _, ok := interfaceObject.([]primitive.ObjectID); ok {
-				(*doc)[key] = interfaceObject
-				return nil
-			}
-			stringID := ""
-			if ele, ok := interfaceObject.(primitive.ObjectID); ok {
-				stringID = ele.Hex()
-			} else if ele, ok := interfaceObject.(string); ok {
-				stringID = ele
-			} else if _, ok := interfaceObject.(map[string]interface{})[formatKey]; !ok {
-				return fmt.Errorf("需要格式化的Key:%s，不存在", formatKey)
-			} else if ele, ok := interfaceObject.(map[string]interface{})[formatKey].(string); ok {
-				stringID = ele
-			} else if ele, ok := interfaceObject.(map[string]interface{})[formatKey].(primitive.ObjectID); ok {
-				stringID = ele.Hex()
-			} else {
-				return fmt.Errorf("需要格式化的Key:%s，数值格式错误", formatKey)
-			}
-			oid, err := primitive.ObjectIDFromHex(stringID)
-			if err != nil {
-				return err
-			}
-			(*doc)[key] = oid
-		}
-		//return fmt.Errorf("%s的类型不是[]interface{}", key)
-	} else {
-		if len(interfaceList) == 0 {
-			return nil
-		}
-		stringList := make([]string, 0)
-		for _, v := range interfaceList {
-			if ele, ok := v.(primitive.ObjectID); ok {
-				stringList = append(stringList, ele.Hex())
-			} else if ele, ok := v.(string); ok {
-				stringList = append(stringList, ele)
-			} else if _, ok := v.(map[string]interface{})[formatKey]; !ok {
-				return fmt.Errorf("需要格式化的Key:%s，不存在", formatKey)
-			} else if ele, ok := v.(map[string]interface{})[formatKey].(string); ok {
-				stringList = append(stringList, ele)
-			} else if ele, ok := v.(map[string]interface{})[formatKey].(primitive.ObjectID); ok {
-				stringList = append(stringList, ele.Hex())
-			} else {
-				return fmt.Errorf("需要格式化的Key:%s，数值格式错误", formatKey)
-			}
-		}
-		oidList, err := StringListToObjectIdList(stringList)
-		if err != nil {
-			return err
-		}
-		(*doc)[key] = oidList
+		(*doc)[key] = stringList
 	}
 	return nil
 }
@@ -787,11 +631,7 @@ func FormatObjectID(doc *bson.M, key string, formatKey string) error {
 	} else {
 		return fmt.Errorf("需要格式化的Key:%s，数值格式错误", formatKey)
 	}
-	oid, err := primitive.ObjectIDFromHex(stringID)
-	if err != nil {
-		return err
-	}
-	(*doc)[key] = oid
+	(*doc)[key] = stringID
 	return nil
 }
 

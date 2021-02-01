@@ -43,31 +43,25 @@ func (p *APIView) GetCollection(database, collection string, cli *mongo.Client) 
 // SaveOne 保存数
 // model:数据
 func (p *APIView) SaveOne(ctx context.Context, col *mongo.Collection, model bson.M) (*mongo.InsertOneResult, error) {
-	r, err := ConvertOID("", model)
-	if err != nil {
-		return nil, fmt.Errorf(`数据格式ObjectID转换错误.%s`, err.Error())
+	if _, ok := model["_id"]; !ok {
+		model["_id"] = primitive.NewObjectID().Hex()
 	}
-	return col.InsertOne(ctx, r)
+	return col.InsertOne(ctx, model)
 }
 
 // SaveOne 保存数
 // model:数据
 func SaveOne(ctx context.Context, col *mongo.Collection, model bson.M) (*mongo.InsertOneResult, error) {
-	r, err := ConvertOID("", model)
-	if err != nil {
-		return nil, fmt.Errorf(`数据格式ObjectID转换错误.%s`, err.Error())
+	if _, ok := model["_id"]; !ok {
+		model["_id"] = primitive.NewObjectID().Hex()
 	}
-	return col.InsertOne(ctx, r)
+	return col.InsertOne(ctx, model)
 }
 
 // SaveOne 保存数
 // model:数据
 func (p *APIView) SaveOneInterface(ctx context.Context, col *mongo.Collection, model interface{}) (*mongo.InsertOneResult, error) {
-	r, err := ConvertOID("", model)
-	if err != nil {
-		return nil, fmt.Errorf(`数据格式ObjectID转换错误.%s`, err.Error())
-	}
-	return col.InsertOne(ctx, r)
+	return col.InsertOne(ctx, model)
 }
 
 // SaveMany 批量保存数据
@@ -75,11 +69,10 @@ func (p *APIView) SaveOneInterface(ctx context.Context, col *mongo.Collection, m
 func (p *APIView) SaveMany(ctx context.Context, col *mongo.Collection, models []bson.M) (*mongo.InsertManyResult, error) {
 	rList := make([]interface{}, 0)
 	for _, model := range models {
-		r, err := ConvertOID("", model)
-		if err != nil {
-			return nil, fmt.Errorf(`数据格式ObjectID转换错误.%s`, err.Error())
+		if _, ok := model["_id"]; !ok {
+			model["_id"] = primitive.NewObjectID().Hex()
 		}
-		rList = append(rList, r)
+		rList = append(rList, model)
 	}
 	return col.InsertMany(ctx, rList)
 }
@@ -89,6 +82,9 @@ func (p *APIView) SaveMany(ctx context.Context, col *mongo.Collection, models []
 func (p *APIView) SaveManyWithConvertOID(ctx context.Context, col *mongo.Collection, models []bson.M) (*mongo.InsertManyResult, error) {
 	rList := make([]interface{}, 0)
 	for _, model := range models {
+		if _, ok := model["_id"]; !ok {
+			model["_id"] = primitive.NewObjectID().Hex()
+		}
 		rList = append(rList, model)
 	}
 	return col.InsertMany(ctx, rList)
@@ -97,11 +93,7 @@ func (p *APIView) SaveManyWithConvertOID(ctx context.Context, col *mongo.Collect
 // DeleteByID 根据ID删除数据
 // id:主键_id
 func (p *APIView) DeleteByID(ctx context.Context, col *mongo.Collection, id string) (*mongo.DeleteResult, error) {
-	oid, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
-	}
-	return col.DeleteOne(ctx, bson.M{"_id": oid})
+	return col.DeleteOne(ctx, bson.M{"_id": id})
 }
 
 // DeleteOne 根据条件删除单条数据
@@ -119,111 +111,53 @@ func (p *APIView) DeleteMany(ctx context.Context, col *mongo.Collection, conditi
 // UpdateByID 根据ID及数据更新
 // id:主键_id model:更新的数据
 func (p *APIView) UpdateByID(ctx context.Context, col *mongo.Collection, id string, model bson.M) (*mongo.UpdateResult, error) {
-	oid, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
-	}
-	r, err := ConvertOID("", model)
-	if err != nil {
-		return nil, fmt.Errorf(`数据格式ObjectID转换错误.%s`, err.Error())
-	}
-
-	return col.UpdateOne(ctx, bson.M{"_id": oid}, bson.D{bson.E{Key: "$set", Value: r}})
+	return col.UpdateOne(ctx, bson.M{"_id": id}, bson.D{bson.E{Key: "$set", Value: model}})
 }
 
 // UpdateByID 根据ID及数据更新
 // id:主键_id model:更新的数据
 func UpdateByID(ctx context.Context, col *mongo.Collection, id string, model bson.M) (*mongo.UpdateResult, error) {
-	oid, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
-	}
-	r, err := ConvertOID("", model)
-	if err != nil {
-		return nil, fmt.Errorf(`数据格式ObjectID转换错误.%s`, err.Error())
-	}
-
-	return col.UpdateOne(ctx, bson.M{"_id": oid}, bson.D{bson.E{Key: "$set", Value: r}})
+	return col.UpdateOne(ctx, bson.M{"_id": id}, bson.D{bson.E{Key: "$set", Value: model}})
 }
 
 // UpdateAll 全部数据更新
 func (p *APIView) UpdateAll(ctx context.Context, col *mongo.Collection, model *bson.M) (*mongo.UpdateResult, error) {
-	r, err := ConvertOID("", *model)
-	if err != nil {
-		return nil, fmt.Errorf(`数据格式ObjectID转换错误.%s`, err.Error())
-	}
-	return col.UpdateMany(ctx, bson.M{}, bson.D{bson.E{Key: "$set", Value: r}})
+	return col.UpdateMany(ctx, bson.M{}, bson.D{bson.E{Key: "$set", Value: model}})
 }
 
 // UpdateManyByIDList 根据id数组进行多条数据更新
 func (p *APIView) UpdateManyByIDList(ctx *context.Context, col *mongo.Collection, id []string, model *bson.M) (*mongo.UpdateResult, error) {
-	oidList := make([]primitive.ObjectID, 0)
-	for _, v := range id {
-		oid, err := primitive.ObjectIDFromHex(v)
-		if err != nil {
-			return nil, err
-		}
-		oidList = append(oidList, oid)
-	}
-	r, err := ConvertOID("", *model)
-	if err != nil {
-		return nil, fmt.Errorf(`数据格式ObjectID转换错误.%s`, err.Error())
-	}
-	return col.UpdateMany(*ctx, bson.M{"_id": bson.M{"$in": oidList}}, bson.D{bson.E{Key: "$set", Value: r}})
+	return col.UpdateMany(*ctx, bson.M{"_id": bson.M{"$in": id}}, bson.D{bson.E{Key: "$set", Value: model}})
 }
 
 // UpdateMany 全部数据更新
 // conditions:更新条件 model:更新的数据
 func (p *APIView) UpdateMany(ctx context.Context, col *mongo.Collection, conditions, model bson.M) (*mongo.UpdateResult, error) {
-	r, err := ConvertOID("", model)
-	if err != nil {
-		return nil, fmt.Errorf(`数据格式ObjectID转换错误.%s`, err.Error())
-	}
-	return col.UpdateMany(ctx, conditions, r)
+	return col.UpdateMany(ctx, conditions, model)
 }
 
 // UpdateMany 全部数据更新
 // conditions:更新条件 model:更新的数据
 func UpdateMany(ctx context.Context, col *mongo.Collection, conditions, model bson.M) (*mongo.UpdateResult, error) {
-	r, err := ConvertOID("", model)
-	if err != nil {
-		return nil, fmt.Errorf(`数据格式ObjectID转换错误.%s`, err.Error())
-	}
-	return col.UpdateMany(ctx, conditions, r)
+	return col.UpdateMany(ctx, conditions, model)
 }
 
 // UpdateMany 全部数据更新
 // conditions:更新条件 model:更新的数据
 func (p *APIView) UpdateManyWithOption(ctx context.Context, col *mongo.Collection, conditions, model bson.M, options *options.UpdateOptions) (*mongo.UpdateResult, error) {
-	r, err := ConvertOID("", model)
-	if err != nil {
-		return nil, fmt.Errorf(`数据格式ObjectID转换错误.%s`, err.Error())
-	}
-	return col.UpdateMany(ctx, conditions, r, options)
+	return col.UpdateMany(ctx, conditions, model, options)
 }
 
 // ReplaceByID 根据ID及数据替换原有数据
 // id:主键_id model:更新的数据
 func (p *APIView) ReplaceByID(ctx context.Context, col *mongo.Collection, id string, model bson.M) (*mongo.UpdateResult, error) {
-	oid, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, err
-	}
-	r, err := ConvertOID("", model)
-	if err != nil {
-		return nil, fmt.Errorf(`数据格式ObjectID转换错误.%s`, err.Error())
-	}
-	return col.ReplaceOne(ctx, bson.M{"_id": oid}, r)
+	return col.ReplaceOne(ctx, bson.M{"_id": id}, model)
 }
 
 // FindByID 根据ID查询数据
 // id:主键_id result:查询结果
 func (p *APIView) FindByID(ctx context.Context, col *mongo.Collection, result *bson.M, id string, calc CalcPipelineFunc) error {
-	oid, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-	singleResult := col.FindOne(ctx, bson.M{"_id": oid})
+	singleResult := col.FindOne(ctx, bson.M{"_id": id})
 
 	if singleResult.Err() != nil {
 		return singleResult.Err()
@@ -241,11 +175,7 @@ func (p *APIView) FindByID(ctx context.Context, col *mongo.Collection, result *b
 }
 
 func FindByID(ctx context.Context, col *mongo.Collection, result *bson.M, id string, calc CalcPipelineFunc) error {
-	oid, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-	singleResult := col.FindOne(ctx, bson.M{"_id": oid})
+	singleResult := col.FindOne(ctx, bson.M{"_id": id})
 
 	if singleResult.Err() != nil {
 		return singleResult.Err()
@@ -269,11 +199,7 @@ func (p *APIView) FindQueryConvertPipeline(query bson.M) (mongo.Pipeline, mongo.
 	if filter, ok := query["filter"]; ok {
 		if filterMap, ok := filter.(bson.M); ok {
 			for k, v := range filterMap {
-				val, err := ConvertOID(k, v)
-				if err != nil {
-					return nil, nil, err
-				}
-				pipeLine = append(pipeLine, bson.D{bson.E{Key: k, Value: val}})
+				pipeLine = append(pipeLine, bson.D{bson.E{Key: k, Value: v}})
 			}
 		} else {
 			return nil, nil, errors.New(`filter格式不正确`)
@@ -464,11 +390,6 @@ func (p *APIView) FindFilter(ctx context.Context, col *mongo.Collection, result 
 					if k == "id" {
 						k = "_id"
 					}
-					// 递归转换判断value值是否为ObjectID
-					r, err := ConvertOID(k, v)
-					if err != nil {
-						return 0, fmt.Errorf(`%s的值数据检验错误.%s`, k, err.Error())
-					}
 					//if strings.HasSuffix(k, "id") && k != "_id" && !strings.HasSuffix(k, "_id") && !strings.HasSuffix(k, "uid") {
 					//	k = k[:len(k)-2]
 					//	k = k + "_id"
@@ -481,7 +402,7 @@ func (p *APIView) FindFilter(ctx context.Context, col *mongo.Collection, result 
 							k = k + "._id"
 						}
 					}
-					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: r}}})
+					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 				}
 			}
 			// }
@@ -521,78 +442,6 @@ func (p *APIView) FindFilter(ctx context.Context, col *mongo.Collection, result 
 		}
 	}
 
-	//if filter, ok := (*query)["filter"]; ok {
-	//	if filterMap, ok := filter.(bson.M); ok {
-	//		for k, v := range filterMap {
-	//			// 图形数据查询
-	//			if k == "ancestorId" {
-	//				if idStr, ok := v.(string); ok {
-	//					id, err := primitive.ObjectIDFromHex(idStr)
-	//					if err != nil {
-	//						return count, fmt.Errorf(`%s的ObjectID值格式不正确.%s`, k, err.Error())
-	//					}
-	//					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$graphLookup", Value: bson.M{
-	//						"from":             collection,
-	//						"startWith":        "$parentId",
-	//						"connectFromField": "parentId",
-	//						"connectToField":   "_id",
-	//						"as":               "parents",
-	//					}}})
-	//					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{
-	//						"parents": bson.D{
-	//							bson.E{
-	//								Key:   "$elemMatch",
-	//								Value: bson.M{"_id": id},
-	//							},
-	//						},
-	//					}}})
-	//					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: bson.M{
-	//						"from":         "model",
-	//						"localField":   "modelId",
-	//						"foreignField": "_id",
-	//						"as":           "model",
-	//					}}})
-	//				} else {
-	//					return count, fmt.Errorf(`%s的ObjectID值格式不正确.非字符串`, k)
-	//				}
-	//				// 特殊处理lookup
-	//			} else if k == "$lookup" {
-	//				pipeLine = append(pipeLine, bson.D{bson.E{Key: k, Value: v}})
-	//				// 特殊处理lookup数组
-	//			} else if k == "$lookups" {
-	//				// 递归转换判断value值是否为ObjectID
-	//				if lookups, ok := v.(primitive.A); ok {
-	//					for _, lookup := range lookups {
-	//						if _, ok := lookup.(primitive.M)["$group"]; ok {
-	//							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
-	//						} else if _, ok := lookup.(primitive.M)["$project"]; ok {
-	//							if _, projectOk := lookup.(primitive.M)["$project"].(bson.M); !projectOk {
-	//								return count, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
-	//							}
-	//							projectMap = lookup.(primitive.M)["$project"].(bson.M)
-	//						} else {
-	//							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
-	//						}
-	//					}
-	//				} else {
-	//					return count, errors.New(`$lookups的值数据格式不正确`)
-	//				}
-	//			} else {
-	//				// 递归转换判断value值是否为ObjectID
-	//				r, err := p.deepConvert(k, v)
-	//				if err != nil {
-	//					return count, fmt.Errorf(`%s的值数据检验错误.%s`, k, err.Error())
-	//				}
-	//
-	//				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: r}}})
-	//			}
-	//		}
-	//		// }
-	//	} else {
-	//		return count, errors.New(`filter格式不正确`)
-	//	}
-	//}
-
 	if withCount, ok := query["withCount"]; ok {
 		if b, ok := withCount.(bool); ok {
 			if b {
@@ -614,7 +463,7 @@ func (p *APIView) FindFilter(ctx context.Context, col *mongo.Collection, result 
 				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
 			}
 		}
-	}else{
+	} else {
 		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
 	}
 
@@ -794,11 +643,6 @@ func (p *APIView) FindFilterDeptQuery(ctx context.Context, col *mongo.Collection
 					if k == "id" {
 						k = "_id"
 					}
-					// 递归转换判断value值是否为ObjectID
-					r, err := ConvertOID(k, v)
-					if err != nil {
-						return 0, fmt.Errorf(`%s的值数据检验错误.%s`, k, err.Error())
-					}
 					//if strings.HasSuffix(k, "id") && k != "_id" && !strings.HasSuffix(k, "_id") && !strings.HasSuffix(k, "uid") {
 					//	k = k[:len(k)-2]
 					//	k = k + "_id"
@@ -811,7 +655,7 @@ func (p *APIView) FindFilterDeptQuery(ctx context.Context, col *mongo.Collection
 							k = k + "._id"
 						}
 					}
-					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: r}}})
+					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 				}
 			}
 			// }
@@ -851,77 +695,6 @@ func (p *APIView) FindFilterDeptQuery(ctx context.Context, col *mongo.Collection
 		}
 	}
 
-	//if filter, ok := (*query)["filter"]; ok {
-	//	if filterMap, ok := filter.(bson.M); ok {
-	//		for k, v := range filterMap {
-	//			// 图形数据查询
-	//			if k == "ancestorId" {
-	//				if idStr, ok := v.(string); ok {
-	//					id, err := primitive.ObjectIDFromHex(idStr)
-	//					if err != nil {
-	//						return count, fmt.Errorf(`%s的ObjectID值格式不正确.%s`, k, err.Error())
-	//					}
-	//					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$graphLookup", Value: bson.M{
-	//						"from":             collection,
-	//						"startWith":        "$parentId",
-	//						"connectFromField": "parentId",
-	//						"connectToField":   "_id",
-	//						"as":               "parents",
-	//					}}})
-	//					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{
-	//						"parents": bson.D{
-	//							bson.E{
-	//								Key:   "$elemMatch",
-	//								Value: bson.M{"_id": id},
-	//							},
-	//						},
-	//					}}})
-	//					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: bson.M{
-	//						"from":         "model",
-	//						"localField":   "modelId",
-	//						"foreignField": "_id",
-	//						"as":           "model",
-	//					}}})
-	//				} else {
-	//					return count, fmt.Errorf(`%s的ObjectID值格式不正确.非字符串`, k)
-	//				}
-	//				// 特殊处理lookup
-	//			} else if k == "$lookup" {
-	//				pipeLine = append(pipeLine, bson.D{bson.E{Key: k, Value: v}})
-	//				// 特殊处理lookup数组
-	//			} else if k == "$lookups" {
-	//				// 递归转换判断value值是否为ObjectID
-	//				if lookups, ok := v.(primitive.A); ok {
-	//					for _, lookup := range lookups {
-	//						if _, ok := lookup.(primitive.M)["$group"]; ok {
-	//							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
-	//						} else if _, ok := lookup.(primitive.M)["$project"]; ok {
-	//							if _, projectOk := lookup.(primitive.M)["$project"].(bson.M); !projectOk {
-	//								return count, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
-	//							}
-	//							projectMap = lookup.(primitive.M)["$project"].(bson.M)
-	//						} else {
-	//							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
-	//						}
-	//					}
-	//				} else {
-	//					return count, errors.New(`$lookups的值数据格式不正确`)
-	//				}
-	//			} else {
-	//				// 递归转换判断value值是否为ObjectID
-	//				r, err := p.deepConvert(k, v)
-	//				if err != nil {
-	//					return count, fmt.Errorf(`%s的值数据检验错误.%s`, k, err.Error())
-	//				}
-	//
-	//				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: r}}})
-	//			}
-	//		}
-	//		// }
-	//	} else {
-	//		return count, errors.New(`filter格式不正确`)
-	//	}
-	//}
 	hasRemoveFirst := false
 	if withCount, ok := query["withCount"]; ok {
 		if b, ok := withCount.(bool); ok {
@@ -1108,11 +881,6 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 									if k == "id" {
 										k = "_id"
 									}
-									// 递归转换判断value值是否为ObjectID
-									r, err := ConvertOID(k, v)
-									if err != nil {
-										return 0, fmt.Errorf(`%s的值数据检验错误.%s`, k, err.Error())
-									}
 									//if strings.HasSuffix(k, "id") && k != "_id" && !strings.HasSuffix(k, "_id") && !strings.HasSuffix(k, "uid") {
 									//	k = k[:len(k)-2]
 									//	k = k + "_id"
@@ -1125,7 +893,7 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 											k = k + "._id"
 										}
 									}
-									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: r}}})
+									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 								}
 							}
 							// }
@@ -1161,11 +929,6 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 									if k == "id" {
 										k = "_id"
 									}
-									// 递归转换判断value值是否为ObjectID
-									r, err := ConvertOID(k, v)
-									if err != nil {
-										return 0, fmt.Errorf(`%s的值数据检验错误.%s`, k, err.Error())
-									}
 									//if strings.HasSuffix(k, "id") && k != "_id" && !strings.HasSuffix(k, "_id") && !strings.HasSuffix(k, "uid") {
 									//	k = k[:len(k)-2]
 									//	k = k + "_id"
@@ -1178,7 +941,7 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 											k = k + "._id"
 										}
 									}
-									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: r}}})
+									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 								}
 							}
 							// }
@@ -1257,7 +1020,7 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
 					}
 				}
-			}else{
+			} else {
 				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
 			}
 
@@ -1386,11 +1149,6 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 							if k == "id" {
 								k = "_id"
 							}
-							// 递归转换判断value值是否为ObjectID
-							r, err := ConvertOID(k, v)
-							if err != nil {
-								return 0, fmt.Errorf(`%s的值数据检验错误.%s`, k, err.Error())
-							}
 							//if strings.HasSuffix(k, "id") && k != "_id" && !strings.HasSuffix(k, "_id") && !strings.HasSuffix(k, "uid") {
 							//	k = k[:len(k)-2]
 							//	k = k + "_id"
@@ -1403,7 +1161,7 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 									k = k + "._id"
 								}
 							}
-							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: r}}})
+							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 						}
 					}
 					// }
@@ -1432,7 +1190,7 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
 					}
 				}
-			}else{
+			} else {
 				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
 			}
 
@@ -1563,11 +1321,6 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 						if k == "id" {
 							k = "_id"
 						}
-						// 递归转换判断value值是否为ObjectID
-						r, err := ConvertOID(k, v)
-						if err != nil {
-							return 0, fmt.Errorf(`%s的值数据检验错误.%s`, k, err.Error())
-						}
 						//if strings.HasSuffix(k, "id") && k != "_id" && !strings.HasSuffix(k, "_id") && !strings.HasSuffix(k, "uid") {
 						//	k = k[:len(k)-2]
 						//	k = k + "_id"
@@ -1580,7 +1333,7 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 								k = k + "._id"
 							}
 						}
-						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: r}}})
+						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 					}
 				}
 				// }
@@ -1609,7 +1362,7 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
 				}
 			}
-		}else{
+		} else {
 			pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
 		}
 

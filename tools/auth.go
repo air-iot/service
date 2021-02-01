@@ -100,10 +100,10 @@ func calcPointNum(ctx context.Context) (int32, error) {
 		for tagKey, tagValue := range tagMap {
 			switch tagKey {
 			case "id":
-				if _, ok := tagValue.(primitive.ObjectID); !ok {
+				if _, ok := tagValue.(string); !ok {
 					tagCountMapKey = ""
 				} else {
-					tagCountMapKey = tagValue.(primitive.ObjectID).Hex()
+					tagCountMapKey = tagValue.(string).Hex()
 				}
 			case "sizeOfTags", "sizeOfProps":
 				if _, ok := tagValue.(int32); ok {
@@ -120,10 +120,10 @@ func calcPointNum(ctx context.Context) (int32, error) {
 		for tagKey, tagValue := range nodeMap {
 			switch tagKey {
 			case "id":
-				if _, ok := tagValue.(primitive.ObjectID); !ok {
+				if _, ok := tagValue.(string); !ok {
 					nodeCountMapKey = ""
 				} else {
-					nodeCountMapKey = tagValue.(primitive.ObjectID).Hex()
+					nodeCountMapKey = tagValue.(string).Hex()
 				}
 			case "count":
 				if _, ok := tagValue.(int32); !ok {

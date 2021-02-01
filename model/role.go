@@ -13,9 +13,9 @@ type Role struct {
 
 // RoleMongo
 type RoleMongo struct {
-	ID          primitive.ObjectID   `json:"id" bson:"_id"`
+	ID          string   `json:"id" bson:"_id"`
 	Name        string               `json:"name" bson:"name"`
-	Users       []primitive.ObjectID `json:"users" bson:"users"`
+	Users       []string `json:"users" bson:"users"`
 	Permission  []string             `json:"permission" bson:"permission"`
 	Description string               `json:"description" bson:"description"`
 }

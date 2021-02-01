@@ -12,7 +12,7 @@ type SystemVariable struct {
 
 // SystemVariableMongo
 type SystemVariableMongo struct {
-	ID    primitive.ObjectID `json:"id" bson:"_id"`
+	ID    string `json:"id" bson:"_id"`
 	Name  string             `json:"name" bson:"name"`
 	Uid   string             `json:"uid" bson:"uid"`
 	Value interface{}        `json:"value" bson:"value"`

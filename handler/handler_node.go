@@ -73,66 +73,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 
 	modifyTypeAfterMapping := modifyTypeMapping[modifyType]
 
-	//nodeObjectID, err := primitive.ObjectIDFromHex(nodeID)
-	//if err != nil {
-	//	return fmt.Errorf("数据消息中nodeId转ObjectID失败")
-	//}
-
-	modelObjectID, err := primitive.ObjectIDFromHex(modelID)
-	if err != nil {
-		return fmt.Errorf("数据消息中modelId转ObjectID失败")
-	}
-
-	//logger.Debugf(eventDeviceModifyLog, "开始获取当前资产修改内容类型的资产修改逻辑事件")
-	//获取当前资产修改内容类型的资产修改逻辑事件=============================================
-	//paramMatch := bson.D{
-	//	bson.E{
-	//		Key: "$match",
-	//		Value: bson.M{
-	//			"type":                DeviceModify,
-	//			"settings.eventType":  modifyTypeAfterMapping,
-	//			"settings.eventRange": "node",
-	//			//"$or":
-	//			//bson.A{
-	//			//	bson.D{{
-	//			//		"settings.node.id", nodeID,
-	//			//	}},
-	//			//	bson.D{
-	//			//		{
-	//			//			"settings.department.id", bson.M{"$in": departmentList},
-	//			//		},
-	//			//		{
-	//			//			"settings.model.id", modelID,
-	//			//		},
-	//			//	},
-	//			//	bson.D{
-	//			//		{
-	//			//			"settings.department.id", bson.M{"$in": departmentList},
-	//			//		},
-	//			//	},
-	//			//	bson.D{
-	//			//		{
-	//			//			"settings.model.id", modelID,
-	//			//		},
-	//			//	},
-	//			//},
-	//		},
-	//	},
-	//}
-	//paramLookup := bson.D{
-	//	bson.E{
-	//		Key: "$lookup",
-	//		Value: bson.M{
-	//			"from":         "eventhandler",
-	//			"localField":   "_id",
-	//			"foreignField": "event",
-	//			"as":           "handlers",
-	//		},
-	//	},
-	//}
-	//
-	//pipeline := mongo.Pipeline{}
-	//pipeline = append(pipeline, paramMatch, paramLookup)
+	modelObjectID := modelID
 	eventInfoList := make([]bson.M, 0)
 	//err = restfulapi.FindPipeline(ctx, idb.Database.Collection("event"), &eventInfoList, pipeline, nil)
 
@@ -251,7 +192,7 @@ eventloop:
 		//break
 
 		logger.Debugf(eventDeviceModifyLog, "开始分析事件")
-		if eventID, ok := eventInfo["id"].(primitive.ObjectID); ok {
+		if eventID, ok := eventInfo["id"].(string); ok {
 			if settings, ok := eventInfo["settings"].(primitive.M); ok {
 
 				//判断是否已经失效
@@ -332,27 +273,9 @@ eventloop:
 				isValid := false
 				if rangType, ok := settings["eventRange"].(string); ok {
 					switch rangType {
-					//case "model":
-					//	modelListInSettings := make([]primitive.ObjectID, 0)
-					//	//没有指定特定资产时，结合部门与模型进行判断
-					//	err = tools.FormatObjectIDPrimitiveList(&settings, "model", "id")
-					//	if err != nil {
-					//		logger.Warnln(eventDeviceModifyLog, "事件配置的模型对象中id字段不存在或类型错误")
-					//		continue
-					//	}
-					//	modelListInSettings, ok = settings["model"].([]primitive.ObjectID)
-					//	if !ok {
-					//		modelListInSettings = make([]primitive.ObjectID, 0)
-					//	}
-					//	for _, modelIDInSettings := range modelListInSettings {
-					//		if modelObjectID == modelIDInSettings {
-					//			isValid = true
-					//			break
-					//		}
-					//	}
 					case "node":
-						departmentListInSettings := make([]primitive.ObjectID, 0)
-						modelListInSettings := make([]primitive.ObjectID, 0)
+						departmentListInSettings := make([]string, 0)
+						modelListInSettings := make([]string, 0)
 						//判断该事件是否指定了特定资产
 						if nodeList, ok := settings["node"].(primitive.A); ok {
 							for _, nodeEle := range nodeList {
@@ -455,13 +378,13 @@ eventloop:
 							logger.Warnln(eventDeviceModifyLog, "事件配置的部门对象中id字段不存在或类型错误")
 							continue
 						}
-						departmentListInSettings, ok = settings["department"].([]primitive.ObjectID)
+						departmentListInSettings, ok = settings["department"].([]string)
 						if !ok {
-							departmentListInSettings = make([]primitive.ObjectID, 0)
+							departmentListInSettings = make([]string, 0)
 						}
-						modelListInSettings, ok = settings["model"].([]primitive.ObjectID)
+						modelListInSettings, ok = settings["model"].([]string)
 						if !ok {
-							modelListInSettings = make([]primitive.ObjectID, 0)
+							modelListInSettings = make([]string, 0)
 						}
 						if len(departmentListInSettings) != 0 && len(modelListInSettings) != 0 {
 						loop1:
@@ -645,15 +568,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 
 	modifyTypeAfterMapping := modifyTypeMapping[modifyType]
 
-	//nodeObjectID, err := primitive.ObjectIDFromHex(nodeID)
-	//if err != nil {
-	//	return fmt.Errorf("数据消息中nodeId转ObjectID失败")
-	//}
-
-	modelObjectID, err := primitive.ObjectIDFromHex(modelID)
-	if err != nil {
-		return fmt.Errorf("数据消息中modelId转ObjectID失败")
-	}
+	modelObjectID := modelID
 
 	//logger.Debugf(eventDeviceModifyLog, "开始获取当前资产修改内容类型的资产修改逻辑事件")
 	//获取当前资产修改内容类型的资产修改逻辑事件=============================================
@@ -822,7 +737,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 		//break
 
 		logger.Debugf(eventDeviceModifyLog, "开始分析事件")
-		if eventID, ok := eventInfo["id"].(primitive.ObjectID); ok {
+		if eventID, ok := eventInfo["id"].(string); ok {
 			if settings, ok := eventInfo["settings"].(primitive.M); ok {
 
 				//判断是否已经失效
@@ -891,16 +806,16 @@ func TriggerModelModify(data map[string]interface{}) error {
 				if rangType, ok := settings["eventRange"].(string); ok {
 					switch rangType {
 					case "model":
-						modelListInSettings := make([]primitive.ObjectID, 0)
+						modelListInSettings := make([]string, 0)
 						//没有指定特定资产时，结合部门与模型进行判断
 						err = tools.FormatObjectIDPrimitiveList(&settings, "model", "id")
 						if err != nil {
 							logger.Warnln(eventDeviceModifyLog, "事件配置的模型对象中id字段不存在或类型错误")
 							continue
 						}
-						modelListInSettings, ok = settings["model"].([]primitive.ObjectID)
+						modelListInSettings, ok = settings["model"].([]string)
 						if !ok {
-							modelListInSettings = make([]primitive.ObjectID, 0)
+							modelListInSettings = make([]string, 0)
 						}
 						for _, modelIDInSettings := range modelListInSettings {
 							if modelObjectID == modelIDInSettings {

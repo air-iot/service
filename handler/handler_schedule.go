@@ -263,7 +263,7 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 			continue
 		}
 		logger.Debugf(eventScheduleLog, "开始分析事件")
-		if eventID, ok := eventInfo["id"].(primitive.ObjectID); ok {
+		if eventID, ok := eventInfo["id"].(string); ok {
 			if settings, ok := eventInfo["settings"].(primitive.M); ok {
 				//判断是否已经失效
 				if invalid, ok := settings["invalid"].(bool); ok {

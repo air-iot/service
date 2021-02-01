@@ -14,10 +14,10 @@ type User struct {
 
 // UserMongo
 type UserMongo struct {
-	ID         primitive.ObjectID   `json:"id" bson:"_id"`
+	ID         string   `json:"id" bson:"_id"`
 	Name       string               `json:"name" bson:"name"`
-	Department []primitive.ObjectID `json:"department" bson:"department"`
-	Roles      []primitive.ObjectID `json:"roles" bson:"roles"`
+	Department []string `json:"department" bson:"department"`
+	Roles      []string `json:"roles" bson:"roles"`
 	OpenID     string               `json:"openid" bson:"openid"`
 	Phone      string               `json:"phone" bson:"phone"`
 }

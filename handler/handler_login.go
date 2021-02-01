@@ -40,8 +40,8 @@ func TriggerLogin(data map[string]interface{}) error {
 		userID = v
 	}
 
-	departmentListInSettings := make([]primitive.ObjectID, 0)
-	roleListInSettings := make([]primitive.ObjectID, 0)
+	departmentListInSettings := make([]string, 0)
+	roleListInSettings := make([]string, 0)
 	departmentStringListInSettings := make([]string, 0)
 	roleStringListInSettings := make([]string, 0)
 	//logger.Debugf(eventLoginLog, "开始遍历事件列表")
@@ -149,13 +149,13 @@ func TriggerLogin(data map[string]interface{}) error {
 				logger.Warnln(eventLoginLog, "事件配置的角色对象中id字段不存在或类型错误")
 				continue
 			}
-			departmentListInSettings, ok = settings["department"].([]primitive.ObjectID)
+			departmentListInSettings, ok = settings["department"].([]string)
 			if !ok {
-				departmentListInSettings = make([]primitive.ObjectID, 0)
+				departmentListInSettings = make([]string, 0)
 			}
-			roleListInSettings, ok = settings["role"].([]primitive.ObjectID)
+			roleListInSettings, ok = settings["role"].([]string)
 			if !ok {
-				roleListInSettings = make([]primitive.ObjectID, 0)
+				roleListInSettings = make([]string, 0)
 			}
 			if len(departmentListInSettings) != 0 && len(roleListInSettings) != 0 {
 				departmentStringListInSettings, err = tools.ObjectIdListToStringList(departmentListInSettings)
@@ -231,7 +231,7 @@ func TriggerLogin(data map[string]interface{}) error {
 				logger.Errorf(eventLoginLog, "数据信息中用户字段中id字段不存在或类型错误:%s", err.Error())
 				continue
 			}
-			userObjectIDList, ok := settings["users"].([]primitive.ObjectID)
+			userObjectIDList, ok := settings["users"].([]string)
 			if !ok {
 				logger.Errorf(eventLoginLog, "数据信息中用户ID数组字段不存在或类型错误")
 				continue

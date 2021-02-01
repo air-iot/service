@@ -63,7 +63,7 @@ type Wechat struct {
 
 // SettingMongo
 type SettingMongo struct {
-	ID           primitive.ObjectID `json:"id" bson:"_id"`
+	ID           string `json:"id" bson:"_id"`
 	Name         string             `json:"name" bson:"name"`
 	WarningMongo primitive.M        `json:"warning" bson:"warning"`
 	// Email 邮件发送配置

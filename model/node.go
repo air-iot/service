@@ -28,19 +28,19 @@ type Node struct {
 
 // NodeCommand
 type NodeMongo struct {
-	ID         primitive.ObjectID   `json:"id" bson:"_id"`
+	ID         string   `json:"id" bson:"_id"`
 	Name       string               `json:"name" bson:"name"`
 	Uid        string               `json:"uid" bson:"uid"`
-	Model      primitive.ObjectID   `json:"model" bson:"model"`
-	Parent     []primitive.ObjectID `json:"parent" bson:"parent"`
-	Department []primitive.ObjectID `json:"department" bson:"department"`
+	Model      string   `json:"model" bson:"model"`
+	Parent     []string `json:"parent" bson:"parent"`
+	Department []string `json:"department" bson:"department"`
 	Device     DeviceMongo          `json:"device" bson:"device"`
 	Custom     struct {
 		IntervalTime int    `json:"intervalTime"  bson:"intervalTime"`
 		YPMC         string `json:"YPMC"  bson:"YPMC"`
 	} `json:"custom" bson:"custom"`
 	Models      []ModelMongo         `json:"models" bson:"models"`
-	Child       []primitive.ObjectID `json:"child" bson:"child"`
+	Child       []string `json:"child" bson:"child"`
 	HasChild    bool                 `json:"hasChild" bson:"hasChild"`
 	Computed    ComputedMongo        `json:"computed" bson:"computed"`
 	Warning     WarningMongo         `json:"warning" bson:"warning"`

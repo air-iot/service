@@ -13,9 +13,9 @@ type EventHandler struct {
 
 // EventHandlerMongo
 type EventHandlerMongo struct {
-	ID          primitive.ObjectID `json:"id" bson:"_id"`
+	ID          string `json:"id" bson:"_id"`
 	HandlerName string             `json:"handlerName" bson:"handlerName"`
-	Event       primitive.ObjectID `json:"event" bson:"event"`
+	Event       string `json:"event" bson:"event"`
 	Settings    primitive.M        `json:"settings" bson:"settings"`
 	Type        string             `json:"type" bson:"type"`
 }

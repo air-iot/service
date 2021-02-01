@@ -15,7 +15,7 @@ type Event struct {
 
 // EventMongo
 type EventMongo struct {
-	ID       primitive.ObjectID `json:"id" bson:"_id"`
+	ID       string `json:"id" bson:"_id"`
 	Name     string             `json:"name" bson:"name"`
 	Owner    string             `json:"owner" bson:"owner"`
 	Settings primitive.M        `json:"settings" bson:"settings"`
