@@ -47,10 +47,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 	//	//return fmt.Errorf("数据消息中department字段不存在或类型错误")
 	//}
 
-	departmentObjectIDList, err := tools.StringListToObjectIdList(tools.InterfaceListToStringList(departmentList))
-	if err != nil {
-		return fmt.Errorf("数据消息中department中的ID转ObjectID失败")
-	}
+	departmentObjectIDList := tools.InterfaceListToStringList(departmentList)
 
 	modifyType, ok := data["type"].(string)
 	if !ok {
@@ -93,7 +90,7 @@ func TriggerDeviceModify(data map[string]interface{}) error {
 		},
 	}
 
-	err = api.Cli.FindEventQuery(query, &eventInfoList)
+	err := api.Cli.FindEventQuery(query, &eventInfoList)
 
 	if err != nil {
 		return fmt.Errorf("获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
@@ -113,83 +110,6 @@ eventloop:
 			continue
 		}
 
-		//paramMatch = bson.D{
-		//	bson.E{
-		//		Key: "$match",
-		//		Value: bson.M{
-		//			"_id": nodeObjectID,
-		//		},
-		//	},
-		//}
-		//paramLookup = bson.D{
-		//	bson.E{
-		//		Key: "$lookup",
-		//		Value: bson.M{
-		//			"from":         "dept",
-		//			"localField":   "department",
-		//			"foreignField": "_id",
-		//			"as":           "department",
-		//		},
-		//	},
-		//}
-		//paramLookupModel := bson.D{
-		//	bson.E{
-		//		Key: "$lookup",
-		//		Value: bson.M{
-		//			"from":         "model",
-		//			"localField":   "model",
-		//			"foreignField": "_id",
-		//			"as":           "model",
-		//		},
-		//	},
-		//}
-		//pipeline = mongo.Pipeline{}
-		//pipeline = append(pipeline, paramMatch, paramLookup, paramLookupModel)
-		//nodeInfoList := make([]bson.M, 0)
-		//err = restfulapi.FindPipeline(ctx, idb.Database.Collection("node"), &nodeInfoList, pipeline, nil)
-		//if err != nil {
-		//	return fmt.Errorf("获取当前资产(%s)的详情失败:%s", nodeID, err.Error())
-		//}
-		//
-		//if len(nodeInfoList) == 0 {
-		//	return fmt.Errorf("当前查询的资产(%s)不存在", nodeID)
-		//}
-		//
-		//nodeInfo := nodeInfoList[0]
-		//
-		//departmentList, ok := nodeInfo["department"].(primitive.A)
-		//if !ok {
-		//	logger.Warnln(eventExecCmdLog, "资产(%s)的department字段不存在或类型错误", nodeID)
-		//	continue
-		//}
-		//departmentMList := make([]bson.M, 0)
-		//for _, department := range departmentList {
-		//	if departmentMap, ok := department.(bson.M); ok {
-		//		departmentMList = append(departmentMList, departmentMap)
-		//	}
-		//}
-		//
-		//data["departmentName"] = tools.FormatKeyInfoList(departmentMList, "name")
-		//
-		//modelList, ok := nodeInfo["model"].(primitive.A)
-		//if !ok {
-		//	logger.Warnln(eventExecCmdLog, "资产(%s)的model字段不存在或类型错误", nodeID)
-		//	continue
-		//}
-		//modelMList := make([]bson.M, 0)
-		//for _, model := range modelList {
-		//	if modelMap, ok := model.(bson.M); ok {
-		//		modelMList = append(modelMList, modelMap)
-		//	}
-		//}
-		//
-		//data["modelName"] = tools.FormatKeyInfoList(modelMList, "name")
-		//data["nodeName"] = tools.FormatKeyInfo(nodeInfo, "name")
-		//data["nodeUid"] = tools.FormatKeyInfo(nodeInfo, "uid")
-		//data["time"] = tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
-
-		//fmt.Println("data:", data)
-		//break
 
 		logger.Debugf(eventDeviceModifyLog, "开始分析事件")
 		if eventID, ok := eventInfo["id"].(string); ok {
@@ -206,7 +126,7 @@ eventloop:
 				//判断禁用
 				if disable, ok := settings["disable"].(bool); ok {
 					if disable {
-						logger.Warnln(eventDeviceModifyLog, "事件(%s)已经被禁用", eventID.Hex())
+						logger.Warnln(eventDeviceModifyLog, "事件(%s)已经被禁用", eventID)
 						continue
 					}
 				}
@@ -221,7 +141,7 @@ eventloop:
 								if startTime, ok := settings["startTime"].(primitive.DateTime); ok {
 									startTimeInt := int64(startTime / 1e3)
 									if tools.GetLocalTimeNow(time.Now()).Unix() < startTimeInt {
-										logger.Debugf(eventDeviceModifyLog, "事件(%s)的定时任务开始时间未到，不执行", eventID.Hex())
+										logger.Debugf(eventDeviceModifyLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
 										continue
 									}
 								}
@@ -229,14 +149,14 @@ eventloop:
 								if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
 									endTimeInt := int64(endTime / 1e3)
 									if tools.GetLocalTimeNow(time.Now()).Unix() >= endTimeInt {
-										logger.Debugf(eventDeviceModifyLog, "事件(%s)的定时任务结束时间已到，不执行", eventID.Hex())
+										logger.Debugf(eventDeviceModifyLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
 										//修改事件为失效
 										updateMap := bson.M{"settings.invalid": true}
-										//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+										//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 										var r = make(map[string]interface{})
-										err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
+										err := api.Cli.UpdateEventById(eventID, updateMap, &r)
 										if err != nil {
-											logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+											logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID, err.Error())
 											continue
 										}
 										continue
@@ -258,7 +178,7 @@ eventloop:
 				//		}
 				//	}
 				//	if !isValidModifyProp {
-				//		logger.Warnln(eventDeviceModifyLog, "事件(%s)修改属性不是触发事件需要的:%+v", eventID.Hex(), operateDataMap)
+				//		logger.Warnln(eventDeviceModifyLog, "事件(%s)修改属性不是触发事件需要的:%+v", eventID, operateDataMap)
 				//		continue
 				//	}
 				//}
@@ -288,16 +208,16 @@ eventloop:
 											} else {
 												nodeInfo, err = logic.NodeLogic.FindLocalMapCache(nodeID)
 												if err != nil {
-													logger.Errorf(eventDeviceModifyLog, "事件(%s)的资产缓存(%+v)查询失败", eventID.Hex(), nodeID)
+													logger.Errorf(eventDeviceModifyLog, "事件(%s)的资产缓存(%+v)查询失败", eventID, nodeID)
 													nodeInfo = bson.M{}
 													continue
 												}
 											}
 
-											departmentStringIDList, err := tools.ObjectIdListToStringList(departmentObjectIDList)
+											departmentStringIDList := departmentObjectIDList
 											departmentMList, err := logic.DeptLogic.FindLocalCacheList(departmentStringIDList)
 											if err != nil {
-												logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
+												logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID, departmentStringIDList)
 												departmentMList = make([]map[string]interface{}, 0)
 											}
 
@@ -305,7 +225,7 @@ eventloop:
 
 											modelEle, err := logic.ModelLogic.FindLocalMapCache(modelID)
 											if err != nil {
-												logger.Errorf(eventDeviceModifyLog, "事件(%s)的模型缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
+												logger.Errorf(eventDeviceModifyLog, "事件(%s)的模型缓存(%+v)查询失败", eventID, departmentStringIDList)
 												continue
 											}
 
@@ -334,11 +254,11 @@ eventloop:
 											if err != nil {
 												continue
 											}
-											err = imqtt.Send(fmt.Sprintf("event/%s", eventID.Hex()), b)
+											err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
 											if err != nil {
-												logger.Warnf(eventDeviceModifyLog, "发送事件(%s)错误:%s", eventID.Hex(), err.Error())
+												logger.Warnf(eventDeviceModifyLog, "发送事件(%s)错误:%s", eventID, err.Error())
 											} else {
-												logger.Debugf(eventDeviceModifyLog, "发送事件成功:%s,数据为:%+v", eventID.Hex(), sendMap)
+												logger.Debugf(eventDeviceModifyLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
 											}
 											continue eventloop
 										} else {
@@ -354,11 +274,11 @@ eventloop:
 							//			sendMap := map[string]interface{}{
 							//				"data": data,
 							//			}
-							//			err := imqtt.Send(emqttConn, fmt.Sprintf("event/%s", eventID.Hex()), sendMap)
+							//			err := imqtt.Send(emqttConn, fmt.Sprintf("event/%s", eventID), sendMap)
 							//			if err != nil {
-							//				logger.Warnf(eventDeviceModifyLog, "发送事件(%s)错误:%s", eventID.Hex(), err.Error())
+							//				logger.Warnf(eventDeviceModifyLog, "发送事件(%s)错误:%s", eventID, err.Error())
 							//			} else {
-							//				logger.Debugf(eventDeviceModifyLog, "发送事件成功:%s,数据为:%+v", eventID.Hex(), sendMap)
+							//				logger.Debugf(eventDeviceModifyLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
 							//			}
 							//			continue
 							//		} else {
@@ -422,7 +342,7 @@ eventloop:
 						}
 
 					default:
-						logger.Errorf(eventDeviceModifyLog, "事件(%s)的事件范围字段值(%s)未匹配到", eventID.Hex(), rangType)
+						logger.Errorf(eventDeviceModifyLog, "事件(%s)的事件范围字段值(%s)未匹配到", eventID, rangType)
 						continue
 					}
 				}
@@ -433,16 +353,16 @@ eventloop:
 					} else {
 						nodeInfo, err = logic.NodeLogic.FindLocalMapCache(nodeID)
 						if err != nil {
-							logger.Errorf(eventDeviceModifyLog, "事件(%s)的资产缓存(%+v)查询失败", eventID.Hex(), nodeID)
+							logger.Errorf(eventDeviceModifyLog, "事件(%s)的资产缓存(%+v)查询失败", eventID, nodeID)
 							nodeInfo = bson.M{}
 							continue
 						}
 					}
 
-					departmentStringIDList, err := tools.ObjectIdListToStringList(departmentObjectIDList)
+					departmentStringIDList := departmentObjectIDList
 					departmentMList, err := logic.DeptLogic.FindLocalCacheList(departmentStringIDList)
 					if err != nil {
-						logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
+						logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID, departmentStringIDList)
 						departmentMList = make([]map[string]interface{}, 0)
 					}
 
@@ -450,7 +370,7 @@ eventloop:
 
 					modelEle, err := logic.ModelLogic.FindLocalMapCache(modelID)
 					if err != nil {
-						logger.Errorf(eventDeviceModifyLog, "事件(%s)的模型缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
+						logger.Errorf(eventDeviceModifyLog, "事件(%s)的模型缓存(%+v)查询失败", eventID, departmentStringIDList)
 						continue
 					}
 
@@ -479,11 +399,11 @@ eventloop:
 					if err != nil {
 						continue
 					}
-					err = imqtt.Send(fmt.Sprintf("event/%s", eventID.Hex()), b)
+					err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
 					if err != nil {
-						logger.Warnf(eventDeviceModifyLog, "发送事件(%s)错误:%s", eventID.Hex(), err.Error())
+						logger.Warnf(eventDeviceModifyLog, "发送事件(%s)错误:%s", eventID, err.Error())
 					} else {
-						logger.Debugf(eventDeviceModifyLog, "发送事件成功:%s,数据为:%+v", eventID.Hex(), sendMap)
+						logger.Debugf(eventDeviceModifyLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
 					}
 
 					hasExecute = true
@@ -492,14 +412,14 @@ eventloop:
 				//对只能执行一次的事件进行失效
 				if validTime == "timeLimit" {
 					if rangeDefine == "once" && hasExecute {
-						logger.Warnln(eventDeviceModifyLog, "事件(%s)为只执行一次的事件", eventID.Hex())
+						logger.Warnln(eventDeviceModifyLog, "事件(%s)为只执行一次的事件", eventID)
 						//修改事件为失效
 						updateMap := bson.M{"settings.invalid": true}
-						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 						var r = make(map[string]interface{})
-						err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
+						err := api.Cli.UpdateEventById(eventID, updateMap, &r)
 						if err != nil {
-							logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+							logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID, err.Error())
 							continue
 						}
 					}
@@ -543,10 +463,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 	//	//return fmt.Errorf("数据消息中department字段不存在或类型错误")
 	//}
 
-	departmentObjectIDList, err := tools.StringListToObjectIdList(tools.InterfaceListToStringList(departmentList))
-	if err != nil {
-		return fmt.Errorf("数据消息中department中的ID转ObjectID失败")
-	}
+	departmentObjectIDList  := tools.InterfaceListToStringList(departmentList)
 
 	modifyType, ok := data["type"].(string)
 	if !ok {
@@ -639,7 +556,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 		},
 	}
 
-	err = api.Cli.FindEventQuery(query, &eventInfoList)
+	err := api.Cli.FindEventQuery(query, &eventInfoList)
 	if err != nil {
 		logger.Errorf(eventDeviceModifyLog, "获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
 		return fmt.Errorf("获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
@@ -751,7 +668,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 				//判断禁用
 				if disable, ok := settings["disable"].(bool); ok {
 					if disable {
-						logger.Warnln(eventDeviceModifyLog, "事件(%s)已经被禁用", eventID.Hex())
+						logger.Warnln(eventDeviceModifyLog, "事件(%s)已经被禁用", eventID)
 						continue
 					}
 				}
@@ -766,7 +683,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 								if startTime, ok := settings["startTime"].(primitive.DateTime); ok {
 									startTimeInt := int64(startTime / 1e3)
 									if tools.GetLocalTimeNow(time.Now()).Unix() < startTimeInt {
-										logger.Debugf(eventDeviceModifyLog, "事件(%s)的定时任务开始时间未到，不执行", eventID.Hex())
+										logger.Debugf(eventDeviceModifyLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
 										continue
 									}
 								}
@@ -774,14 +691,14 @@ func TriggerModelModify(data map[string]interface{}) error {
 								if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
 									endTimeInt := int64(endTime / 1e3)
 									if tools.GetLocalTimeNow(time.Now()).Unix() >= endTimeInt {
-										logger.Debugf(eventDeviceModifyLog, "事件(%s)的定时任务结束时间已到，不执行", eventID.Hex())
+										logger.Debugf(eventDeviceModifyLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
 										//修改事件为失效
 										updateMap := bson.M{"settings.invalid": true}
-										//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+										//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 										var r = make(map[string]interface{})
-										err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
+										err := api.Cli.UpdateEventById(eventID, updateMap, &r)
 										if err != nil {
-											logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+											logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID, err.Error())
 											continue
 										}
 										continue
@@ -824,15 +741,15 @@ func TriggerModelModify(data map[string]interface{}) error {
 							}
 						}
 					default:
-						logger.Errorf(eventDeviceModifyLog, "事件(%s)的事件范围字段值(%s)未匹配到", eventID.Hex(), rangType)
+						logger.Errorf(eventDeviceModifyLog, "事件(%s)的事件范围字段值(%s)未匹配到", eventID, rangType)
 						continue
 					}
 				}
 				if isValid {
-					departmentStringIDList, err := tools.ObjectIdListToStringList(departmentObjectIDList)
+					departmentStringIDList := departmentObjectIDList
 					departmentMList, err := logic.DeptLogic.FindLocalCacheList(departmentStringIDList)
 					if err != nil {
-						logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
+						logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID, departmentStringIDList)
 						departmentMList = make([]map[string]interface{}, 0)
 					}
 
@@ -840,7 +757,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 
 					modelEle, err := logic.ModelLogic.FindLocalMapCache(modelID)
 					if err != nil {
-						logger.Errorf(eventDeviceModifyLog, "事件(%s)的模型缓存(%+v)查询失败", eventID.Hex(), departmentStringIDList)
+						logger.Errorf(eventDeviceModifyLog, "事件(%s)的模型缓存(%+v)查询失败", eventID, departmentStringIDList)
 						continue
 					}
 
@@ -867,11 +784,11 @@ func TriggerModelModify(data map[string]interface{}) error {
 					if err != nil {
 						continue
 					}
-					err = imqtt.Send(fmt.Sprintf("event/%s", eventID.Hex()), b)
+					err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
 					if err != nil {
-						logger.Warnf(eventDeviceModifyLog, "发送事件(%s)错误:%s", eventID.Hex(), err.Error())
+						logger.Warnf(eventDeviceModifyLog, "发送事件(%s)错误:%s", eventID, err.Error())
 					} else {
-						logger.Debugf(eventDeviceModifyLog, "发送事件成功:%s,数据为:%+v", eventID.Hex(), sendMap)
+						logger.Debugf(eventDeviceModifyLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
 					}
 
 					hasExecute = true
@@ -880,14 +797,14 @@ func TriggerModelModify(data map[string]interface{}) error {
 				//对只能执行一次的事件进行失效
 				if validTime == "timeLimit" {
 					if rangeDefine == "once" && hasExecute {
-						logger.Warnln(eventDeviceModifyLog, "事件(%s)为只执行一次的事件", eventID.Hex())
+						logger.Warnln(eventDeviceModifyLog, "事件(%s)为只执行一次的事件", eventID)
 						//修改事件为失效
 						updateMap := bson.M{"settings.invalid": true}
-						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 						var r = make(map[string]interface{})
-						err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
+						err := api.Cli.UpdateEventById(eventID, updateMap, &r)
 						if err != nil {
-							logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+							logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID, err.Error())
 							continue
 						}
 					}

@@ -21,13 +21,13 @@ func TriggerWarningRules(data cmodel.WarningMessage, actionType string) error {
 	//logger.Debugf(eventAlarmLog, "开始执行计算事件触发器")
 	//logger.Debugf(eventAlarmLog, "传入参数为:%+v", data)
 
-	nodeID := data.NodeID.Hex()
+	nodeID := data.NodeID
 	if nodeID == "" {
 		logger.Errorf(eventAlarmLog, fmt.Sprintf("数据消息中nodeId字段不存在或类型错误"))
 		return fmt.Errorf("数据消息中nodeId字段不存在或类型错误")
 	}
 
-	modelID := data.ModelID.Hex()
+	modelID := data.ModelID
 	if modelID == "" {
 		logger.Errorf(eventAlarmLog, fmt.Sprintf("数据消息中modelId字段不存在或类型错误"))
 		return fmt.Errorf("数据消息中modelId字段不存在或类型错误")
@@ -199,10 +199,7 @@ eventloop:
 					}
 				case "department":
 					hasValidWarn = false
-					deptIDInDataList, err := tools.ObjectIdListToStringList(data.Department)
-					if err != nil {
-						return fmt.Errorf("当前资产(%s)所属部门ID数组转ObjectID数组失败:%s", nodeID, err.Error())
-					}
+					deptIDInDataList  := data.Department
 					if departmentList, ok := settings["department"].([]interface{}); ok {
 					deptLoop:
 						for _, dept := range departmentList {
@@ -413,7 +410,7 @@ func TriggerWarningDisableModelRules(data cmodel.WarningMessage, actionType stri
 	//logger.Debugf(eventAlarmLog, "开始执行计算事件触发器")
 	//logger.Debugf(eventAlarmLog, "传入参数为:%+v", data)
 
-	modelID := data.ModelID.Hex()
+	modelID := data.ModelID
 	if modelID == "" {
 		logger.Errorf(eventAlarmLog, fmt.Sprintf("数据消息中modelId字段不存在或类型错误"))
 		return fmt.Errorf("数据消息中modelId字段不存在或类型错误")
@@ -783,13 +780,13 @@ func TriggerWarningDisableNodeRules(data cmodel.WarningMessage, actionType strin
 	//logger.Debugf(eventAlarmLog, "开始执行计算事件触发器")
 	//logger.Debugf(eventAlarmLog, "传入参数为:%+v", data)
 
-	nodeID := data.NodeID.Hex()
+	nodeID := data.NodeID
 	if nodeID == "" {
 		logger.Errorf(eventAlarmLog, fmt.Sprintf("数据消息中nodeId字段不存在或类型错误"))
 		return fmt.Errorf("数据消息中nodeId字段不存在或类型错误")
 	}
 
-	modelID := data.ModelID.Hex()
+	modelID := data.ModelID
 	if modelID == "" {
 		logger.Errorf(eventAlarmLog, fmt.Sprintf("数据消息中modelId字段不存在或类型错误"))
 		return fmt.Errorf("数据消息中modelId字段不存在或类型错误")
@@ -961,11 +958,7 @@ eventloop:
 					}
 				case "department":
 					hasValidWarn = false
-					deptIDInDataList, err := tools.ObjectIdListToStringList(data.Department)
-					if err != nil {
-						logger.Debugf(eventAlarmLog, "当前资产(%s)所属部门ID数组转ObjectID数组失败:%s", nodeID, err.Error())
-						continue
-					}
+					deptIDInDataList := data.Department
 					if departmentList, ok := settings["department"].([]interface{}); ok {
 					deptLoop:
 						for _, dept := range departmentList {

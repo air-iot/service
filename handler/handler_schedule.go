@@ -291,12 +291,12 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 				}
 				if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
 					if tools.GetLocalTimeNow(time.Now()).Unix() >= int64(endTime)/1000 {
-						logger.Debugf(eventScheduleLog, "事件(%s)的定时任务结束事件已到，不再执行", eventID.Hex())
+						logger.Debugf(eventScheduleLog, "事件(%s)的定时任务结束事件已到，不再执行", eventID)
 						//修改事件为失效
 						updateMap := bson.M{"settings.invalid": true}
-						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 						var r = make(map[string]interface{})
-						err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
+						err := api.Cli.UpdateEventById(eventID, updateMap, &r)
 						if err != nil {
 							logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 							continue
@@ -344,13 +344,13 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 						}
 						if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
 							if tools.GetLocalTimeNow(time.Now()).Unix() >= int64(endTime)/1000 {
-								logger.Debugf(eventScheduleLog, "事件(%s)的定时任务结束事件已到，不再执行", eventID.Hex())
+								logger.Debugf(eventScheduleLog, "事件(%s)的定时任务结束事件已到，不再执行", eventID)
 
 								//修改事件为失效
 								updateMap := bson.M{"settings.invalid": true}
-								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 								var r = make(map[string]interface{})
-								err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
+								err := api.Cli.UpdateEventById(eventID, updateMap, &r)
 								if err != nil {
 									logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 									return
@@ -376,30 +376,30 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 					//if err != nil {
 					//	return
 					//}
-					//imqtt.SendMsg(emqttConn, "event"+"/"+eventID.Hex(), string(b))
+					//imqtt.SendMsg(emqttConn, "event"+"/"+eventID, string(b))
 					b, err := json.Marshal(sendMap)
 					if err != nil {
 						logger.Debugf(eventScheduleLog, "事件(%s)的发送map序列化失败:%s", err.Error())
 						return
 					}
-					err = imqtt.Send(fmt.Sprintf("event/%s", eventIDCron.Hex()), b)
+					err = imqtt.Send(fmt.Sprintf("event/%s", eventIDCron), b)
 					if err != nil {
-						logger.Warnf(eventScheduleLog, "发送事件(%s)错误:%s", eventIDCron.Hex(), err.Error())
-						//fmt.Println(eventScheduleLog, "发送事件(%s)错误:%s", eventIDCron.Hex(), err.Error())
+						logger.Warnf(eventScheduleLog, "发送事件(%s)错误:%s", eventIDCron, err.Error())
+						//fmt.Println(eventScheduleLog, "发送事件(%s)错误:%s", eventIDCron, err.Error())
 					} else {
-						logger.Debugf(eventScheduleLog, "发送事件成功:%s,数据为:%+v", eventIDCron.Hex(), sendMap)
-						//fmt.Println(eventScheduleLog, "发送事件成功:%s,数据为:%+v", eventIDCron.Hex(), sendMap)
+						logger.Debugf(eventScheduleLog, "发送事件成功:%s,数据为:%+v", eventIDCron, sendMap)
+						//fmt.Println(eventScheduleLog, "发送事件成功:%s,数据为:%+v", eventIDCron, sendMap)
 					}
 
 					if isOnce {
 						logger.Warnln(eventAlarmLog, "事件(%s)为只执行一次的事件", eventID)
 						//修改事件为失效
 						updateMap := bson.M{"settings.invalid": true}
-						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 						var r = make(map[string]interface{})
-						err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
+						err := api.Cli.UpdateEventById(eventID, updateMap, &r)
 						if err != nil {
-							logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+							logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 							return
 						}
 					}

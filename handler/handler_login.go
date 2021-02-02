@@ -12,7 +12,6 @@ import (
 	imqtt "github.com/air-iot/service/mq/mqtt"
 	"github.com/air-iot/service/tools"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var eventLoginLog = map[string]interface{}{"name": "用户登录事件触发"}
@@ -42,8 +41,6 @@ func TriggerLogin(data map[string]interface{}) error {
 
 	departmentListInSettings := make([]string, 0)
 	roleListInSettings := make([]string, 0)
-	departmentStringListInSettings := make([]string, 0)
-	roleStringListInSettings := make([]string, 0)
 	//logger.Debugf(eventLoginLog, "开始遍历事件列表")
 	for _, eventInfo := range *eventInfoList {
 		logger.Debugf(eventLoginLog, "事件信息为:%+v", eventInfo)
@@ -158,22 +155,12 @@ func TriggerLogin(data map[string]interface{}) error {
 				roleListInSettings = make([]string, 0)
 			}
 			if len(departmentListInSettings) != 0 && len(roleListInSettings) != 0 {
-				departmentStringListInSettings, err = tools.ObjectIdListToStringList(departmentListInSettings)
-				if err != nil {
-					logger.Warnln(eventLoginLog, "部门ObjectID转ID失败:%s", err.Error())
-					continue
-				}
-				roleStringListInSettings, err = tools.ObjectIdListToStringList(roleListInSettings)
-				if err != nil {
-					logger.Warnln(eventLoginLog, "角色ObjectID转ID失败:%s", err.Error())
-					continue
-				}
-				userInfoListByDept, err := clogic.UserLogic.FindLocalDeptUserCacheList(departmentStringListInSettings)
+				userInfoListByDept, err := clogic.UserLogic.FindLocalDeptUserCacheList(departmentListInSettings)
 				if err != nil {
 					logger.Warnln(eventLoginLog, "部门ID获取用户缓存失败:%s", err.Error())
 					continue
 				}
-				userInfoListByRole, err := clogic.UserLogic.FindLocalRoleUserCacheList(roleStringListInSettings)
+				userInfoListByRole, err := clogic.UserLogic.FindLocalRoleUserCacheList(roleListInSettings)
 				if err != nil {
 					logger.Warnln(eventLoginLog, "角色ID获取用户缓存失败:%s", err.Error())
 					continue
@@ -192,12 +179,7 @@ func TriggerLogin(data map[string]interface{}) error {
 				}
 
 			} else if len(departmentListInSettings) != 0 && len(roleListInSettings) == 0 {
-				departmentStringListInSettings, err = tools.ObjectIdListToStringList(departmentListInSettings)
-				if err != nil {
-					logger.Warnln(eventLoginLog, "部门ObjectID转ID失败:%s", err.Error())
-					continue
-				}
-				userInfoListByDept, err := clogic.UserLogic.FindLocalDeptUserCacheList(departmentStringListInSettings)
+				userInfoListByDept, err := clogic.UserLogic.FindLocalDeptUserCacheList(departmentListInSettings)
 				if err != nil {
 					logger.Warnln(eventLoginLog, "部门ID获取用户缓存失败:%s", err.Error())
 					continue
@@ -208,12 +190,7 @@ func TriggerLogin(data map[string]interface{}) error {
 				}
 
 			} else if len(departmentListInSettings) == 0 && len(roleListInSettings) != 0 {
-				roleStringListInSettings, err = tools.ObjectIdListToStringList(roleListInSettings)
-				if err != nil {
-					logger.Warnln(eventLoginLog, "角色ObjectID转ID失败:%s", err.Error())
-					continue
-				}
-				userInfoListByRole, err := clogic.UserLogic.FindLocalRoleUserCacheList(roleStringListInSettings)
+				userInfoListByRole, err := clogic.UserLogic.FindLocalRoleUserCacheList(roleListInSettings)
 				if err != nil {
 					logger.Warnln(eventLoginLog, "角色ID获取用户缓存失败:%s", err.Error())
 					continue
@@ -231,14 +208,9 @@ func TriggerLogin(data map[string]interface{}) error {
 				logger.Errorf(eventLoginLog, "数据信息中用户字段中id字段不存在或类型错误:%s", err.Error())
 				continue
 			}
-			userObjectIDList, ok := settings["users"].([]string)
+			userIDList, ok = settings["users"].([]string)
 			if !ok {
 				logger.Errorf(eventLoginLog, "数据信息中用户ID数组字段不存在或类型错误")
-				continue
-			}
-			userIDList, err = tools.ObjectIdListToStringList(userObjectIDList)
-			if err != nil {
-				logger.Errorf(eventLoginLog, fmt.Sprintf("当前用户登录触发器(%s)的用户ID转字符串数组失败:%s", eventID, err.Error()))
 				continue
 			}
 		}
