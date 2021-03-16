@@ -174,8 +174,8 @@ func ConvertPrimitiveMapToID(data *bson.M, key string, value primitive.M) (inter
 			}
 		case string:
 			if k == "_id"{
-				delete(*data, k)
-				(*data)["id"] = val
+				delete(value, k)
+				value["id"] = val
 			}
 		default:
 			value[k] = val
