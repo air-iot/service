@@ -107,16 +107,22 @@ func MergeDataMap(key, value string, dataMap *map[string][]string) {
 	}
 }
 
-func UnmarshalListAndMap(data []byte,) (*[]map[string]interface{},error){
-	dataMapList := make([]map[string]interface{},0)
-	err := json.Unmarshal(data, &dataMapList)
-	if err != nil {
+func UnmarshalListAndMap(data []byte, eventType string) (*[]map[string]interface{}, error) {
+	dataMapList := make([]map[string]interface{}, 0)
+	switch eventType {
+	case "数据事件":
+		err := json.Unmarshal(data, &dataMapList)
+		if err != nil {
+			return nil, fmt.Errorf("数据事件数据解序列化失败:%s", err.Error())
+		}
+	default:
 		dataMap := map[string]interface{}{}
 		err := json.Unmarshal(data, &dataMap)
 		if err != nil {
-			return 	nil,fmt.Errorf("接收的数据解序列化失败:%s", err.Error())
+			return nil, fmt.Errorf("数据解序列化失败:%s", err.Error())
 		}
-		dataMapList = append(dataMapList,dataMap)
+		dataMapList = append(dataMapList, dataMap)
 	}
-	return &dataMapList,nil
+
+	return &dataMapList, nil
 }

@@ -85,6 +85,7 @@ func Init() {
 	NodeLogic.nodeMapCache = &sync.Map{}
 	NodeLogic.nodeCacheWithModelID = &sync.Map{}
 	NodeLogic.nodeUidMapCache = &sync.Map{}
+	NodeLogic.nodeMapCacheByUid = &sync.Map{}
 	ModelLogic.modelCache = &sync.Map{}
 	ModelLogic.modelNapCache = &sync.Map{}
 	TagLogic.tagCache = &sync.Map{}
@@ -229,6 +230,9 @@ func cache() error {
 		for _, n := range resultMap.Node {
 			if id, ok := n["id"]; ok {
 				NodeLogic.nodeMapCache.Store(id, n)
+			}
+			if uid, ok := n["uid"]; ok {
+				NodeLogic.nodeMapCacheByUid.Store(uid, n)
 			}
 		}
 		//TagLogic.Mutex.Lock()
