@@ -161,7 +161,7 @@ func TriggerComputed(data cmodel.DataMessage) error {
 		//判断事件是否已经触发
 		hasExecute := false
 
-		if computeType, ok := settings["dataType"].(string); ok {
+		if computeType, ok := settings["datatype"].(string); ok {
 			switch computeType {
 			case "model":
 				if tags, ok := settings["tags"].([]interface{}); ok {
@@ -290,13 +290,49 @@ func TriggerComputed(data cmodel.DataMessage) error {
 										}
 									}
 
+									//获取当前模型对应资产ID的资产
+									nodeInfoMap, err := clogic.NodeLogic.FindLocalMapCacheByUid(uidInMap)
+									if err != nil {
+										logger.Errorf(eventComputeLogicLog, fmt.Sprintf("获取当前模型(%s)的资产(%s)失败:%s", modelID, uidInMap, err.Error()))
+										continue
+									}
+
+									modelInfoMap, err := clogic.ModelLogic.FindLocalMapCache(modelID)
+									if err != nil {
+										logger.Errorf(eventComputeLogicLog, fmt.Sprintf("获取当前模型(%s)详情失败:%s", modelID, err.Error()))
+										continue
+									}
+
+									//生成发送消息
+									departmentStringIDList := make([]string, 0)
+									//var departmentObjectList primitive.A
+									if departmentIDList, ok := nodeInfoMap["department"].([]interface{}); ok {
+										departmentStringIDList = tools.InterfaceListToStringList(departmentIDList)
+									} else {
+										logger.Warnf(eventComputeLogicLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
+									}
+
+									deptInfoList := make([]map[string]interface{}, 0)
+									if len(departmentStringIDList) != 0 {
+										deptInfoList, err = clogic.DeptLogic.FindLocalCacheList(departmentStringIDList)
+										if err != nil {
+											logger.Warnf(eventComputeLogicLog, fmt.Sprintf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error()))
+											deptInfoList = make([]map[string]interface{}, 0)
+										}
+									}
+
 									dataMap := map[string]interface{}{
 										"time": nowTimeString,
 										//"status": "未处理",
-										"modelId": nodeUIDModelMap[uidInMap],
-										"nodeId":  nodeUIDNodeMap[uidInMap],
-										"uid":     uidInMap,
-										"fields":  computeFieldsMap,
+										"modelId":        nodeUIDModelMap[uidInMap],
+										"nodeId":         nodeUIDNodeMap[uidInMap],
+										"uid":            uidInMap,
+										"fields":         computeFieldsMap,
+										"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
+										"modelName":      tools.FormatKeyInfo(modelInfoMap, "name"),
+										"nodeName":       tools.FormatKeyInfo(nodeInfoMap, "name"),
+										"nodeUid":        tools.FormatKeyInfo(nodeInfoMap, "uid"),
+										"tagInfo":        tools.FormatDataInfoList([]map[string]interface{}{computeFieldsMap}),
 									}
 									//for k, v := range computeFieldsMap {
 									//	dataMap[k] = v
@@ -462,13 +498,55 @@ func TriggerComputed(data cmodel.DataMessage) error {
 									}
 								}
 
+								//获取当前模型对应资产ID的资产
+								nodeInfoMap, err := clogic.NodeLogic.FindLocalMapCacheByUid(uidInMap)
+								if err != nil {
+									logger.Errorf(eventComputeLogicLog, fmt.Sprintf("获取当前模型(%s)的资产(%s)失败:%s", modelID, uidInMap, err.Error()))
+									continue
+								}
+
+								modelIDInMap, ok := nodeInfoMap["model"].(string)
+								if !ok {
+									logger.Errorf(eventComputeLogicLog, fmt.Sprintf("资产(%s)的model字段类型错误或不存在", uidInMap))
+									continue
+								}
+
+								modelInfoMap, err := clogic.ModelLogic.FindLocalMapCache(modelIDInMap)
+								if err != nil {
+									logger.Errorf(eventComputeLogicLog, fmt.Sprintf("获取当前模型(%s)详情失败:%s", modelIDInMap, err.Error()))
+									continue
+								}
+
+								//生成发送消息
+								departmentStringIDList := make([]string, 0)
+								//var departmentObjectList primitive.A
+								if departmentIDList, ok := nodeInfoMap["department"].([]interface{}); ok {
+									departmentStringIDList = tools.InterfaceListToStringList(departmentIDList)
+								} else {
+									logger.Warnf(eventComputeLogicLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
+								}
+
+								deptInfoList := make([]map[string]interface{}, 0)
+								if len(departmentStringIDList) != 0 {
+									deptInfoList, err = clogic.DeptLogic.FindLocalCacheList(departmentStringIDList)
+									if err != nil {
+										logger.Warnf(eventComputeLogicLog, fmt.Sprintf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error()))
+										deptInfoList = make([]map[string]interface{}, 0)
+									}
+								}
+
 								dataMap := map[string]interface{}{
 									"time": nowTimeString,
 									//"status": "未处理",
-									"modelId": nodeUIDModelMap[uidInMap],
-									"nodeId":  nodeUIDNodeMap[uidInMap],
-									"uid":     uidInMap,
-									"fields":  computeFieldsMap,
+									"modelId":        nodeUIDModelMap[uidInMap],
+									"nodeId":         nodeUIDNodeMap[uidInMap],
+									"uid":            uidInMap,
+									"fields":         computeFieldsMap,
+									"departmentName": tools.FormatKeyInfoListMap(deptInfoList, "name"),
+									"modelName":      tools.FormatKeyInfo(modelInfoMap, "name"),
+									"nodeName":       tools.FormatKeyInfo(nodeInfoMap, "name"),
+									"nodeUid":        tools.FormatKeyInfo(nodeInfoMap, "uid"),
+									"tagInfo":        tools.FormatDataInfoList([]map[string]interface{}{computeFieldsMap}),
 								}
 								//for k, v := range computeFieldsMap {
 								//	dataMap[k] = v
