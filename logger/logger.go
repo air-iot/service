@@ -1,127 +1,184 @@
 package logger
 
 import (
+	"context"
+	"fmt"
+	"io"
+
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
-	"log"
-	"os"
 )
 
+// Define key
 const (
-	MONGOPOOLGETERROR  = "从MongoDB连接池中获取连接失败: %s"
-	REDISPOOLGETERROR  = "从Redis连接池中获取连接失败: %s"
-	EMQTTPOOLGETERROR  = "从Mqtt连接池中获取连接失败: %s"
-	INFLUXPOOLGETERROR = "从InfluxDB连接池中获取连接失败: %s"
-
-	MONGOPOOLRELEASEERROR  = "释放MongoDB连接失败: %s"
-	REDISPOOLRELEASEERROR  = "释放Redis连接失败: %s"
-	EMQTTPOOLRELEASEERROR  = "释放Mqtt连接失败: %s"
-	INFLUXPOOLRELEASEERROR = "释放InfluxDB连接失败: %s"
-
-	QUERYERROR      = "根据过滤器查询数据失败: %s"
-	QUERYBYIDERROR  = "根据id查询数据失败: %s"
-	SAVEONEERROR    = "保存一条数据到数据库失败: %s"
-	DELETEBYIDERROR = "根据id从数据库删除一条数据失败: %s"
-	UPDATEBYIDERROR = "根据id更新数据失败: %s"
-
-	INPUTUNMARSHALERROR   = "传入参数解序列化错误: %s"
-	USERCACHEUPDATEERROR  = "更新用户权限缓存失败: %s"
-	UPDATETAGMAPPINGERROR = "更新动态属性反向映射Map失败: %s"
+	TraceIDKey = "trace_id"
+	UserIDKey  = "user_id"
+	TagKey     = "tag"
+	VersionKey = "version"
+	StackKey   = "stack"
 )
 
-func Init() {
-	var tmpLogLevel = viper.GetString("log.level")
-	var file = viper.GetString("log.file")
-	l, err := logrus.ParseLevel(tmpLogLevel)
-	if err != nil {
-		l = logrus.ErrorLevel
+var (
+	version string
+)
+
+// Logger Logrus
+type Logger = logrus.Logger
+
+// Entry Logrus entry
+type Entry = logrus.Entry
+
+// Hook 定义日志钩子别名
+type Hook = logrus.Hook
+
+// StandardLogger 获取标准日志
+func StandardLogger() *Logger {
+	return logrus.StandardLogger()
+}
+
+// SetLevel 设定日志级别
+func SetLevel(level int) {
+	logrus.SetLevel(logrus.Level(level))
+}
+
+// SetFormatter 设定日志输出格式
+func SetFormatter(format string) {
+	switch format {
+	case "json":
+		logrus.SetFormatter(new(logrus.JSONFormatter))
+	default:
+		logrus.SetFormatter(new(logrus.TextFormatter))
 	}
-	// logrus.SetFormatter(&logrus.JSONFormatter{TimestampFormat: "2006-01-02 15:04:05"})
-	if file != "" {
-		err := os.MkdirAll("logs", 0666)
-		if err != nil {
-			log.Fatalf("log dir: %s \n", err.Error())
+}
+
+// SetOutput 设定日志输出
+func SetOutput(out io.Writer) {
+	logrus.SetOutput(out)
+}
+
+// SetVersion 设定版本
+func SetVersion(v string) {
+	version = v
+}
+
+// AddHook 增加日志钩子
+func AddHook(hook Hook) {
+	logrus.AddHook(hook)
+}
+
+type (
+	traceIDKey struct{}
+	userIDKey  struct{}
+	tagKey     struct{}
+	stackKey   struct{}
+)
+
+// NewTraceIDContext 创建跟踪ID上下文
+func NewTraceIDContext(ctx context.Context, traceID string) context.Context {
+	return context.WithValue(ctx, traceIDKey{}, traceID)
+}
+
+// FromTraceIDContext 从上下文中获取跟踪ID
+func FromTraceIDContext(ctx context.Context) string {
+	v := ctx.Value(traceIDKey{})
+	if v != nil {
+		if s, ok := v.(string); ok {
+			return s
 		}
-		f, err := os.OpenFile("logs/"+file, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
-		if err != nil {
-			log.Fatalf("log open: %s \n", err.Error())
+	}
+	return ""
+}
+
+// NewUserIDContext 创建用户ID上下文
+func NewUserIDContext(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, userIDKey{}, userID)
+}
+
+// FromUserIDContext 从上下文中获取用户ID
+func FromUserIDContext(ctx context.Context) string {
+	v := ctx.Value(userIDKey{})
+	if v != nil {
+		if s, ok := v.(string); ok {
+			return s
 		}
-		logrus.SetOutput(f)
-	} else {
-		logrus.SetOutput(os.Stdout)
 	}
-	logrus.SetLevel(l)
-
+	return ""
 }
 
-// Debugln 调试输出
-func Debugln(fields map[string]interface{}, args ...interface{}) {
-	if fields == nil {
-		logrus.Debugln(args...)
-	} else {
-		logrus.WithFields(fields).Debugln(args...)
-	}
+// NewTagContext 创建Tag上下文
+func NewTagContext(ctx context.Context, tag string) context.Context {
+	return context.WithValue(ctx, tagKey{}, tag)
 }
 
-// Debugf 调试输出
-func Debugf(fields map[string]interface{}, format string, args ...interface{}) {
-	if fields == nil {
-		logrus.Debugf(format, args...)
-	} else {
-		logrus.WithFields(fields).Debugf(format, args...)
+// FromTagContext 从上下文中获取Tag
+func FromTagContext(ctx context.Context) string {
+	v := ctx.Value(tagKey{})
+	if v != nil {
+		if s, ok := v.(string); ok {
+			return s
+		}
 	}
+	return ""
 }
 
-// Infoln 信息输出
-func Infoln(fields map[string]interface{}, args ...interface{}) {
-	if fields == nil {
-		logrus.Infoln(args...)
-	} else {
-		logrus.WithFields(fields).Infoln(args...)
-	}
+// NewStackContext 创建Stack上下文
+func NewStackContext(ctx context.Context, stack error) context.Context {
+	return context.WithValue(ctx, stackKey{}, stack)
 }
 
-// Infof 信息输出
-func Infof(fields map[string]interface{}, format string, args ...interface{}) {
-	if fields == nil {
-		logrus.Infof(format, args...)
-	} else {
-		logrus.WithFields(fields).Infof(format, args...)
+// FromStackContext 从上下文中获取Stack
+func FromStackContext(ctx context.Context) error {
+	v := ctx.Value(stackKey{})
+	if v != nil {
+		if s, ok := v.(error); ok {
+			return s
+		}
 	}
+	return nil
 }
 
-// Warnln 告警输出
-func Warnln(fields map[string]interface{}, args ...interface{}) {
-	if fields == nil {
-		logrus.Warnln(args...)
-	} else {
-		logrus.WithFields(fields).Warnln(args...)
+// WithContext Use context create entry
+func WithContext(ctx context.Context) *Entry {
+	if ctx == nil {
+		ctx = context.Background()
 	}
+
+	fields := map[string]interface{}{
+		VersionKey: version,
+	}
+
+	if v := FromTraceIDContext(ctx); v != "" {
+		fields[TraceIDKey] = v
+	}
+
+	if v := FromUserIDContext(ctx); v != "" {
+		fields[UserIDKey] = v
+	}
+
+	if v := FromTagContext(ctx); v != "" {
+		fields[TagKey] = v
+	}
+
+	if v := FromStackContext(ctx); v != nil {
+		fields[StackKey] = fmt.Sprintf("%+v", v)
+	}
+
+	return logrus.WithContext(ctx).WithFields(fields)
 }
 
-// Warnf 告警输出
-func Warnf(fields map[string]interface{}, format string, args ...interface{}) {
-	if fields == nil {
-		logrus.Warnf(format, args...)
-	} else {
-		logrus.WithFields(fields).Warnf(format, args...)
-	}
-}
-
-// Errorln 错误输出
-func Errorln(fields map[string]interface{}, args ...interface{}) {
-	if fields == nil {
-		logrus.Errorln(args...)
-	} else {
-		logrus.WithFields(fields).Errorln(args...)
-	}
-}
-
-// Errorf 错误输出
-func Errorf(fields map[string]interface{}, format string, args ...interface{}) {
-	if fields == nil {
-		logrus.Errorf(format, args...)
-	} else {
-		logrus.WithFields(fields).Errorf(format, args...)
-	}
-}
+// Define logrus alias
+var (
+	Tracef  = logrus.Tracef
+	Debugf  = logrus.Debugf
+	Debugln = logrus.Debugln
+	Infof   = logrus.Infof
+	Infoln  = logrus.Infoln
+	Warnf   = logrus.Warnf
+	Warnln  = logrus.Warnln
+	Errorf  = logrus.Errorf
+	Errorln = logrus.Errorln
+	Fatalf  = logrus.Fatalf
+	Fatalln = logrus.Fatalln
+	Panicf  = logrus.Panicf
+	Panic   = logrus.Panic
+	Println = logrus.Println
+)
