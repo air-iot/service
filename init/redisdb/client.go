@@ -13,6 +13,12 @@ import (
 // InitRedisDB 初始化redis存储
 func InitRedisDB() (*redis.Client, func(), error) {
 	cfg := config.C.Redis
+	return NewRedisDB(cfg)
+}
+
+// NewRedisDB 创建redis存储
+func NewRedisDB(cfg config.Redis) (*redis.Client, func(), error) {
+
 	cli := redis.NewClient(&redis.Options{
 		Addr:         cfg.Addr,
 		Password:     cfg.Password, // no password set

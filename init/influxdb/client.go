@@ -14,6 +14,11 @@ import (
 // InitInfluxDB 初始化influx存储
 func InitInfluxDB() (client.Client, func(), error) {
 	cfg := config.C.Influx
+	return NewInfluxDB(cfg)
+}
+
+// NewInfluxDB 创建influx存储
+func NewInfluxDB(cfg config.Influx) (client.Client, func(), error) {
 	var cli client.Client
 	var err error
 	switch strings.ToUpper(cfg.Protocol) {

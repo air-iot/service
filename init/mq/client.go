@@ -14,10 +14,14 @@ import (
 // InitMQ 初始化消息队列
 func InitMQ() (MQ, func(), error) {
 	cfg := config.C.MQ
+	return NewMQ(cfg, config.C.MQTT, config.C.RabbitMQ)
 
+}
+
+// NewMQ 创建消息队列
+func NewMQ(cfg config.MQ, mqttCfg config.MQTT, rabbitCfg config.RabbitMQ) (MQ, func(), error) {
 	switch strings.ToUpper(cfg.MQType) {
 	case "RABBIT":
-		rabbitCfg := config.C.RabbitMQ
 		conn, err := amqp.Dial(rabbitCfg.DNS())
 		if err != nil {
 			return nil, nil, err
@@ -31,7 +35,6 @@ func InitMQ() (MQ, func(), error) {
 		rabbit := NewRabbit(conn, rabbitCfg.Exchange, rabbitCfg.Queue)
 		return rabbit, cleanFunc, nil
 	default:
-		mqttCfg := config.C.MQTT
 		opts := MQTT.NewClientOptions()
 		opts.AddBroker(mqttCfg.DNS())
 		opts.SetAutoReconnect(true)
@@ -52,12 +55,10 @@ func InitMQ() (MQ, func(), error) {
 		if token := client.Connect(); token.Wait() && token.Error() != nil {
 			return nil, nil, token.Error()
 		}
-
 		cleanFunc := func() {
 			client.Disconnect(250)
 		}
 		mqtt := NewMQTT(client)
 		return mqtt, cleanFunc, nil
 	}
-
 }

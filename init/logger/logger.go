@@ -10,8 +10,12 @@ import (
 
 // InitLogger 初始化日志模块
 func InitLogger() (func(), error) {
-
 	c := config.C.Log
+	return NewLogger(c)
+}
+
+// NewLogger 创建日志模块
+func NewLogger(c config.Log) (func(), error) {
 	logger.SetLevel(c.Level)
 	logger.SetFormatter(c.Format)
 

@@ -14,7 +14,11 @@ import (
 // InitMongoDB 初始化mongo存储
 func InitMongoDB() (*mongo.Client, func(), error) {
 	cfg := config.C.Mongo
+	return NewMongoDB(cfg)
+}
 
+// NewMongoDB 创建mongo存储
+func NewMongoDB(cfg config.Mongo) (*mongo.Client, func(), error) {
 	opts := options.Client().
 		ApplyURI(cfg.ApplyURI()).
 		SetMaxPoolSize(cfg.PoolSize).
