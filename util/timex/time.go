@@ -1,4 +1,4 @@
-package xtime
+package timex
 
 import (
 	"strconv"
