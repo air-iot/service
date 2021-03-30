@@ -1557,3 +1557,50 @@ func UpdateByID(ctx context.Context, col *mongo.Collection, id string, model bso
 func ReplaceByID(ctx context.Context, col *mongo.Collection, id string, model bson.M) (*mongo.UpdateResult, error) {
 	return col.ReplaceOne(ctx, bson.M{"_id": id}, bson.D{bson.E{Key: "$set", Value: model}})
 }
+
+// DeleteByID 根据ID删除数据
+// id:主键_id
+func DeleteByID(ctx context.Context, col *mongo.Collection, id string) (*mongo.DeleteResult, error) {
+	return col.DeleteOne(ctx, bson.M{"_id": id})
+}
+
+// DeleteOne 根据条件删除单条数据
+// condition:删除条件
+func DeleteOne(ctx context.Context, col *mongo.Collection, condition *bson.M) (*mongo.DeleteResult, error) {
+	return col.DeleteOne(ctx, *condition)
+}
+
+// DeleteMany 根据条件进行多条数据删除
+// condition:删除条件
+func DeleteMany(ctx context.Context, col *mongo.Collection, condition *bson.M) (*mongo.DeleteResult, error) {
+	return col.DeleteMany(ctx, *condition)
+}
+
+// SaveOneInterface 保存数
+// model:数据
+func SaveOneInterface(ctx context.Context, col *mongo.Collection, model interface{}) (*mongo.InsertOneResult, error) {
+	return col.InsertOne(ctx, model)
+}
+
+// SaveMany 批量保存数据
+// models:数据
+func SaveMany(ctx context.Context, col *mongo.Collection, models []bson.M) (*mongo.InsertManyResult, error) {
+	rList := make([]interface{}, 0)
+	for _, model := range models {
+		if _, ok := model["_id"]; !ok {
+			model["_id"] = primitive.NewObjectID().Hex()
+		}
+		rList = append(rList, model)
+	}
+	return col.InsertMany(ctx, rList)
+}
+
+// UpdateAll 全部数据更新
+func UpdateAll(ctx context.Context, col *mongo.Collection, model *bson.M) (*mongo.UpdateResult, error) {
+	return col.UpdateMany(ctx, bson.M{}, bson.D{bson.E{Key: "$set", Value: model}})
+}
+
+// UpdateManyByIDList 根据id数组进行多条数据更新
+func UpdateManyByIDList(ctx *context.Context, col *mongo.Collection, id []string, model *bson.M) (*mongo.UpdateResult, error) {
+	return col.UpdateMany(*ctx, bson.M{"_id": bson.M{"$in": id}}, bson.D{bson.E{Key: "$set", Value: model}})
+}
