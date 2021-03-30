@@ -1550,3 +1550,10 @@ func UpdateMany(ctx context.Context, col *mongo.Collection, conditions, model bs
 func UpdateByID(ctx context.Context, col *mongo.Collection, id string, model bson.M) (*mongo.UpdateResult, error) {
 	return col.UpdateOne(ctx, bson.M{"_id": id}, bson.D{bson.E{Key: "$set", Value: model}})
 }
+
+
+// ReplaceByID 根据ID及数据替换
+// id:主键_id model:替换的数据
+func ReplaceByID(ctx context.Context, col *mongo.Collection, id string, model bson.M) (*mongo.UpdateResult, error) {
+	return col.ReplaceOne(ctx, bson.M{"_id": id}, bson.D{bson.E{Key: "$set", Value: model}})
+}
