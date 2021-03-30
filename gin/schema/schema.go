@@ -123,21 +123,7 @@ func NewIDResult(id string) *IDResult {
 	}
 }
 
-// NewUsernameResult 创建响应唯一标识实例
-func NewUsernameResult(username string) *UsernameResult {
-	return &UsernameResult{
-		Username: username,
-	}
-}
-
 // IDResult 响应唯一标识
 type IDResult struct {
 	ID string `json:"id"`
 }
-
-// UsernameResult 响应名称
-type UsernameResult struct {
-	Username string `json:"username"`
-}
-
-type Image struct{}

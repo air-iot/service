@@ -16,11 +16,12 @@ import (
 
 // 定义上下文中的键
 const (
-	prefix           = "operation"
+	prefix           = "service"
 	UserIDKey        = prefix + "/user-id"
 	ReqBodyKey       = prefix + "/req-body"
 	ResBodyKey       = prefix + "/res-body"
 	LoggerReqBodyKey = prefix + "/logger-req-body"
+	XRequestProject  = "x-request-project"
 )
 
 // GetToken 获取用户令牌
@@ -36,6 +37,11 @@ func GetToken(c *gin.Context) string {
 		token = auth[len(prefix):]
 	}
 	return token
+}
+
+// GetProjectName 获取项目名称
+func GetProjectName(c *gin.Context) string {
+	return c.GetHeader(XRequestProject)
 }
 
 // GetUserID 获取用户ID
