@@ -255,6 +255,82 @@ func FormatObjectIDList(doc *bson.M, key string, formatKey string) error {
 	return nil
 }
 
+// FormatIDListMap 格式化对象数组为string数组（转换的字段为string类型）
+func FormatObjectToIDListMap(doc *map[string]interface{}, key string, formatKey string) error {
+	if _, ok := (*doc)[key]; !ok {
+		//(*doc)[key] = make([]string, 0)
+		return nil
+	}
+	if (*doc)[key] == nil {
+		(*doc)[key] = ""
+		return nil
+	}
+	interfaceList, ok := (*doc)[key].([]interface{})
+	if !ok {
+		if stringKey, stringOk := (*doc)[key].(string); stringOk {
+			if stringKey == "" {
+				return nil
+			}
+		}
+		interfaceObject, objOk := (*doc)[key].(interface{})
+		if !objOk {
+			return fmt.Errorf("%s的类型不是interface{}或[]interface{}", key)
+		} else {
+			if emptyObject, ok := interfaceObject.(map[string]interface{}); ok {
+				flag := false
+				for range emptyObject {
+					flag = true
+				}
+				if !flag {
+					return nil
+				}
+			}
+			if _, ok := interfaceObject.([]primitive.ObjectID); ok {
+				(*doc)[key] = interfaceObject
+				return nil
+			}
+			stringID := ""
+			if ele, ok := interfaceObject.(primitive.ObjectID); ok {
+				stringID = ele.Hex()
+			} else if ele, ok := interfaceObject.(string); ok {
+				stringID = ele
+			} else if _, ok := interfaceObject.(map[string]interface{})[formatKey]; !ok {
+				return fmt.Errorf("%s需要格式化的Key:%s，不存在", key, formatKey)
+			} else if ele, ok := interfaceObject.(map[string]interface{})[formatKey].(string); ok {
+				stringID = ele
+			} else if ele, ok := interfaceObject.(map[string]interface{})[formatKey].(primitive.ObjectID); ok {
+				stringID = ele.Hex()
+			} else {
+				return fmt.Errorf("%s需要格式化的Key:%s，数值格式错误", key, formatKey)
+			}
+			(*doc)[key] = stringID
+		}
+		//return fmt.Errorf("%s的类型不是[]interface{}", key)
+	} else {
+		if len(interfaceList) == 0 {
+			return nil
+		}
+		stringList := make([]string, 0)
+		for _, v := range interfaceList {
+			if ele, ok := v.(primitive.ObjectID); ok {
+				stringList = append(stringList, ele.Hex())
+			} else if ele, ok := v.(string); ok {
+				stringList = append(stringList, ele)
+			} else if _, ok := v.(map[string]interface{})[formatKey]; !ok {
+				return fmt.Errorf("%s需要格式化的Key:%s，不存在", key, formatKey)
+			} else if ele, ok := v.(map[string]interface{})[formatKey].(string); ok {
+				stringList = append(stringList, ele)
+			} else if ele, ok := v.(map[string]interface{})[formatKey].(primitive.ObjectID); ok {
+				stringList = append(stringList, ele.Hex())
+			} else {
+				return fmt.Errorf("需要格式化的Key:%s，数值格式错误", formatKey)
+			}
+		}
+		(*doc)[key] = stringList
+	}
+	return nil
+}
+
 
 // FormatObjectID 格式化对象为string（转换的字段为ObjectID类型或string类型）
 func FormatObjectID(doc *bson.M, key string, formatKey string) error {
