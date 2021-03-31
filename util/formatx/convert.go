@@ -5,8 +5,9 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/air-iot/service/util/json"
+	"github.com/go-redis/redis/v8"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // InterfaceTypeToRedisMethod 数值类型的redis查询结果转为对应类型
@@ -46,7 +47,6 @@ func InterfaceTypeToString(t interface{}) string {
 	}
 }
 
-
 // MergeDataMap 融合映射Map
 func MergeDataMap(key, value string, dataMap *map[string][]string) {
 	if key == "" {
@@ -77,4 +77,34 @@ func UnmarshalListAndMap(data []byte, eventType string) (*[]map[string]interface
 	}
 
 	return &dataMapList, nil
+}
+
+// DeepCopy 深度复制
+func DeepCopy(value interface{}) interface{} {
+	if valueMap, ok := value.(map[string]interface{}); ok {
+		newMap := make(map[string]interface{})
+		for k, v := range valueMap {
+			newMap[k] = DeepCopy(v)
+		}
+		return newMap
+	} else if valueSlice, ok := value.([]interface{}); ok {
+		newSlice := make([]interface{}, len(valueSlice))
+		for k, v := range valueSlice {
+			newSlice[k] = DeepCopy(v)
+		}
+		return newSlice
+	} else if valueMap, ok := value.(primitive.M); ok {
+		newMap := make(primitive.M)
+		for k, v := range valueMap {
+			newMap[k] = DeepCopy(v)
+		}
+		return newMap
+	} else if valueSlice, ok := value.(primitive.A); ok {
+		newSlice := make(primitive.A, len(valueSlice))
+		for k, v := range valueSlice {
+			newSlice[k] = DeepCopy(v)
+		}
+		return newSlice
+	}
+	return value
 }
