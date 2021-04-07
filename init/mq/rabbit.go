@@ -1,31 +1,52 @@
 package mq
 
 import (
+	"context"
+	"strings"
+
 	"github.com/streadway/amqp"
+
+	"github.com/air-iot/service/config"
+	"github.com/air-iot/service/errors"
+	"github.com/air-iot/service/logger"
 )
 
 type rabbit struct {
-	queue    string
-	exchange string
-	conn     *amqp.Connection
+	//queue    string
+	//exchange string
+	conn *amqp.Connection
 }
 
-func NewRabbit(conn *amqp.Connection, exchange, queue string) MQ {
+const TOPICSEPWITHRABBIT = "."
+
+func NewRabbit(conn *amqp.Connection) MQ {
 	m := new(rabbit)
 	m.conn = conn
-	m.exchange = exchange
-	m.queue = queue
 	return m
 }
 
-func (p *rabbit) newQueue(channel *amqp.Channel) (*amqp.Queue, error) {
+func NewRabbitClient(cfg config.RabbitMQ) (*amqp.Connection, func(), error) {
+	conn, err := amqp.Dial(cfg.DNS())
+	if err != nil {
+		return nil, nil, err
+	}
+	cleanFunc := func() {
+		err := conn.Close()
+		if err != nil {
+			logger.Errorf("rabbitmq close error: %s", err.Error())
+		}
+	}
+	return conn, cleanFunc, nil
+}
+
+func (p *rabbit) NewQueue(channel *amqp.Channel, queueName string) (*amqp.Queue, error) {
 	queue, err := channel.QueueDeclare(
-		p.queue, // name
-		true,    // durable
-		true,    // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
+		queueName, // name
+		true,      // durable
+		true,      // delete when unused
+		false,     // exclusive
+		false,     // no-wait
+		nil,       // arguments
 	)
 	if err != nil {
 		return nil, err
@@ -33,27 +54,32 @@ func (p *rabbit) newQueue(channel *amqp.Channel) (*amqp.Queue, error) {
 	return &queue, nil
 }
 
-func (p *rabbit) newExchange(channel *amqp.Channel) error {
+func (p *rabbit) NewExchange(channel *amqp.Channel, exchange string) error {
 	return channel.ExchangeDeclare(
-		p.exchange, // name
-		"topic",    // type
-		true,       // durable
-		false,      // auto-deleted
-		false,      // internal
-		false,      // no-wait
-		nil,        // arguments
+		exchange, // name
+		"topic",  // type
+		true,     // durable
+		false,    // auto-deleted
+		false,    // internal
+		false,    // no-wait
+		nil,      // arguments
 	)
 }
 
-func (p *rabbit) Publish(topic string, payload []byte) error {
+func (p *rabbit) Publish(ctx context.Context, topicParams []string, payload []byte) error {
 	channel, err := p.conn.Channel()
 	if err != nil {
 		return err
 	}
+	exchange, ok := ctx.Value("exchange").(string)
+	if !ok {
+		return errors.New("context exchange not found")
+	}
+	topic := strings.Join(topicParams, TOPICSEPWITHRABBIT)
 	return channel.Publish(
-		p.exchange, // exchange
-		topic,      // routing key
-		false,      // mandatory
+		exchange, // exchange
+		topic,    // routing key
+		false,    // mandatory
 		false,
 		amqp.Publishing{
 			DeliveryMode: amqp.Transient,
@@ -62,23 +88,34 @@ func (p *rabbit) Publish(topic string, payload []byte) error {
 		})
 }
 
-func (p *rabbit) Consume(topic string, handler func(topic string, payload []byte)) error {
+func (p *rabbit) Consume(ctx context.Context, topicParams []string, splitN int, handler Handler) error {
 	channel, err := p.conn.Channel()
 	if err != nil {
 		return err
 	}
-	q, err := p.newQueue(channel)
+
+	queue, ok := ctx.Value("exchange").(string)
+	if !ok {
+		return errors.New("context queue not found")
+	}
+
+	exchange, ok := ctx.Value("exchange").(string)
+	if !ok {
+		return errors.New("context exchange not found")
+	}
+	q, err := p.NewQueue(channel, queue)
 	if err != nil {
 		return err
 	}
-	err = p.newExchange(channel)
+	err = p.NewExchange(channel, exchange)
 	if err != nil {
 		return err
 	}
+	topic := strings.Join(topicParams, TOPICSEPWITHRABBIT)
 	err = channel.QueueBind(
-		q.Name,     // queue name
-		topic,      // routing key
-		p.exchange, // exchange
+		q.Name,   // queue name
+		topic,    // routing key
+		exchange, // exchange
 		false,
 		nil,
 	)
@@ -107,17 +144,18 @@ func (p *rabbit) Consume(topic string, handler func(topic string, payload []byte
 	}
 	go func() {
 		for d := range messages {
-			handler(d.RoutingKey, d.Body)
+			handler(d.RoutingKey, strings.SplitN(d.RoutingKey, TOPICSEPWITHRABBIT, splitN), d.Body)
 			//if err := d.Ack(false); err != nil {}
 		}
 	}()
 	return nil
 }
 
-func (p *rabbit) UnSubscription(consume string) error {
+func (p *rabbit) UnSubscription(ctx context.Context, topicParams []string) error {
+	topic := strings.Join(topicParams, TOPICSEPWITHRABBIT)
 	channel, err := p.conn.Channel()
 	if err != nil {
 		return err
 	}
-	return channel.Cancel(consume, true)
+	return channel.Cancel(topic, true)
 }

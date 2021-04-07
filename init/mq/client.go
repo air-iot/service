@@ -11,17 +11,28 @@ import (
 	"github.com/air-iot/service/logger"
 )
 
+// MQType 消息队列类型
+type MQType string
+
+const (
+	TypeKey = "type"
+
+	Mqtt   MQType = "MQTT"
+	Rabbit MQType = "RABBIT"
+)
+
+type Handler func(topic string, topicSplit []string, payload []byte)
+
 // InitMQ 初始化消息队列
 func InitMQ() (MQ, func(), error) {
 	cfg := config.C.MQ
 	return NewMQ(cfg, config.C.MQTT, config.C.RabbitMQ)
-
 }
 
 // NewMQ 创建消息队列
 func NewMQ(cfg config.MQ, mqttCfg config.MQTT, rabbitCfg config.RabbitMQ) (MQ, func(), error) {
-	switch strings.ToUpper(cfg.MQType) {
-	case "RABBIT":
+	switch MQType(strings.ToUpper(cfg.MQType)) {
+	case Rabbit:
 		conn, err := amqp.Dial(rabbitCfg.DNS())
 		if err != nil {
 			return nil, nil, err
@@ -32,7 +43,7 @@ func NewMQ(cfg config.MQ, mqttCfg config.MQTT, rabbitCfg config.RabbitMQ) (MQ, f
 				logger.Errorf("rabbitmq close error: %s", err.Error())
 			}
 		}
-		rabbit := NewRabbit(conn, rabbitCfg.Exchange, rabbitCfg.Queue)
+		rabbit := NewRabbit(conn)
 		return rabbit, cleanFunc, nil
 	default:
 		opts := MQTT.NewClientOptions()
