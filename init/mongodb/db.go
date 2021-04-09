@@ -220,7 +220,18 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 				lookups = []interface{}{groupMap}
 			}
 		} else {
-			query.Filter["$lookups"] = []interface{}{bson.M{"$project": projectMap}, groupMap}
+
+			lookupsTmp := make([]interface{}, 0)
+			if len(projectMap) > 0 {
+				lookupsTmp = append(lookupsTmp, bson.M{"$project": projectMap})
+			}
+			if len(groupMap) > 0 {
+				lookupsTmp = append(lookupsTmp, groupMap)
+			}
+
+			if len(lookupsTmp) > 0 {
+				query.Filter["$lookups"] = lookupsTmp
+			}
 		}
 	}
 
@@ -462,13 +473,14 @@ func FindFilter(ctx context.Context, col *mongo.Collection, result interface{}, 
 	if countPipeLine != nil {
 		count, err = FindCount(ctx, col, countPipeLine)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("query count err: %s", err.Error())
 		}
 	}
 	if pipeLine != nil {
+		println("1 ", pipeLine)
 		err = FindPipeline(ctx, col, result, pipeLine)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("query data: %s", err.Error())
 		}
 	}
 	return
