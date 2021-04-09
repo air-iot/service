@@ -329,6 +329,51 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 			}
 		}
 	}
+
+
+	if query.Filter != nil {
+		for k, v := range query.Filter {
+			if k != "$lookups" {
+				continue
+			}
+			lookups, ok := v.([]interface{})
+			if !ok {
+				return nil, nil, errors.New(`$lookups的值数据格式不正确`)
+			}
+			// 图形数据查询
+			// 递归转换判断value值是否为ObjectID
+			for _, lookup := range lookups {
+				if _, ok := lookup.(map[string]interface{})["$group"]; ok {
+					hasGroup = true
+					break
+					//pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
+				}
+			}
+		}
+
+		if hasGroup {
+			for k, v := range query.Filter {
+				if k != "$lookups" {
+					continue
+				}
+				lookups, ok := v.([]interface{})
+				if !ok {
+					return nil, nil, errors.New(`$lookups的值数据格式不正确`)
+				}
+				afterGroupFlag := false
+				for _, lookup := range lookups {
+					if afterGroupFlag {
+						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+					}
+					if group, ok := lookup.(map[string]interface{})["$group"]; ok {
+						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: group}})
+						afterGroupFlag = true
+					}
+				}
+			}
+		}
+	}
+
 	if query.WithCount != nil && *(query.WithCount) {
 		countPipeLine = mongo.Pipeline{}
 		if err := json.CopyByJson(&countPipeLine, &pipeLine); err != nil {
@@ -360,14 +405,8 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 			if !ok {
 				return nil, nil, errors.New(`$lookups的值数据格式不正确`)
 			}
-			// 图形数据查询
-			// 递归转换判断value值是否为ObjectID
 			for _, lookup := range lookups {
-				if _, ok := lookup.(map[string]interface{})["$group"]; ok {
-					hasGroup = true
-					break
-					//pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
-				} else if project, ok := lookup.(map[string]interface{})["$project"]; ok {
+				if project, ok := lookup.(map[string]interface{})["$project"]; ok {
 					projectMapTmp, ok := project.(map[string]interface{})
 					if !ok {
 						return nil, nil, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
@@ -375,28 +414,6 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 					projectMap = projectMapTmp
 				} else {
 					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
-				}
-			}
-		}
-
-		if hasGroup {
-			for k, v := range query.Filter {
-				if k != "$lookups" {
-					continue
-				}
-				lookups, ok := v.([]interface{})
-				if !ok {
-					return nil, nil, errors.New(`$lookups的值数据格式不正确`)
-				}
-				afterGroupFlag := false
-				for _, lookup := range lookups {
-					if afterGroupFlag {
-						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
-					}
-					if group, ok := lookup.(map[string]interface{})["$group"]; ok {
-						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: group}})
-						afterGroupFlag = true
-					}
 				}
 			}
 		}
