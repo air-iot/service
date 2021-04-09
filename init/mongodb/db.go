@@ -241,12 +241,14 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 							// 特殊处理lookup数组
 						} else if k != "$lookups" {
 							//判断空对象
-							if emptyObject, ok := v.(map[string]interface{}); ok {
-								flag := false
-								for range emptyObject {
-									flag = true
+							switch emptyObject := v.(type) {
+							case map[string]interface{}:
+								if len(emptyObject) == 0 {
+									delete(query.Filter, k)
+									continue
 								}
-								if !flag {
+							case bson.M:
+								if len(emptyObject) == 0 {
 									delete(query.Filter, k)
 									continue
 								}
@@ -276,12 +278,14 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 							// 特殊处理lookup数组
 						} else if k != "$lookups" {
 							//判断空对象
-							if emptyObject, ok := v.(map[string]interface{}); ok {
-								flag := false
-								for range emptyObject {
-									flag = true
+							switch emptyObject := v.(type) {
+							case map[string]interface{}:
+								if len(emptyObject) == 0 {
+									delete(query.Filter, k)
+									continue
 								}
-								if !flag {
+							case bson.M:
+								if len(emptyObject) == 0 {
 									delete(query.Filter, k)
 									continue
 								}
@@ -307,16 +311,19 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 					// 特殊处理lookup数组
 				} else if k != "$lookups" {
 					//判断空对象
-					if emptyObject, ok := v.(map[string]interface{}); ok {
-						flag := false
-						for range emptyObject {
-							flag = true
+					switch emptyObject := v.(type) {
+					case map[string]interface{}:
+						if len(emptyObject) == 0 {
+							delete(query.Filter, k)
+							continue
 						}
-						if !flag {
+					case bson.M:
+						if len(emptyObject) == 0 {
 							delete(query.Filter, k)
 							continue
 						}
 					}
+
 					if k == "id" {
 						k = "_id"
 					}
@@ -363,19 +370,43 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 			// 图形数据查询
 			// 递归转换判断value值是否为ObjectID
 			for _, lookup := range lookups {
-				if _, ok := lookup.(map[string]interface{})["$group"]; ok {
-					hasGroup = true
-					break
-					//pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
-				} else if project, ok := lookup.(map[string]interface{})["$project"]; ok {
-					projectMapTmp, ok := project.(map[string]interface{})
-					if !ok {
-						return nil, nil, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
+				switch lookupMap := lookup.(type) {
+				case map[string]interface{}:
+					if _, ok := lookupMap["$group"]; ok {
+						hasGroup = true
+						break
+						//pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
+					} else if project, ok := lookupMap["$project"]; ok {
+						switch projectM := project.(type) {
+						case map[string]interface{}:
+							projectMap = projectM
+						case bson.M:
+							projectMap = projectM
+						default:
+							return nil, nil, fmt.Errorf("%s的关联查询时内部project格式错误，不是Map", k)
+						}
+					} else {
+						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
 					}
-					projectMap = projectMapTmp
-				} else {
-					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+				case bson.M:
+					if _, ok := lookupMap["$group"]; ok {
+						hasGroup = true
+						break
+						//pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
+					} else if project, ok := lookupMap["$project"]; ok {
+						switch projectM := project.(type) {
+						case map[string]interface{}:
+							projectMap = projectM
+						case bson.M:
+							projectMap = projectM
+						default:
+							return nil, nil, fmt.Errorf("%s的关联查询时内部project格式错误，不是Map", k)
+						}
+					} else {
+						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+					}
 				}
+
 			}
 		}
 
@@ -393,9 +424,18 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 					if afterGroupFlag {
 						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
 					}
-					if group, ok := lookup.(map[string]interface{})["$group"]; ok {
-						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: group}})
-						afterGroupFlag = true
+
+					switch lookupM := lookup.(type) {
+					case map[string]interface{}:
+						if group, ok := lookupM["$group"]; ok {
+							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: group}})
+							afterGroupFlag = true
+						}
+					case bson.M:
+						if group, ok := lookupM["$group"]; ok {
+							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: group}})
+							afterGroupFlag = true
+						}
 					}
 				}
 			}
