@@ -1302,39 +1302,6 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 					return count, errors.New(`withoutBody格式不正确`)
 				}
 			}
-
-			if withCount, ok := query["withCount"]; ok {
-				if b, ok := withCount.(bool); ok {
-					if b {
-						newPipeLine := DeepCopy(pipeLine).(mongo.Pipeline)
-						c, err := p.FindCount(ctx, col, newPipeLine)
-						if err != nil {
-							return 0, err
-						}
-						count = c
-					}
-				} else {
-					return count, errors.New(`withCount格式不正确`)
-				}
-			}
-			if sort, ok := query["sort"]; ok {
-				if s, ok := sort.(bson.M); ok {
-					if len(s) > 0 {
-						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
-					}
-				}
-			}else{
-				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
-			}
-
-			if skip, ok := query["skip"]; ok {
-				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$skip", Value: skip}})
-			}
-
-			if limit, ok := query["limit"]; ok {
-				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$limit", Value: limit}})
-			}
-
 			if filter, ok := query["filter"]; ok {
 				if filterMap, ok := filter.(bson.M); ok {
 					for k, v := range filterMap {
@@ -1397,6 +1364,37 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 				}
 			}
 
+			if withCount, ok := query["withCount"]; ok {
+				if b, ok := withCount.(bool); ok {
+					if b {
+						newPipeLine := DeepCopy(pipeLine).(mongo.Pipeline)
+						c, err := p.FindCount(ctx, col, newPipeLine)
+						if err != nil {
+							return 0, err
+						}
+						count = c
+					}
+				} else {
+					return count, errors.New(`withCount格式不正确`)
+				}
+			}
+			if sort, ok := query["sort"]; ok {
+				if s, ok := sort.(bson.M); ok {
+					if len(s) > 0 {
+						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
+					}
+				}
+			}else{
+				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
+			}
+
+			if skip, ok := query["skip"]; ok {
+				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$skip", Value: skip}})
+			}
+
+			if limit, ok := query["limit"]; ok {
+				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$limit", Value: limit}})
+			}
 			if project, ok := query["project"]; ok {
 				if projectList, ok := query["project"].(map[string]interface{}); ok {
 					for k, v := range projectMap {
@@ -1480,39 +1478,6 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 				}
 			}
 
-			if withCount, ok := query["withCount"]; ok {
-				if b, ok := withCount.(bool); ok {
-					if b {
-						newPipeLine := DeepCopy(pipeLine).(mongo.Pipeline)
-						c, err := p.FindCount(ctx, col, newPipeLine)
-						if err != nil {
-							return 0, err
-						}
-						count = c
-					}
-				} else {
-					return count, errors.New(`withCount格式不正确`)
-				}
-			}
-
-			if sort, ok := query["sort"]; ok {
-				if s, ok := sort.(bson.M); ok {
-					if len(s) > 0 {
-						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
-					}
-				}
-			}else{
-				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
-			}
-
-			if skip, ok := query["skip"]; ok {
-				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$skip", Value: skip}})
-			}
-
-			if limit, ok := query["limit"]; ok {
-				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$limit", Value: limit}})
-			}
-
 			if filter, ok := query["filter"]; ok {
 				if filterMap, ok := filter.(bson.M); ok {
 					for k, v := range filterMap {
@@ -1575,6 +1540,38 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 				}
 			}
 
+			if withCount, ok := query["withCount"]; ok {
+				if b, ok := withCount.(bool); ok {
+					if b {
+						newPipeLine := DeepCopy(pipeLine).(mongo.Pipeline)
+						c, err := p.FindCount(ctx, col, newPipeLine)
+						if err != nil {
+							return 0, err
+						}
+						count = c
+					}
+				} else {
+					return count, errors.New(`withCount格式不正确`)
+				}
+			}
+
+			if sort, ok := query["sort"]; ok {
+				if s, ok := sort.(bson.M); ok {
+					if len(s) > 0 {
+						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
+					}
+				}
+			}else{
+				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
+			}
+
+			if skip, ok := query["skip"]; ok {
+				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$skip", Value: skip}})
+			}
+
+			if limit, ok := query["limit"]; ok {
+				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$limit", Value: limit}})
+			}
 			if project, ok := query["project"]; ok {
 				if projectList, ok := query["project"].(map[string]interface{}); ok {
 					for k, v := range projectMap {
@@ -1644,6 +1641,7 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 			}
 		}
 
+
 		if withoutBody, ok := query["withoutBody"]; ok {
 			if b, ok := withoutBody.(bool); ok {
 				if b {
@@ -1660,38 +1658,6 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 			}
 		}
 
-		if withCount, ok := query["withCount"]; ok {
-			if b, ok := withCount.(bool); ok {
-				if b {
-					newPipeLine := DeepCopy(pipeLine).(mongo.Pipeline)
-					c, err := p.FindCount(ctx, col, newPipeLine)
-					if err != nil {
-						return 0, err
-					}
-					count = c
-				}
-			} else {
-				return count, errors.New(`withCount格式不正确`)
-			}
-		}
-		if sort, ok := query["sort"]; ok {
-			if s, ok := sort.(bson.M); ok {
-				if len(s) > 0 {
-					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
-				}
-			}
-		}else{
-			pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
-		}
-
-		if skip, ok := query["skip"]; ok {
-			pipeLine = append(pipeLine, bson.D{bson.E{Key: "$skip", Value: skip}})
-		}
-
-		if limit, ok := query["limit"]; ok {
-			pipeLine = append(pipeLine, bson.D{bson.E{Key: "$limit", Value: limit}})
-		}
-
 		if filter, ok := query["filter"]; ok {
 			if filterMap, ok := filter.(bson.M); ok {
 				for k, v := range filterMap {
@@ -1704,13 +1670,6 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 									hasGroup = true
 									break
 									//pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
-								} else if _, ok := lookup.(primitive.M)["$project"]; ok {
-									if _, projectOk := lookup.(primitive.M)["$project"].(bson.M); !projectOk {
-										return 0, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
-									}
-									projectMap = lookup.(primitive.M)["$project"].(bson.M)
-								} else {
-									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
 								}
 							}
 						} else {
@@ -1751,6 +1710,65 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 				} else {
 					return 0, errors.New(`filter格式不正确`)
 				}
+			}
+		}
+		if withCount, ok := query["withCount"]; ok {
+			if b, ok := withCount.(bool); ok {
+				if b {
+					newPipeLine := DeepCopy(pipeLine).(mongo.Pipeline)
+					c, err := p.FindCount(ctx, col, newPipeLine)
+					if err != nil {
+						return 0, err
+					}
+					count = c
+				}
+			} else {
+				return count, errors.New(`withCount格式不正确`)
+			}
+		}
+		if sort, ok := query["sort"]; ok {
+			if s, ok := sort.(bson.M); ok {
+				if len(s) > 0 {
+					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
+				}
+			}
+		}else{
+			pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
+		}
+
+		if skip, ok := query["skip"]; ok {
+			pipeLine = append(pipeLine, bson.D{bson.E{Key: "$skip", Value: skip}})
+		}
+
+		if limit, ok := query["limit"]; ok {
+			pipeLine = append(pipeLine, bson.D{bson.E{Key: "$limit", Value: limit}})
+		}
+
+		if filter, ok := query["filter"]; ok {
+			if filterMap, ok := filter.(bson.M); ok {
+				for k, v := range filterMap {
+					// 图形数据查询
+					if k == "$lookups" {
+						// 递归转换判断value值是否为ObjectID
+						if lookups, ok := v.(primitive.A); ok {
+							for _, lookup := range lookups {
+								if _, ok := lookup.(primitive.M)["$project"]; ok {
+									if _, projectOk := lookup.(primitive.M)["$project"].(bson.M); !projectOk {
+										return 0, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
+									}
+									projectMap = lookup.(primitive.M)["$project"].(bson.M)
+								} else {
+									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+								}
+							}
+						} else {
+							return 0, errors.New(`$lookups的值数据格式不正确`)
+						}
+					}
+				}
+				// }
+			} else {
+				return 0, errors.New(`filter格式不正确`)
 			}
 		}
 
