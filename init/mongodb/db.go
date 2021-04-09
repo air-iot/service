@@ -220,7 +220,7 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 				lookups = []interface{}{groupMap}
 			}
 		} else {
-			query.Filter["$lookups"] = []interface{}{bson.M{"$project": projectMap}, groupMap}
+			query.Filter["$lookups"] = []interface{}{map[string]interface{}{"$project": projectMap}, groupMap}
 		}
 	}
 
@@ -258,7 +258,7 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 								k = k[:len(k)-2]
 								k = k + "._id"
 							}
-							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: map[string]interface{}{k: v}}})
 						}
 					}
 				}
@@ -293,7 +293,7 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 								k = k[:len(k)-2]
 								k = k + "._id"
 							}
-							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: map[string]interface{}{k: v}}})
 						}
 					}
 				}
@@ -324,7 +324,7 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 						k = k[:len(k)-2]
 						k = k + "._id"
 					}
-					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: map[string]interface{}{k: v}}})
 				}
 			}
 		}
@@ -338,7 +338,7 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 	if query.Sort != nil && len(query.Sort) > 0 {
 		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: query.Sort}})
 	} else {
-		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
+		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: map[string]interface{}{"_id": 1}}})
 	}
 	if query.Skip != nil && *(query.Skip) >= 0 {
 		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$skip", Value: query.Skip}})
@@ -370,7 +370,7 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 				} else if project, ok := lookup.(map[string]interface{})["$project"]; ok {
 					projectMapTmp, ok := project.(map[string]interface{})
 					if !ok {
-						return nil, nil, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
+						return nil, nil, fmt.Errorf("%s的关联查询时内部project格式错误，不是map", k)
 					}
 					projectMap = projectMapTmp
 				} else {
@@ -459,7 +459,7 @@ func FindPipeline(ctx context.Context, col *mongo.Collection, result interface{}
 
 // FindByID 根据id查询数据
 func FindByID(ctx context.Context, col *mongo.Collection, result interface{}, id string) error {
-	singleResult := col.FindOne(ctx, bson.M{"_id": id})
+	singleResult := col.FindOne(ctx, map[string]interface{}{"_id": id})
 	if singleResult.Err() != nil {
 		return singleResult.Err()
 	}
@@ -507,19 +507,19 @@ func UpdateMany(ctx context.Context, col *mongo.Collection, conditions, item int
 // UpdateByID 根据ID及数据更新
 // id:主键_id model:更新的数据
 func UpdateByID(ctx context.Context, col *mongo.Collection, id string, item interface{}) (*mongo.UpdateResult, error) {
-	return col.UpdateOne(ctx, bson.M{"_id": id}, bson.D{bson.E{Key: "$set", Value: item}})
+	return col.UpdateOne(ctx, map[string]interface{}{"_id": id}, bson.D{bson.E{Key: "$set", Value: item}})
 }
 
 // ReplaceByID 根据ID及数据替换
 // id:主键_id model:替换的数据
 func ReplaceByID(ctx context.Context, col *mongo.Collection, id string, item interface{}) (*mongo.UpdateResult, error) {
-	return col.ReplaceOne(ctx, bson.M{"_id": id}, bson.D{bson.E{Key: "$set", Value: item}})
+	return col.ReplaceOne(ctx, map[string]interface{}{"_id": id}, bson.D{bson.E{Key: "$set", Value: item}})
 }
 
 // DeleteByID 根据ID删除数据
 // id:主键_id
 func DeleteByID(ctx context.Context, col *mongo.Collection, id string) (*mongo.DeleteResult, error) {
-	return col.DeleteOne(ctx, bson.M{"_id": id})
+	return col.DeleteOne(ctx, map[string]interface{}{"_id": id})
 }
 
 // DeleteOne 根据条件删除单条数据
@@ -545,12 +545,12 @@ func SaveMany(ctx context.Context, col *mongo.Collection, item []interface{}) (*
 
 // UpdateAll 全部数据更新
 func UpdateAll(ctx context.Context, col *mongo.Collection, item interface{}) (*mongo.UpdateResult, error) {
-	return col.UpdateMany(ctx, bson.M{}, bson.D{bson.E{Key: "$set", Value: item}})
+	return col.UpdateMany(ctx, map[string]interface{}{}, bson.D{bson.E{Key: "$set", Value: item}})
 }
 
 // UpdateManyByIDList 根据id数组进行多条数据更新
 func UpdateManyByIDList(ctx *context.Context, col *mongo.Collection, id []string, item interface{}) (*mongo.UpdateResult, error) {
-	return col.UpdateMany(*ctx, bson.M{"_id": bson.M{"$in": id}}, bson.D{bson.E{Key: "$set", Value: item}})
+	return col.UpdateMany(*ctx, map[string]interface{}{"_id": map[string]interface{}{"$in": id}}, bson.D{bson.E{Key: "$set", Value: item}})
 }
 
 // UpdateManyWithOption 数组中的数据更新
