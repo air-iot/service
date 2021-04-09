@@ -1670,13 +1670,6 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 									hasGroup = true
 									break
 									//pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
-								} else if _, ok := lookup.(primitive.M)["$project"]; ok {
-									if _, projectOk := lookup.(primitive.M)["$project"].(bson.M); !projectOk {
-										return 0, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
-									}
-									projectMap = lookup.(primitive.M)["$project"].(bson.M)
-								} else {
-									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
 								}
 							}
 						} else {
@@ -1749,6 +1742,34 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 
 		if limit, ok := query["limit"]; ok {
 			pipeLine = append(pipeLine, bson.D{bson.E{Key: "$limit", Value: limit}})
+		}
+
+		if filter, ok := query["filter"]; ok {
+			if filterMap, ok := filter.(bson.M); ok {
+				for k, v := range filterMap {
+					// 图形数据查询
+					if k == "$lookups" {
+						// 递归转换判断value值是否为ObjectID
+						if lookups, ok := v.(primitive.A); ok {
+							for _, lookup := range lookups {
+								if _, ok := lookup.(primitive.M)["$project"]; ok {
+									if _, projectOk := lookup.(primitive.M)["$project"].(bson.M); !projectOk {
+										return 0, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
+									}
+									projectMap = lookup.(primitive.M)["$project"].(bson.M)
+								} else {
+									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+								}
+							}
+						} else {
+							return 0, errors.New(`$lookups的值数据格式不正确`)
+						}
+					}
+				}
+				// }
+			} else {
+				return 0, errors.New(`filter格式不正确`)
+			}
 		}
 
 		if project, ok := query["project"]; ok {
