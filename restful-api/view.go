@@ -1451,6 +1451,9 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 									return 0, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
 								}
 								projectMap = lookup.(primitive.M)["$project"].(bson.M)
+							} else	if _, ok := lookup.(primitive.M)["$group"]; ok {
+								continue
+								//pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
 							} else {
 								pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
 							}
