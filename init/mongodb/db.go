@@ -94,6 +94,18 @@ func ConvertKeyUnderlineID(data interface{}) interface{} {
 			(*val)[i] = ConvertKeyUnderlineID(v)
 		}
 		return val
+	case []map[string]interface{}:
+		var vtmp = make([]interface{}, len(val))
+		for i, v := range val {
+			vtmp[i] = ConvertKeyUnderlineID(v)
+		}
+		return vtmp
+	case *[]map[string]interface{}:
+		var vtmp = make([]interface{}, len(*val))
+		for i, v := range *val {
+			vtmp[i] = ConvertKeyUnderlineID(v)
+		}
+		return vtmp
 	case primitive.A:
 		for i, v := range val {
 			val[i] = ConvertKeyUnderlineID(v)
@@ -162,6 +174,18 @@ func ConvertKeyID(data interface{}) interface{} {
 			(*val)[i] = ConvertKeyUnderlineID(v)
 		}
 		return val
+	case []map[string]interface{}:
+		var vtmp = make([]interface{}, len(val))
+		for i, v := range val {
+			vtmp[i] = ConvertKeyUnderlineID(v)
+		}
+		return vtmp
+	case *[]map[string]interface{}:
+		var vtmp = make([]interface{}, len(*val))
+		for i, v := range *val {
+			vtmp[i] = ConvertKeyUnderlineID(v)
+		}
+		return vtmp
 	case primitive.A:
 		for i, v := range val {
 			val[i] = ConvertKeyUnderlineID(v)
@@ -477,7 +501,6 @@ func FindFilter(ctx context.Context, col *mongo.Collection, result interface{}, 
 		}
 	}
 	if pipeLine != nil {
-		println("1 ", pipeLine)
 		err = FindPipeline(ctx, col, result, pipeLine)
 		if err != nil {
 			return nil, fmt.Errorf("query data: %s", err.Error())
