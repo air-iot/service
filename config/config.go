@@ -218,6 +218,7 @@ type Redis struct {
 // Mongo mongodb配置参数
 type Mongo struct {
 	Addr              string
+	DBName            string
 	PoolSize          uint64
 	HeartbeatInterval uint16
 	MaxConnIdleTime   uint16
