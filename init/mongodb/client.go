@@ -20,20 +20,14 @@ func InitMongoDB() (*mongo.Client, func(), error) {
 // NewMongoDB 创建mongo存储
 func NewMongoDB(cfg config.Mongo) (*mongo.Client, func(), error) {
 	opts := options.Client().
-		ApplyURI(cfg.ApplyURI()).
+		ApplyURI(cfg.Addr).
 		SetMaxPoolSize(cfg.PoolSize).
 		SetHeartbeatInterval(30 * time.Second).
 		SetMaxConnIdleTime(30 * time.Second)
-
-	cli, err := mongo.NewClient(opts)
+	cli, err := mongo.Connect(context.Background(), opts)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	if err := cli.Connect(context.Background()); err != nil {
-		return nil, nil, err
-	}
-
 	cleanFunc := func() {
 		err := cli.Disconnect(context.Background())
 		if err != nil {
@@ -44,6 +38,5 @@ func NewMongoDB(cfg config.Mongo) (*mongo.Client, func(), error) {
 	if err != nil {
 		return nil, cleanFunc, err
 	}
-
 	return cli, cleanFunc, nil
 }

@@ -217,21 +217,8 @@ type Redis struct {
 
 // Mongo mongodb配置参数
 type Mongo struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	DBName   string
+	Addr     string
 	PoolSize uint64
-}
-
-func (a Mongo) ApplyURI() string {
-	return fmt.Sprintf("mongodb://%s:%s@%s:%d/admin",
-		a.Username,
-		a.Password,
-		a.Host,
-		a.Port,
-	)
 }
 
 // Influx influxdb配置参数
