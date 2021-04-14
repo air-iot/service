@@ -22,8 +22,8 @@ func NewMongoDB(cfg config.Mongo) (*mongo.Client, func(), error) {
 	opts := options.Client().
 		ApplyURI(cfg.Addr).
 		SetMaxPoolSize(cfg.PoolSize).
-		SetHeartbeatInterval(30 * time.Second).
-		SetMaxConnIdleTime(30 * time.Second)
+		SetHeartbeatInterval(time.Duration(cfg.HeartbeatInterval) * time.Second).
+		SetMaxConnIdleTime(time.Duration(cfg.MaxConnIdleTime) * time.Second)
 	cli, err := mongo.Connect(context.Background(), opts)
 	if err != nil {
 		return nil, nil, err

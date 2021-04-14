@@ -217,8 +217,10 @@ type Redis struct {
 
 // Mongo mongodb配置参数
 type Mongo struct {
-	Addr     string
-	PoolSize uint64
+	Addr              string
+	PoolSize          uint64
+	HeartbeatInterval uint16
+	MaxConnIdleTime   uint16
 }
 
 // Influx influxdb配置参数
