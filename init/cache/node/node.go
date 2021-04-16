@@ -25,18 +25,19 @@ type MemNode struct {
 }
 
 // NewMemNode 创建Node缓存
-func NewMemNode(mqClient mq.MQ, redisClient redis.Client, config cache.CacheParams) *MemNode {
+func NewMemNode(mqClient mq.MQ, redisClient redis.Client, config cache.CacheParams) (*MemNode, func(), error) {
 	node := new(MemNode)
 	node.redisClient = redisClient
 	node.mqClient = mqClient
 	node.config = config
 	node.config.Exchange = CacheNodePrefix
 	node.Cache = make(map[string]map[string]string)
-	return node
+	cleanFunc, err := node.cacheHandler(context.Background())
+	return node, cleanFunc, err
 }
 
-// CacheHandler 初始化node缓存
-func (p *MemNode) CacheHandler(ctx context.Context) (func(), error) {
+// cacheHandler 初始化node缓存
+func (p *MemNode) cacheHandler(ctx context.Context) (func(), error) {
 	topic := []string{CacheNodePrefix, "#"}
 
 	ctx = context.WithValue(ctx, "exchange", p.config.Exchange)

@@ -25,18 +25,19 @@ type MemModel struct {
 }
 
 // NewMemModel 创建模型缓存
-func NewMemModel(mqClient mq.MQ, redisClient redis.Client, config cache.CacheParams) *MemModel {
+func NewMemModel(mqClient mq.MQ, redisClient redis.Client, config cache.CacheParams) (*MemModel, func(), error) {
 	model := new(MemModel)
 	model.redisClient = redisClient
 	model.mqClient = mqClient
 	model.config = config
 	model.config.Exchange = CacheModelPrefix
 	model.Cache = make(map[string]map[string]string)
-	return model
+	cleanFunc, err := model.cacheHandler(context.Background())
+	return model, cleanFunc, err
 }
 
 // CacheHandler 初始化model缓存
-func (p *MemModel) CacheHandler(ctx context.Context) (func(), error) {
+func (p *MemModel) cacheHandler(ctx context.Context) (func(), error) {
 	topic := []string{CacheModelPrefix, "#"}
 
 	ctx = context.WithValue(ctx, "exchange", p.config.Exchange)
