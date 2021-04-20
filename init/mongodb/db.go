@@ -3,6 +3,7 @@ package mongodb
 import (
 	"context"
 	"fmt"
+	"github.com/air-iot/service/util/formatx"
 	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -542,6 +543,777 @@ func FindFilter(ctx context.Context, col *mongo.Collection, result interface{}, 
 // result:查询结果 query:查询条件
 func FindFilterLimit(ctx context.Context, col *mongo.Collection, result interface{}, query QueryOption) (*int, error) {
 	return FindFilter(ctx, col, result, query)
+}
+
+func FindFilterOld(ctx context.Context, col *mongo.Collection, result *[]bson.M, query bson.M) (int, error) {
+
+	var count int
+	projectMap := bson.M{}
+
+	pipeLine := mongo.Pipeline{}
+
+	hasGroup := false
+
+	//$group 放入 $lookups的$project后面
+	if filter, ok := query["filter"]; ok {
+		if filterMap, ok := filter.(bson.M); ok {
+			groupMap := primitive.M{}
+			hasGroupFields := false
+			if groupFieldsMap, ok := query["groupFields"].(primitive.M); ok {
+				groupMap = groupFieldsMap
+				hasGroupFields = true
+				for k := range groupFieldsMap {
+					projectMap[k] = 1
+				}
+				delete(query, "groupFields")
+			}
+			if groupByMap, ok := query["groupBy"].(primitive.M); ok {
+				groupMap["_id"] = groupByMap
+				query["group"] = groupMap
+				delete(query, "groupBy")
+			} else if hasGroupFields {
+				groupMap["_id"] = nil
+				query["group"] = groupMap
+				delete(query, "groupBy")
+			}
+			if groupMap, ok := query["group"].(primitive.M); ok {
+				//groupMap["_id"] = groupMap["id"]
+				delete(groupMap, "id")
+				if lookups, ok := filterMap["$lookups"].(primitive.A); ok {
+					lookupsOtherList := primitive.A{}
+					if len(lookups) != 0 {
+						if projectM, ok := lookups[0].(primitive.M)["$project"].(primitive.M); ok {
+							for k := range projectMap {
+								projectM[k] = 1
+							}
+							lookupsOtherList = append(lookupsOtherList, lookups[0])
+							lookupsOtherList = append(lookupsOtherList, bson.M{"$group": groupMap})
+							lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
+							lookups = lookupsOtherList
+							filterMap["$lookups"] = lookups
+						} else {
+							lookupsOtherList = append(lookupsOtherList, bson.M{"$group": groupMap})
+							lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
+							lookups = lookupsOtherList
+							filterMap["$lookups"] = lookups
+						}
+					} else {
+						lookups = primitive.A{groupMap}
+					}
+				} else {
+					filterMap["$lookups"] = primitive.A{bson.M{"$project": projectMap}, groupMap}
+				}
+				delete(query, "group")
+			}
+			// }
+		} else {
+			return 0, errors.New(`filter格式不正确`)
+		}
+	}
+	//if filter, ok := query["filter"]; ok {
+	//	if filterMap, ok := filter.(bson.M); ok {
+	//		if groupMap,ok := filterMap["$group"].(primitive.M);ok{
+	//			if lookups,ok := filterMap["$lookups"].(primitive.A);ok{
+	//				lookupsOtherList := primitive.A{}
+	//				if len(lookups) != 0{
+	//					if _, ok := lookups[0].(primitive.M)["$project"]; ok {
+	//						lookupsOtherList = append(lookupsOtherList,lookups[0])
+	//						lookupsOtherList = append(lookupsOtherList,bson.M{"$group":groupMap})
+	//						lookupsOtherList = append(lookupsOtherList,lookups[1:]...)
+	//						lookups = lookupsOtherList
+	//						filterMap["$lookups"] = lookups
+	//					}else{
+	//						lookupsOtherList = append(lookupsOtherList,bson.M{"$group":groupMap})
+	//						lookupsOtherList = append(lookupsOtherList,lookups[1:]...)
+	//						lookups = lookupsOtherList
+	//						filterMap["$lookups"] = lookups
+	//					}
+	//				}else{
+	//					lookups = primitive.A{groupMap}
+	//				}
+	//			}else{
+	//				filterMap["$lookups"] = primitive.A{groupMap}
+	//			}
+	//			delete(filterMap,"$group")
+	//		}
+	//		// }
+	//	} else {
+	//		return 0, errors.New(`filter格式不正确`)
+	//	}
+	//}
+
+	if filter, ok := query["filter"]; ok {
+		if filterMap, ok := filter.(bson.M); ok {
+			for k, v := range filterMap {
+				// 图形数据查询
+				if k == "$lookups" {
+					// 递归转换判断value值是否为ObjectID
+					if lookups, ok := v.(primitive.A); ok {
+						for _, lookup := range lookups {
+							if _, ok := lookup.(primitive.M)["$group"]; ok {
+								hasGroup = true
+								break
+								//pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
+							} else if _, ok := lookup.(primitive.M)["$project"]; ok {
+								if _, projectOk := lookup.(primitive.M)["$project"].(bson.M); !projectOk {
+									return 0, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
+								}
+								projectMap = lookup.(primitive.M)["$project"].(bson.M)
+							} else {
+								pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+							}
+						}
+					} else {
+						return 0, errors.New(`$lookups的值数据格式不正确`)
+					}
+				}
+			}
+			// }
+		} else {
+			return 0, errors.New(`filter格式不正确`)
+		}
+	}
+
+	if filter, ok := query["filter"]; ok {
+		if filterMap, ok := filter.(bson.M); ok {
+			for k, v := range filterMap {
+				if k == "$lookup" {
+					pipeLine = append(pipeLine, bson.D{bson.E{Key: k, Value: v}})
+					// 特殊处理lookup数组
+				} else if k != "$lookups" {
+					//判断空对象
+					if emptyObject, ok := v.(primitive.M); ok {
+						flag := false
+						for range emptyObject {
+							flag = true
+						}
+						if !flag {
+							delete(filterMap, k)
+							continue
+						}
+					}
+					if k == "id" {
+						k = "_id"
+					}
+					if hasGroup && k == "modelId" {
+						k = "model"
+					} else {
+						if strings.HasSuffix(k, "Id") && k != "requestId" {
+							k = k[:len(k)-2]
+							k = k + "._id"
+						}
+					}
+					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+				}
+			}
+			// }
+		} else {
+			return 0, errors.New(`filter格式不正确`)
+		}
+	}
+
+	if hasGroup {
+		afterGroupFlag := false
+
+		if filter, ok := query["filter"]; ok {
+			if filterMap, ok := filter.(bson.M); ok {
+				for k, v := range filterMap {
+					// 图形数据查询
+					if k == "$lookups" {
+						// 递归转换判断value值是否为ObjectID
+						if lookups, ok := v.(primitive.A); ok {
+							for _, lookup := range lookups {
+								if afterGroupFlag {
+									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+								}
+								if _, ok := lookup.(primitive.M)["$group"]; ok {
+									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
+									afterGroupFlag = true
+								}
+							}
+						} else {
+							return 0, errors.New(`$lookups的值数据格式不正确`)
+						}
+					}
+				}
+				// }
+			} else {
+				return 0, errors.New(`filter格式不正确`)
+			}
+		}
+	}
+
+	//if filter, ok := (*query)["filter"]; ok {
+	//	if filterMap, ok := filter.(bson.M); ok {
+	//		for k, v := range filterMap {
+	//			// 图形数据查询
+	//			if k == "ancestorId" {
+	//				if idStr, ok := v.(string); ok {
+	//					id, err := primitive.ObjectIDFromHex(idStr)
+	//					if err != nil {
+	//						return count, fmt.Errorf(`%s的ObjectID值格式不正确.%s`, k, err.Error())
+	//					}
+	//					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$graphLookup", Value: bson.M{
+	//						"from":             collection,
+	//						"startWith":        "$parentId",
+	//						"connectFromField": "parentId",
+	//						"connectToField":   "_id",
+	//						"as":               "parents",
+	//					}}})
+	//					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{
+	//						"parents": bson.D{
+	//							bson.E{
+	//								Key:   "$elemMatch",
+	//								Value: bson.M{"_id": id},
+	//							},
+	//						},
+	//					}}})
+	//					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: bson.M{
+	//						"from":         "model",
+	//						"localField":   "modelId",
+	//						"foreignField": "_id",
+	//						"as":           "model",
+	//					}}})
+	//				} else {
+	//					return count, fmt.Errorf(`%s的ObjectID值格式不正确.非字符串`, k)
+	//				}
+	//				// 特殊处理lookup
+	//			} else if k == "$lookup" {
+	//				pipeLine = append(pipeLine, bson.D{bson.E{Key: k, Value: v}})
+	//				// 特殊处理lookup数组
+	//			} else if k == "$lookups" {
+	//				// 递归转换判断value值是否为ObjectID
+	//				if lookups, ok := v.(primitive.A); ok {
+	//					for _, lookup := range lookups {
+	//						if _, ok := lookup.(primitive.M)["$group"]; ok {
+	//							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
+	//						} else if _, ok := lookup.(primitive.M)["$project"]; ok {
+	//							if _, projectOk := lookup.(primitive.M)["$project"].(bson.M); !projectOk {
+	//								return count, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
+	//							}
+	//							projectMap = lookup.(primitive.M)["$project"].(bson.M)
+	//						} else {
+	//							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+	//						}
+	//					}
+	//				} else {
+	//					return count, errors.New(`$lookups的值数据格式不正确`)
+	//				}
+	//			} else {
+	//				// 递归转换判断value值是否为ObjectID
+	//				r, err := p.deepConvert(k, v)
+	//				if err != nil {
+	//					return count, fmt.Errorf(`%s的值数据检验错误.%s`, k, err.Error())
+	//				}
+	//
+	//				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: r}}})
+	//			}
+	//		}
+	//		// }
+	//	} else {
+	//		return count, errors.New(`filter格式不正确`)
+	//	}
+	//}
+
+	if withCount, ok := query["withCount"]; ok {
+		if b, ok := withCount.(bool); ok {
+			if b {
+				newPipeLine := formatx.DeepCopy(pipeLine).(mongo.Pipeline)
+				c, err := FindCount(ctx, col, newPipeLine)
+				if err != nil {
+					return 0, err
+				}
+				count = *c
+			}
+		} else {
+			return count, errors.New(`withCount格式不正确`)
+		}
+	}
+
+	if sort, ok := query["sort"]; ok {
+		if s, ok := sort.(bson.M); ok {
+			if len(s) > 0 {
+				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
+			}
+		}
+	} else {
+		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
+	}
+
+	if skip, ok := query["skip"]; ok {
+		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$skip", Value: skip}})
+	}
+
+	if limit, ok := query["limit"]; ok {
+		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$limit", Value: limit}})
+	}
+
+	if withoutBody, ok := query["withoutBody"]; ok {
+		if b, ok := withoutBody.(bool); ok {
+			if b {
+				newPipeLine := formatx.DeepCopy(pipeLine).(mongo.Pipeline)
+				c, err := FindCount(ctx, col, newPipeLine)
+				if err != nil {
+					return 0, err
+				}
+				count = *c
+				return count, nil
+			}
+		} else {
+			return count, errors.New(`withoutBody格式不正确`)
+		}
+	}
+
+	if project, ok := query["project"]; ok {
+		if projectList, ok := query["project"].(map[string]interface{}); ok {
+			for k, v := range projectMap {
+				projectList[k] = v
+			}
+		} else if projectList, ok := query["project"].(bson.M); ok {
+			for k, v := range projectMap {
+				projectList[k] = v
+			}
+		}
+		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$project", Value: project}})
+	} else {
+		flag := false
+		for range projectMap {
+			flag = true
+		}
+		if flag {
+			pipeLine = append(pipeLine, bson.D{bson.E{Key: "$project", Value: projectMap}})
+		}
+	}
+
+	//if project, ok := (*query)["project"]; ok {
+	//	pipeLine = append(pipeLine, bson.D{bson.E{Key: "$project", Value: project}})
+	//}
+	//newPipeLine := DeepCopy(pipeLine).(mongo.Pipeline)
+	if err := FindPipeline(ctx, col, result, pipeLine); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// FindFilterLimit 根据条件查询数据(先根据条件分页)
+// result:查询结果 query:查询条件
+func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bson.M, query bson.M) (int, error) {
+
+	var count int
+	projectMap := bson.M{}
+
+	pipeLine := mongo.Pipeline{}
+
+	hasGroup := false
+
+	//$group 放入 $lookups的$project后面
+	if filter, ok := query["filter"]; ok {
+		if filterMap, ok := filter.(bson.M); ok {
+			groupMap := primitive.M{}
+			hasGroupFields := false
+			if groupFieldsMap, ok := query["groupFields"].(primitive.M); ok {
+				groupMap = groupFieldsMap
+				hasGroupFields = true
+				for k := range groupFieldsMap {
+					projectMap[k] = 1
+				}
+				delete(query, "groupFields")
+			}
+			if groupByMap, ok := query["groupBy"].(primitive.M); ok {
+				groupMap["_id"] = groupByMap
+				query["group"] = groupMap
+				delete(query, "groupBy")
+			} else if hasGroupFields {
+				groupMap["_id"] = nil
+				query["group"] = groupMap
+				delete(query, "groupBy")
+			}
+			if groupMap, ok := query["group"].(primitive.M); ok {
+				//groupMap["_id"] = groupMap["id"]
+				delete(groupMap, "id")
+				if lookups, ok := filterMap["$lookups"].(primitive.A); ok {
+					lookupsOtherList := primitive.A{}
+					if len(lookups) != 0 {
+						if projectM, ok := lookups[0].(primitive.M)["$project"].(primitive.M); ok {
+							for k := range projectMap {
+								projectM[k] = 1
+							}
+							lookupsOtherList = append(lookupsOtherList, lookups[0])
+							lookupsOtherList = append(lookupsOtherList, bson.M{"$group": groupMap})
+							lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
+							lookups = lookupsOtherList
+							filterMap["$lookups"] = lookups
+						} else {
+							lookupsOtherList = append(lookupsOtherList, bson.M{"$group": groupMap})
+							lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
+							lookups = lookupsOtherList
+							filterMap["$lookups"] = lookups
+						}
+					} else {
+						lookups = primitive.A{groupMap}
+					}
+				} else {
+					filterMap["$lookups"] = primitive.A{bson.M{"$project": projectMap}, groupMap}
+				}
+				delete(query, "group")
+			}
+			// }
+		} else {
+			return 0, errors.New(`filter格式不正确`)
+		}
+	}
+
+	hasForeignKey, ok := query["hasForeignKey"].(bool)
+	if ok {
+		if hasForeignKey {
+			queryLookupList := primitive.A{}
+			hasForeignKey, ok := query["queryLookupList"].(primitive.A)
+			if ok {
+				queryLookupList = hasForeignKey
+			}
+			if sortFirst, ok := query["sortFirst"].(bool); ok {
+				if sortFirst {
+					if filter, ok := query["filter"]; ok {
+						if filterMap, ok := filter.(bson.M); ok {
+							for k, v := range filterMap {
+								if k == "$lookup" {
+									pipeLine = append(pipeLine, bson.D{bson.E{Key: k, Value: v}})
+									// 特殊处理lookup数组
+								} else if k != "$lookups" {
+									//判断空对象
+									if emptyObject, ok := v.(primitive.M); ok {
+										flag := false
+										for range emptyObject {
+											flag = true
+										}
+										if !flag {
+											delete(filterMap, k)
+											continue
+										}
+									}
+									if k == "id" {
+										k = "_id"
+									}
+									if strings.HasSuffix(k, "Id") && k != "requestId" {
+										k = k[:len(k)-2]
+										k = k + "._id"
+									}
+									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+								}
+							}
+							// }
+						} else {
+							return 0, errors.New(`filter格式不正确`)
+						}
+					}
+					for _, lookup := range queryLookupList {
+						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+					}
+				} else {
+					for _, lookup := range queryLookupList {
+						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+					}
+					if filter, ok := query["filter"]; ok {
+						if filterMap, ok := filter.(bson.M); ok {
+							for k, v := range filterMap {
+								if k == "$lookup" {
+									pipeLine = append(pipeLine, bson.D{bson.E{Key: k, Value: v}})
+									// 特殊处理lookup数组
+								} else if k != "$lookups" {
+									//判断空对象
+									if emptyObject, ok := v.(primitive.M); ok {
+										flag := false
+										for range emptyObject {
+											flag = true
+										}
+										if !flag {
+											delete(filterMap, k)
+											continue
+										}
+									}
+									if k == "id" {
+										k = "_id"
+									}
+									if strings.HasSuffix(k, "Id") && k != "requestId" {
+										k = k[:len(k)-2]
+										k = k + "._id"
+									}
+									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+								}
+							}
+							// }
+						} else {
+							return 0, errors.New(`filter格式不正确`)
+						}
+					}
+				}
+			} else {
+				for _, lookup := range queryLookupList {
+					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+				}
+				if filter, ok := query["filter"]; ok {
+					if filterMap, ok := filter.(bson.M); ok {
+						for k, v := range filterMap {
+							if k == "$lookup" {
+								pipeLine = append(pipeLine, bson.D{bson.E{Key: k, Value: v}})
+								// 特殊处理lookup数组
+							} else if k != "$lookups" {
+								//判断空对象
+								if emptyObject, ok := v.(primitive.M); ok {
+									flag := false
+									for range emptyObject {
+										flag = true
+									}
+									if !flag {
+										delete(filterMap, k)
+										continue
+									}
+								}
+								if k == "id" {
+									k = "_id"
+								}
+								if strings.HasSuffix(k, "Id") && k != "requestId" {
+									k = k[:len(k)-2]
+									k = k + "._id"
+								}
+								pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+							}
+						}
+						// }
+					} else {
+						return 0, errors.New(`filter格式不正确`)
+					}
+				}
+			}
+		} else {
+			if filter, ok := query["filter"]; ok {
+				if filterMap, ok := filter.(bson.M); ok {
+					for k, v := range filterMap {
+						if k == "$lookup" {
+							pipeLine = append(pipeLine, bson.D{bson.E{Key: k, Value: v}})
+							// 特殊处理lookup数组
+						} else if k != "$lookups" {
+							//判断空对象
+							if emptyObject, ok := v.(primitive.M); ok {
+								flag := false
+								for range emptyObject {
+									flag = true
+								}
+								if !flag {
+									delete(filterMap, k)
+									continue
+								}
+							}
+							if k == "id" {
+								k = "_id"
+							}
+							if strings.HasSuffix(k, "Id") && k != "requestId" {
+								k = k[:len(k)-2]
+								k = k + "._id"
+							}
+							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+						}
+					}
+					// }
+				} else {
+					return 0, errors.New(`filter格式不正确`)
+				}
+			}
+		}
+	} else {
+		if filter, ok := query["filter"]; ok {
+			if filterMap, ok := filter.(bson.M); ok {
+				for k, v := range filterMap {
+					if k == "$lookup" {
+						pipeLine = append(pipeLine, bson.D{bson.E{Key: k, Value: v}})
+						// 特殊处理lookup数组
+					} else if k != "$lookups" {
+						//判断空对象
+						if emptyObject, ok := v.(primitive.M); ok {
+							flag := false
+							for range emptyObject {
+								flag = true
+							}
+							if !flag {
+								delete(filterMap, k)
+								continue
+							}
+						}
+						if k == "id" {
+							k = "_id"
+						}
+						if strings.HasSuffix(k, "Id") && k != "requestId" {
+							k = k[:len(k)-2]
+							k = k + "._id"
+						}
+						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+					}
+				}
+				// }
+			} else {
+				return 0, errors.New(`filter格式不正确`)
+			}
+		}
+
+	}
+
+	if withoutBody, ok := query["withoutBody"]; ok {
+		if b, ok := withoutBody.(bool); ok {
+			if b {
+				newPipeLine := formatx.DeepCopy(pipeLine).(mongo.Pipeline)
+				c, err := FindCount(ctx, col, newPipeLine)
+				if err != nil {
+					return 0, err
+				}
+				count = *c
+				return count, nil
+			}
+		} else {
+			return count, errors.New(`withoutBody格式不正确`)
+		}
+	}
+
+	if filter, ok := query["filter"]; ok {
+		if filterMap, ok := filter.(bson.M); ok {
+			for k, v := range filterMap {
+				// 图形数据查询
+				if k == "$lookups" {
+					// 递归转换判断value值是否为ObjectID
+					if lookups, ok := v.(primitive.A); ok {
+						for _, lookup := range lookups {
+							if _, ok := lookup.(primitive.M)["$group"]; ok {
+								hasGroup = true
+								break
+								//pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
+							}
+						}
+					} else {
+						return 0, errors.New(`$lookups的值数据格式不正确`)
+					}
+				}
+			}
+			// }
+		} else {
+			return 0, errors.New(`filter格式不正确`)
+		}
+	}
+	if hasGroup {
+		afterGroupFlag := false
+
+		if filter, ok := query["filter"]; ok {
+			if filterMap, ok := filter.(bson.M); ok {
+				for k, v := range filterMap {
+					// 图形数据查询
+					if k == "$lookups" {
+						// 递归转换判断value值是否为ObjectID
+						if lookups, ok := v.(primitive.A); ok {
+							for _, lookup := range lookups {
+								if afterGroupFlag {
+									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+								}
+								if _, ok := lookup.(primitive.M)["$group"]; ok {
+									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
+									afterGroupFlag = true
+								}
+							}
+						} else {
+							return 0, errors.New(`$lookups的值数据格式不正确`)
+						}
+					}
+				}
+				// }
+			} else {
+				return 0, errors.New(`filter格式不正确`)
+			}
+		}
+	}
+	if withCount, ok := query["withCount"]; ok {
+		if b, ok := withCount.(bool); ok {
+			if b {
+				newPipeLine := formatx.DeepCopy(pipeLine).(mongo.Pipeline)
+				c, err := FindCount(ctx, col, newPipeLine)
+				if err != nil {
+					return 0, err
+				}
+				count = *c
+			}
+		} else {
+			return count, errors.New(`withCount格式不正确`)
+		}
+	}
+	if sort, ok := query["sort"]; ok {
+		if s, ok := sort.(bson.M); ok {
+			if len(s) > 0 {
+				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
+			}
+		}
+	} else {
+		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
+	}
+
+	if skip, ok := query["skip"]; ok {
+		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$skip", Value: skip}})
+	}
+
+	if limit, ok := query["limit"]; ok {
+		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$limit", Value: limit}})
+	}
+
+	if filter, ok := query["filter"]; ok {
+		if filterMap, ok := filter.(bson.M); ok {
+			for k, v := range filterMap {
+				// 图形数据查询
+				if k == "$lookups" {
+					// 递归转换判断value值是否为ObjectID
+					if lookups, ok := v.(primitive.A); ok {
+						for _, lookup := range lookups {
+							if _, ok := lookup.(primitive.M)["$project"]; ok {
+								if _, projectOk := lookup.(primitive.M)["$project"].(bson.M); !projectOk {
+									return 0, fmt.Errorf("%s的关联查询时内部project格式错误，不是bson.M", k)
+								}
+								projectMap = lookup.(primitive.M)["$project"].(bson.M)
+							} else if _, ok := lookup.(primitive.M)["$group"]; ok {
+								continue
+								//pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: lookup.(primitive.M)["$group"]}})
+							} else {
+								pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+							}
+						}
+					} else {
+						return 0, errors.New(`$lookups的值数据格式不正确`)
+					}
+				}
+			}
+			// }
+		} else {
+			return 0, errors.New(`filter格式不正确`)
+		}
+	}
+
+	if project, ok := query["project"]; ok {
+		if projectList, ok := query["project"].(map[string]interface{}); ok {
+			for k, v := range projectMap {
+				projectList[k] = v
+			}
+		} else if projectList, ok := query["project"].(bson.M); ok {
+			for k, v := range projectMap {
+				projectList[k] = v
+			}
+		}
+		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$project", Value: project}})
+	} else {
+		flag := false
+		for range projectMap {
+			flag = true
+		}
+		if flag {
+			pipeLine = append(pipeLine, bson.D{bson.E{Key: "$project", Value: projectMap}})
+		}
+	}
+	if err := FindPipeline(ctx, col, result, pipeLine); err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 // FindPipeline 根据mongo pipeline
