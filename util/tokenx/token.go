@@ -7,8 +7,6 @@ import (
 
 	"github.com/air-iot/service/util/json"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/dgrijalva/jwt-go/request"
-	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
 )
 
@@ -60,56 +58,16 @@ func GetHMACKey() []byte {
 }
 
 // GetUserInfo 获取缓存的用户数据.
-func GetUserInfo(ginContext gin.Context, redisDB *redis.Client) (*map[string]interface{}, error) {
-	//从请求中解析出token
-	token, err := request.ParseFromRequest(ginContext.Request, request.AuthorizationHeaderExtractor, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("token method error:%v", token.Header["alg"])
-		}
-		return GetHMACKey(), nil
-	})
-
+func GetUserInfo(ctx context.Context, redisDB *redis.Client, projectName, userID string) (*map[string]interface{}, error) {
+	result, err := redisDB.HGet(ctx, fmt.Sprintf("%s/login", projectName), userID).Result()
 	if err != nil {
 		return nil, err
 	}
+	userInfo := &map[string]interface{}{}
 
-	//token无效则返回
-	if !token.Valid {
-		return nil, fmt.Errorf("权限验证,令牌无效")
-	}
-
-	// 从token中获取用户id
-	userId := ""
-	if claims, ok := token.Claims.(jwt.MapClaims); ok {
-		if id, ok := claims["id"]; ok {
-			if n, ok := id.(string); ok {
-				//logrus.Info(global.NewLOG(n, req.Request.Method, req.Request.URL.Path, ip, global.SUCCESS).ToString())
-				userId = n
-			}
-		}
-	}
-
-	var cmd *redis.StringCmd
-	//根据用户id查询用户权限信息（Redis）
-	//if iredis.ClusterBool {
-	//	cmd = iredis.ClusterClient.Get(context.Background(), userId)
-	//} else {
-	cmd = redisDB.Get(context.Background(), userId)
-	//}
-	if cmd.Err() != nil {
-		return nil, cmd.Err()
-	}
-	userInfoString := cmd.Val()
-	//userInfoString, err := FindByRedisKey(userId, ctx)
-	//if err != nil {
-	//	return nil, err
-	//}
-
-	userInfoMap := &map[string]interface{}{}
-
-	err = json.Unmarshal([]byte(userInfoString), userInfoMap)
+	err = json.Unmarshal([]byte(result), userInfo)
 	if err != nil {
 		return nil, err
 	}
-	return userInfoMap, nil
+	return userInfo, nil
 }
