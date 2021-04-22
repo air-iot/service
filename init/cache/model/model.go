@@ -25,7 +25,7 @@ var MemoryModelData = struct {
 }
 
 // CacheHandler 初始化model缓存
-func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ, queue string) (func(), error) {
+func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ) (func(), error) {
 	topic := []string{CacheModelPrefix, "#"}
 
 	ctx = context.WithValue(ctx, "exchange", CacheModelPrefix)

@@ -25,7 +25,7 @@ var MemoryNodeData = struct {
 }
 
 // CacheHandler 初始化node缓存
-func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ, queue string) (func(), error) {
+func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ) (func(), error) {
 	topic := []string{CacheNodePrefix, "#"}
 
 	ctx = context.WithValue(ctx, "exchange", CacheNodePrefix)
