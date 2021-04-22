@@ -1,4 +1,4 @@
-package cache
+package entity
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
@@ -28,28 +28,28 @@ type Node struct {
 
 // NodeCommand
 type NodeMongo struct {
-	ID         string   `json:"id" bson:"_id"`
-	Name       string               `json:"name" bson:"name"`
-	Uid        string               `json:"uid" bson:"uid"`
-	Model      string   `json:"model" bson:"model"`
-	Parent     []string `json:"parent" bson:"parent"`
-	Department []string `json:"department" bson:"department"`
-	Device     DeviceMongo          `json:"device" bson:"device"`
+	ID         string      `json:"id" bson:"_id"`
+	Name       string      `json:"name" bson:"name"`
+	Uid        string      `json:"uid" bson:"uid"`
+	Model      string      `json:"model" bson:"model"`
+	Parent     []string    `json:"parent" bson:"parent"`
+	Department []string    `json:"department" bson:"department"`
+	Device     DeviceMongo `json:"device" bson:"device"`
 	Custom     struct {
 		IntervalTime int    `json:"intervalTime"  bson:"intervalTime"`
 		YPMC         string `json:"YPMC"  bson:"YPMC"`
 	} `json:"custom" bson:"custom"`
-	Models      []ModelMongo         `json:"models" bson:"models"`
-	Child       []string `json:"child" bson:"child"`
-	HasChild    bool                 `json:"hasChild" bson:"hasChild"`
-	Computed    ComputedMongo        `json:"computed" bson:"computed"`
-	Warning     WarningMongo         `json:"warning" bson:"warning"`
-	Offined     bool                 `json:"offlined" bson:"offlined"`
-	TimeoutTime interface{}          `json:"timeoutTime" bson:"timeoutTime"`
-	ConnectTime interface{}          `json:"connectTime" bson:"connectTime"`
-	CreateTime  interface{}          `json:"createTime" bson:"createTime"`
-	Status      string               `json:"status" bson:"status"`
-	Type        string               `json:"type" bson:"type"`
+	Models      []ModelMongo  `json:"models" bson:"models"`
+	Child       []string      `json:"child" bson:"child"`
+	HasChild    bool          `json:"hasChild" bson:"hasChild"`
+	Computed    ComputedMongo `json:"computed" bson:"computed"`
+	Warning     WarningMongo  `json:"warning" bson:"warning"`
+	Offined     bool          `json:"offlined" bson:"offlined"`
+	TimeoutTime interface{}   `json:"timeoutTime" bson:"timeoutTime"`
+	ConnectTime interface{}   `json:"connectTime" bson:"connectTime"`
+	CreateTime  interface{}   `json:"createTime" bson:"createTime"`
+	Status      string        `json:"status" bson:"status"`
+	Type        string        `json:"type" bson:"type"`
 }
 
 type Warning struct {

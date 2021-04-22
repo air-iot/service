@@ -1,4 +1,4 @@
-package cache
+package entity
 
 // User
 type User struct {

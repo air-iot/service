@@ -1,4 +1,4 @@
-package cache
+package entity
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
@@ -63,9 +63,9 @@ type Wechat struct {
 
 // SettingMongo
 type SettingMongo struct {
-	ID           string `json:"id" bson:"_id"`
-	Name         string             `json:"name" bson:"name"`
-	WarningMongo primitive.M        `json:"warning" bson:"warning"`
+	ID           string      `json:"id" bson:"_id"`
+	Name         string      `json:"name" bson:"name"`
+	WarningMongo primitive.M `json:"warning" bson:"warning"`
 	// Email 邮件发送配置
 	EmailMongo primitive.M `json:"email" bson:"email"`
 	// Wechat Wechat发送配置

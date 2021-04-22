@@ -1,4 +1,4 @@
-package cache
+package entity
 
 // Role
 type Role struct {
@@ -12,8 +12,8 @@ type Role struct {
 // RoleMongo
 type RoleMongo struct {
 	ID          string   `json:"id" bson:"_id"`
-	Name        string               `json:"name" bson:"name"`
+	Name        string   `json:"name" bson:"name"`
 	Users       []string `json:"users" bson:"users"`
-	Permission  []string             `json:"permission" bson:"permission"`
-	Description string               `json:"description" bson:"description"`
+	Permission  []string `json:"permission" bson:"permission"`
+	Description string   `json:"description" bson:"description"`
 }

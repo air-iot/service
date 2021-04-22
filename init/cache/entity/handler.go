@@ -1,4 +1,4 @@
-package cache
+package entity
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
@@ -13,9 +13,9 @@ type EventHandler struct {
 
 // EventHandlerMongo
 type EventHandlerMongo struct {
-	ID          string `json:"id" bson:"_id"`
-	HandlerName string             `json:"handlerName" bson:"handlerName"`
-	Event       string `json:"event" bson:"event"`
-	Settings    primitive.M        `json:"settings" bson:"settings"`
-	Type        string             `json:"type" bson:"type"`
+	ID          string      `json:"id" bson:"_id"`
+	HandlerName string      `json:"handlerName" bson:"handlerName"`
+	Event       string      `json:"event" bson:"event"`
+	Settings    primitive.M `json:"settings" bson:"settings"`
+	Type        string      `json:"type" bson:"type"`
 }

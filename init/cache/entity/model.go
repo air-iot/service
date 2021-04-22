@@ -1,4 +1,4 @@
-package cache
+package entity
 
 // Model
 type Model struct {
@@ -11,12 +11,12 @@ type Model struct {
 }
 
 type ModelMongo struct {
-	ID        string `json:"id" bson:"_id"`
-	Name      string             `json:"name" bson:"name"`
-	Computed  ComputedMongo      `json:"computed" bson:"computed"`
-	Device    DeviceMongo        `json:"device" bson:"device"`
-	Warning   WarningMongo       `json:"warning" bson:"warning"`
-	Relations RelationsMongo     `json:"relations" bson:"relations"`
+	ID        string         `json:"id" bson:"_id"`
+	Name      string         `json:"name" bson:"name"`
+	Computed  ComputedMongo  `json:"computed" bson:"computed"`
+	Device    DeviceMongo    `json:"device" bson:"device"`
+	Warning   WarningMongo   `json:"warning" bson:"warning"`
+	Relations RelationsMongo `json:"relations" bson:"relations"`
 }
 
 type RelationsMongo struct {

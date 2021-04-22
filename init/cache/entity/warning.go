@@ -1,4 +1,4 @@
-package cache
+package entity
 
 import (
 	"time"
@@ -10,14 +10,14 @@ type WarningMessage struct {
 	Type           string                   `json:"type"`
 	Status         string                   `json:"status"`
 	Processed      string                   `json:"processed"`
-	Parent         []string     `json:"status"`
+	Parent         []string                 `json:"parent"`
 	Desc           string                   `json:"desc"`
 	Level          string                   `json:"level"`
-	Department     []string     `json:"department"`
+	Department     []string                 `json:"department"`
 	Fields         []map[string]interface{} `json:"fields"`
 	Model          interface{}              `json:"model"`
-	ModelID        string       `json:"modelID"`
-	NodeID         string       `json:"nodeID"`
+	ModelID        string                   `json:"modelID"`
+	NodeID         string                   `json:"nodeID"`
 	Node           interface{}              `json:"node"`
 	RuleID         string                   `json:"ruleid"`
 	Time           int64                    `json:"time"`
@@ -26,7 +26,7 @@ type WarningMessage struct {
 	Handle         bool                     `json:"handle"`
 	Alert          bool                     `json:"alert"`
 	Other          map[string]interface{}   `json:"other"`
-	Driver         []string     `json:"driver"`
+	Driver         []string                 `json:"driver"`
 	HandleUserName string                   `json:"handleUserName"`
 	WarnTag        map[string]interface{}   `json:"warnTag"`
 }
@@ -37,13 +37,13 @@ type WarningSaveMessage struct {
 	Type       string                   `json:"type"`
 	Status     string                   `json:"status"`
 	Processed  string                   `json:"processed"`
-	Parent     []string     `json:"status"`
+	Parent     []string                 `json:"parent"`
 	Desc       string                   `json:"desc"`
 	Level      string                   `json:"level"`
-	Department []string     `json:"department"`
+	Department []string                 `json:"department"`
 	Fields     []map[string]interface{} `json:"fields"`
-	Model      string       `json:"model"`
-	Node       string       `json:"node"`
+	Model      string                   `json:"model"`
+	Node       string                   `json:"node"`
 	RuleID     string                   `json:"ruleid"`
 	Time       time.Time                `json:"time"`
 	Interval   int64                    `json:"interval"`
@@ -51,7 +51,7 @@ type WarningSaveMessage struct {
 	Handle     bool                     `json:"handle"`
 	Alert      bool                     `json:"alert"`
 	Other      map[string]interface{}   `json:"other"`
-	Driver     []string     `json:"driver"`
+	Driver     []string                 `json:"driver"`
 	WarnTag    map[string]interface{}   `json:"warnTag"`
 }
 
@@ -61,7 +61,7 @@ type WarningSendMessage struct {
 	Type       string                 `json:"type"`
 	Status     string                 `json:"status"`
 	Processed  string                 `json:"processed"`
-	Parent     interface{}            `json:"status"`
+	Parent     interface{}            `json:"parent"`
 	Desc       string                 `json:"desc"`
 	Level      string                 `json:"level"`
 	Department interface{}            `json:"department"`
@@ -85,7 +85,7 @@ type WarningUnmarshalMessage struct {
 	Type       string                   `json:"type"`
 	Status     string                   `json:"status"`
 	Processed  string                   `json:"processed"`
-	Parent     interface{}              `json:"status"`
+	Parent     interface{}              `json:"parent"`
 	Desc       string                   `json:"desc"`
 	Level      string                   `json:"level"`
 	Department interface{}              `json:"department"`
