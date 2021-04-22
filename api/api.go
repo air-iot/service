@@ -5,18 +5,23 @@ import (
 )
 
 type AuthToken struct {
-	Expires int64  `json:"expires"`
-	Token   string `json:"token"`
+	TokenType   string `json:"tokenType"`
+	ExpiresAt   int64  `json:"expiresAt"`
+	AccessToken string `json:"accessToken"`
 }
 
 type Client interface {
-	Get(url url.URL, result interface{}) error
-	Post(url url.URL, data, result interface{}) error
-	Delete(url url.URL, result interface{}) error
-	Put(url url.URL, data, result interface{}) error
-	Patch(url url.URL, data, result interface{}) error
+	Get(url url.URL, headers map[string]string, result interface{}) error
+	Post(url url.URL, headers map[string]string, data, result interface{}) error
+	Delete(url url.URL, headers map[string]string, result interface{}) error
+	Put(url url.URL, headers map[string]string, data, result interface{}) error
+	Patch(url url.URL, headers map[string]string, data, result interface{}) error
 
-	// model
+	GetLatest(query, result interface{}) error
+	PostLatest(data, result interface{}) error
+	GetQuery(query, result interface{}) error
+	PostQuery(query, result interface{}) error
+
 	FindModelQuery(query, result interface{}) error
 	FindModelById(id string, result interface{}) error
 	SaveModel(data, result interface{}) error
@@ -24,7 +29,6 @@ type Client interface {
 	UpdateModelById(id string, data, result interface{}) error
 	ReplaceModelById(id string, data, result interface{}) error
 
-	// node
 	FindNodeQuery(query, result interface{}) error
 	FindNodeById(id string, result interface{}) error
 	SaveNode(data, result interface{}) error
@@ -33,7 +37,6 @@ type Client interface {
 	ReplaceNodeById(id string, data, result interface{}) error
 	FindTagsById(id string, result interface{}) error
 
-	// user
 	FindUserQuery(query, result interface{}) error
 	FindUserById(id string, result interface{}) error
 	SaveUser(data, result interface{}) error
@@ -41,7 +44,6 @@ type Client interface {
 	UpdateUserById(id string, data, result interface{}) error
 	ReplaceUserById(id string, data, result interface{}) error
 
-	// handler
 	FindHandlerQuery(query, result interface{}) error
 	FindHandlerById(id string, result interface{}) error
 	SaveHandler(data, result interface{}) error
@@ -49,7 +51,6 @@ type Client interface {
 	UpdateHandlerById(id string, data, result interface{}) error
 	ReplaceHandlerById(id string, data, result interface{}) error
 
-	// ext
 	FindExtQuery(collection string, query, result interface{}) error
 	FindExtById(collection, id string, result interface{}) error
 	SaveExt(collection string, data, result interface{}) error
@@ -59,7 +60,6 @@ type Client interface {
 	ReplaceExtById(collection, id string, data, result interface{}) error
 	DelExtAll(tableName, result interface{}) error
 
-	// event
 	FindEventQuery(query, result interface{}) error
 	FindEventById(id string, result interface{}) error
 	SaveEvent(data, result interface{}) error
@@ -67,7 +67,6 @@ type Client interface {
 	UpdateEventById(id string, data, result interface{}) error
 	ReplaceEventById(id string, data, result interface{}) error
 
-	// setting
 	FindSettingQuery(query, result interface{}) error
 	FindSettingById(id string, result interface{}) error
 	SaveSetting(data, result interface{}) error
@@ -75,7 +74,6 @@ type Client interface {
 	UpdateSettingById(id string, data, result interface{}) error
 	ReplaceSettingById(id string, data, result interface{}) error
 
-	// table
 	FindTableQuery(query, result interface{}) error
 	FindTableById(id string, result interface{}) error
 	SaveTable(data, result interface{}) error
@@ -83,13 +81,6 @@ type Client interface {
 	UpdateTableById(id string, data, result interface{}) error
 	ReplaceTableById(id string, data, result interface{}) error
 
-	// data
-	//GetLatest(query interface{}) (result []model.RealTimeData, err error)
-	//PostLatest(data interface{}) (result []model.RealTimeData, err error)
-	//GetQuery(query interface{}) (result *model.QueryData, err error)
-	//PostQuery(query interface{}) (result *model.QueryData, err error)
-
-	// 报警
 	FindWarnQuery(archive bool, query, result interface{}) error
 	FindWarnById(id string, archive bool, result interface{}) error
 	SaveWarn(data, archive bool, result interface{}) error
@@ -97,11 +88,9 @@ type Client interface {
 	UpdateWarnById(id string, archive bool, data, result interface{}) error
 	ReplaceWarnById(id string, archive bool, data, result interface{}) error
 
-	// driver
 	ChangeCommand(id string, data, result interface{}) error
 	DriverConfig(driverId, serviceId string) ([]byte, error)
 
-	// gateway
 	FindGatewayQuery(query, result interface{}) error
 	FindGatewayById(id string, result interface{}) error
 	FindGatewayByType(typeName string, result interface{}) error
@@ -113,7 +102,6 @@ type Client interface {
 	// license
 	//CheckDriver(licenseName string) (*model.Signature, error)
 
-	// log
 	FindLogQuery(query, result interface{}) error
 	FindLogById(id string, result interface{}) error
 	SaveLog(data, result interface{}) error
