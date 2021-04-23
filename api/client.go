@@ -45,6 +45,7 @@ func NewClient(cli *redis.Client, cfg Config) Client {
 
 // FindToken 获取token
 func (p *client) FindToken(project string) (*AuthToken, error) {
+	project = ginx.XRequestProjectDefault
 	p.Lock()
 	defer p.Unlock()
 	if token, ok := p.tokens[project]; ok {
