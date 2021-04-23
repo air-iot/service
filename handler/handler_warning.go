@@ -50,7 +50,7 @@ func TriggerWarningRules(ctx context.Context, redisClient *redis.Client, mongoCl
 	//}
 	////logger.Debugf(eventAlarmLog, "开始获取当前模型的计算逻辑事件")
 	//获取当前模型的报警规则逻辑事件=============================================
-	eventInfoList := new([]entity.Event,0)
+	eventInfoList := new([]entity.Event)
 	err := event.GetByType(ctx,redisClient,mongoClient,projectName,string(Alarm),eventInfoList)
 	if err != nil {
 		//logger.Debugf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的报警事件失败:%s", modelID, err.Error()))
@@ -436,7 +436,7 @@ func TriggerWarningDisableModelRules(ctx context.Context, redisClient *redis.Cli
 	//}
 	////logger.Debugf(eventAlarmLog, "开始获取当前模型的计算逻辑事件")
 	//获取当前模型的报警规则逻辑事件=============================================
-	eventInfoList := new([]entity.Event,0)
+	eventInfoList := new([]entity.Event)
 	err := event.GetByType(ctx,redisClient,mongoClient,projectName,string(Alarm),eventInfoList)
 	if err != nil {
 		//logger.Debugf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的报警事件失败:%s", modelID, err.Error()))
@@ -815,7 +815,7 @@ func TriggerWarningDisableNodeRules(ctx context.Context, redisClient *redis.Clie
 	//}
 	////logger.Debugf(eventAlarmLog, "开始获取当前模型的计算逻辑事件")
 	//获取当前模型的报警规则逻辑事件=============================================
-	eventInfoList := new([]entity.Event,0)
+	eventInfoList := new([]entity.Event)
 	err := event.GetByType(ctx,redisClient,mongoClient,projectName,string(Alarm),eventInfoList)
 	if err != nil {
 		//logger.Debugf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的报警事件失败:%s", modelID, err.Error()))

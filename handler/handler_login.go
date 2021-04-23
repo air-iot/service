@@ -30,7 +30,7 @@ func TriggerLogin(ctx context.Context, redisClient *redis.Client, mongoClient *m
 	////logger.Debugf(eventLoginLog, "开始获取当前模型的用户登录事件")
 	//获取当前用户登录事件=============================================
 	headerMap := map[string]string{ginx.XRequestProject:projectName}
-	eventInfoList := new([]entity.Event,0)
+	eventInfoList := new([]entity.Event)
 	err := event.GetByType(ctx,redisClient,mongoClient,projectName,string(Login),eventInfoList)
 	if err != nil {
 		//logger.Debugf(eventLoginLog, fmt.Sprintf("获取用户登录事件失败:%s", err.Error()))
@@ -164,13 +164,13 @@ func TriggerLogin(ctx context.Context, redisClient *redis.Client, mongoClient *m
 				roleListInSettings = make([]string, 0)
 			}
 			if len(departmentListInSettings) != 0 && len(roleListInSettings) != 0 {
-				userInfoListByDept := new([]entity.User,0)
+				userInfoListByDept := new([]entity.User)
 				err := user.GetByDept(ctx,redisClient,mongoClient,projectName,departmentListInSettings,userInfoListByDept)
 				if err != nil {
 					//logger.Warnln(eventLoginLog, "部门ID获取用户缓存失败:%s", err.Error())
 					continue
 				}
-				userInfoListByRole := new([]entity.User,0)
+				userInfoListByRole := new([]entity.User)
 				err = user.GetByRole(ctx,redisClient,mongoClient,projectName,roleListInSettings,userInfoListByRole)
 				if err != nil {
 					//logger.Warnln(eventLoginLog, "角色ID获取用户缓存失败:%s", err.Error())
@@ -190,7 +190,7 @@ func TriggerLogin(ctx context.Context, redisClient *redis.Client, mongoClient *m
 				}
 
 			} else if len(departmentListInSettings) != 0 && len(roleListInSettings) == 0 {
-				userInfoListByDept := new([]entity.User,0)
+				userInfoListByDept := new([]entity.User)
 				err := user.GetByDept(ctx,redisClient,mongoClient,projectName,departmentListInSettings,userInfoListByDept)
 				if err != nil {
 					//logger.Warnln(eventLoginLog, "部门ID获取用户缓存失败:%s", err.Error())
@@ -202,7 +202,7 @@ func TriggerLogin(ctx context.Context, redisClient *redis.Client, mongoClient *m
 				}
 
 			} else if len(departmentListInSettings) == 0 && len(roleListInSettings) != 0 {
-				userInfoListByRole := new([]entity.User,0)
+				userInfoListByRole := new([]entity.User)
 				err = user.GetByRole(ctx,redisClient,mongoClient,projectName,roleListInSettings,userInfoListByRole)
 				if err != nil {
 					//logger.Warnln(eventLoginLog, "角色ID获取用户缓存失败:%s", err.Error())
