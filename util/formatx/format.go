@@ -99,6 +99,27 @@ func AddNonRepBsonMByLoop(slc []bson.M, addEle bson.M) []bson.M {
 	return slc
 }
 
+// AddNonRepMapByLoop 通过循环添加非重复元素（[]map[string]interface{}）
+func AddNonRepMapByLoop(slc []map[string]interface{}, addEle map[string]interface{}) []map[string]interface{} {
+	flag := true
+	for i := range slc {
+		if _, ok := slc[i]["id"].(string); !ok {
+			return slc
+		}
+		if _, ok := addEle["id"].(string); !ok {
+			return slc
+		}
+		if slc[i]["id"].(string) == addEle["id"].(string) {
+			flag = false // 存在重复元素，标识为false
+		}
+	}
+	if flag { // 标识为false，不添加进结果
+		slc = append(slc, addEle)
+	}
+	return slc
+}
+
+
 //// StringListToObjectIdList 字符串数组转ObjectId数组
 //func StringListToObjectIdList(idStringList []string) ([]primitive.ObjectID, error) {
 //	idObjectList := make([]primitive.ObjectID, 0)
