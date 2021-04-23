@@ -2,7 +2,7 @@ package formatx
 
 import (
 	"fmt"
-	"github.com/air-iot/service/init/cache"
+	"github.com/air-iot/service/init/cache/entity"
 	"github.com/air-iot/service/util/numberx"
 	"regexp"
 	"strings"
@@ -1117,9 +1117,9 @@ func FormatObjectIDPrimitiveList(doc *bson.M, key string, formatKey string) erro
 					stringID = ele.Hex()
 				} else if ele, ok := interfaceObject.(string); ok {
 					stringID = ele
-				} else if ele, ok := interfaceObject.(*cache.Node); ok {
+				} else if ele, ok := interfaceObject.(*entity.Node); ok {
 					stringID = ele.ID
-				} else if ele, ok := interfaceObject.(*cache.Model); ok {
+				} else if ele, ok := interfaceObject.(*entity.Model); ok {
 					stringID = ele.ID
 				} else if _, ok := interfaceObject.(primitive.M)[formatKey]; !ok {
 					return fmt.Errorf("%s需要格式化的Key:%s，不存在", key, formatKey)
