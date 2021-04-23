@@ -1050,3 +1050,34 @@ func (p *client) ReplaceLogById(headers map[string]string, id string, data, resu
 	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/log/%s", id)}
 	return p.Put(u, headers, data, result)
 }
+
+func (p *client) FindProjectQuery(headers map[string]string, query, result interface{}) error {
+	b, err := json.Marshal(query)
+	if err != nil {
+		return err
+	}
+	host := p.cfg.Host
+	if host == "" {
+		host = "spm:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "spm/project"}
+	v := url.Values{}
+	v.Set("query", string(b))
+	u.RawQuery = v.Encode()
+	token, err := p.FindToken("baseToken")
+	if err != nil {
+		return err
+	}
+	headers[ginx.XRequestHeaderAuthorization] = fmt.Sprintf("%s %s", token.TokenType, token.AccessToken)
+	resp, err := resty.New().SetTimeout(time.Minute * 1).R().
+		SetHeaders(headers).
+		SetResult(result).
+		Get(u.String())
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode() >= 200 && resp.StatusCode() <= 204 {
+		return nil
+	}
+	return errors.New(resp.String())
+}

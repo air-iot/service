@@ -110,4 +110,6 @@ type Client interface {
 	DelLogById(headers map[string]string, id string, result interface{}) error
 	UpdateLogById(headers map[string]string, id string, data, result interface{}) error
 	ReplaceLogById(headers map[string]string, id string, data, result interface{}) error
+
+	FindProjectQuery(headers map[string]string, query, result interface{}) error
 }
