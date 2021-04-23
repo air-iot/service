@@ -41,7 +41,11 @@ func GetToken(c *gin.Context) string {
 
 // GetProjectName 获取项目名称
 func GetProjectName(c *gin.Context) string {
-	return c.GetHeader(XRequestProject)
+	project := c.GetHeader(XRequestProject)
+	if project == "" {
+		project = "default"
+	}
+	return project
 }
 
 // GetUserID 获取用户ID

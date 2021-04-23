@@ -3,6 +3,8 @@ package node
 import (
 	"context"
 	"fmt"
+	"github.com/air-iot/service/init/mongodb"
+	"go.mongodb.org/mongo-driver/mongo"
 	"math/rand"
 	"sync"
 
@@ -81,7 +83,7 @@ func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ) (
 }
 
 // Get 根据项目ID和资产ID查询数据
-func Get(ctx context.Context, redisClient *redis.Client, project, id string, result interface{}) (err error) {
+func Get(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project, id string, result interface{}) (err error) {
 	MemoryNodeData.Lock()
 	defer MemoryNodeData.Unlock()
 	var node string
@@ -89,7 +91,7 @@ func Get(ctx context.Context, redisClient *redis.Client, project, id string, res
 	if ok {
 		node, ok = nodeMap[id]
 		if !ok {
-			node, err = redisClient.HGet(ctx, fmt.Sprintf("%s/node", project), id).Result()
+			node, err = getByDB(ctx, redisClient, mongoClient, project, id)
 			if err != nil {
 				return errors.WithStack(err)
 			}
@@ -97,7 +99,7 @@ func Get(ctx context.Context, redisClient *redis.Client, project, id string, res
 			MemoryNodeData.Cache[project] = nodeMap
 		}
 	} else {
-		node, err = redisClient.HGet(ctx, fmt.Sprintf("%s/node", project), id).Result()
+		node, err = getByDB(ctx, redisClient, mongoClient, project, id)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -110,6 +112,30 @@ func Get(ctx context.Context, redisClient *redis.Client, project, id string, res
 		return errors.WithStack(err)
 	}
 	return nil
+}
+
+func getByDB(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project, id string) (string, error) {
+	node, err := redisClient.HGet(ctx, fmt.Sprintf("%s/node", project), id).Result()
+	if err != nil && err != redis.Nil {
+		return "", err
+	} else if err == redis.Nil {
+		col := mongoClient.Database(project).Collection("node")
+		nodeTmp := make(map[string]interface{})
+		err := mongodb.FindByID(ctx, col, &nodeTmp, id)
+		if err != nil {
+			return "", err
+		}
+		nodeBytes, err := json.Marshal(&nodeTmp)
+		if err != nil {
+			return "", err
+		}
+		_, err = redisClient.HMSet(ctx, fmt.Sprintf("%s/node", project), map[string]interface{}{id: nodeBytes}).Result()
+		if err != nil {
+			return "", fmt.Errorf("更新redis数据错误, %s", err.Error())
+		}
+		node = string(nodeBytes)
+	}
+	return node, nil
 }
 
 // TriggerUpdate 更新redis资产数据,并发送消息通知
