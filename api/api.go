@@ -11,101 +11,103 @@ type AuthToken struct {
 }
 
 type Client interface {
+	FindToken(project string) (*AuthToken, error)
+
 	Get(url url.URL, headers map[string]string, result interface{}) error
 	Post(url url.URL, headers map[string]string, data, result interface{}) error
 	Delete(url url.URL, headers map[string]string, result interface{}) error
 	Put(url url.URL, headers map[string]string, data, result interface{}) error
 	Patch(url url.URL, headers map[string]string, data, result interface{}) error
 
-	GetLatest(query, result interface{}) error
-	PostLatest(data, result interface{}) error
-	GetQuery(query, result interface{}) error
-	PostQuery(query, result interface{}) error
+	GetLatest(headers map[string]string, query, result interface{}) error
+	PostLatest(headers map[string]string, data, result interface{}) error
+	GetQuery(headers map[string]string, query, result interface{}) error
+	PostQuery(headers map[string]string, query, result interface{}) error
 
-	FindModelQuery(query, result interface{}) error
-	FindModelById(id string, result interface{}) error
-	SaveModel(data, result interface{}) error
-	DelModelById(id string, result interface{}) error
-	UpdateModelById(id string, data, result interface{}) error
-	ReplaceModelById(id string, data, result interface{}) error
+	FindModelQuery(headers map[string]string, query, result interface{}) error
+	FindModelById(headers map[string]string, id string, result interface{}) error
+	SaveModel(headers map[string]string, data, result interface{}) error
+	DelModelById(headers map[string]string, id string, result interface{}) error
+	UpdateModelById(headers map[string]string, id string, data, result interface{}) error
+	ReplaceModelById(headers map[string]string, id string, data, result interface{}) error
 
-	FindNodeQuery(query, result interface{}) error
-	FindNodeById(id string, result interface{}) error
-	SaveNode(data, result interface{}) error
-	DelNodeById(id string, result interface{}) error
-	UpdateNodeById(id string, data, result interface{}) error
-	ReplaceNodeById(id string, data, result interface{}) error
-	FindTagsById(id string, result interface{}) error
+	FindNodeQuery(headers map[string]string, query, result interface{}) error
+	FindNodeById(headers map[string]string, id string, result interface{}) error
+	SaveNode(headers map[string]string, data, result interface{}) error
+	DelNodeById(headers map[string]string, id string, result interface{}) error
+	UpdateNodeById(headers map[string]string, id string, data, result interface{}) error
+	ReplaceNodeById(headers map[string]string, id string, data, result interface{}) error
+	FindTagsById(headers map[string]string, id string, result interface{}) error
 
-	FindUserQuery(query, result interface{}) error
-	FindUserById(id string, result interface{}) error
-	SaveUser(data, result interface{}) error
-	DelUserById(id string, result interface{}) error
-	UpdateUserById(id string, data, result interface{}) error
-	ReplaceUserById(id string, data, result interface{}) error
+	FindUserQuery(headers map[string]string, query, result interface{}) error
+	FindUserById(headers map[string]string, id string, result interface{}) error
+	SaveUser(headers map[string]string, data, result interface{}) error
+	DelUserById(headers map[string]string, id string, result interface{}) error
+	UpdateUserById(headers map[string]string, id string, data, result interface{}) error
+	ReplaceUserById(headers map[string]string, id string, data, result interface{}) error
 
-	FindHandlerQuery(query, result interface{}) error
-	FindHandlerById(id string, result interface{}) error
-	SaveHandler(data, result interface{}) error
-	DelHandlerById(id string, result interface{}) error
-	UpdateHandlerById(id string, data, result interface{}) error
-	ReplaceHandlerById(id string, data, result interface{}) error
+	FindHandlerQuery(headers map[string]string, query, result interface{}) error
+	FindHandlerById(headers map[string]string, id string, result interface{}) error
+	SaveHandler(headers map[string]string, data, result interface{}) error
+	DelHandlerById(headers map[string]string, id string, result interface{}) error
+	UpdateHandlerById(headers map[string]string, id string, data, result interface{}) error
+	ReplaceHandlerById(headers map[string]string, id string, data, result interface{}) error
 
-	FindExtQuery(collection string, query, result interface{}) error
-	FindExtById(collection, id string, result interface{}) error
-	SaveExt(collection string, data, result interface{}) error
-	SaveManyExt(collection string, data, result interface{}) error
-	DelExtById(collection, id string, result interface{}) error
-	UpdateExtById(collection, id string, data, result interface{}) error
-	ReplaceExtById(collection, id string, data, result interface{}) error
-	DelExtAll(tableName, result interface{}) error
+	FindExtQuery(headers map[string]string, collection string, query, result interface{}) error
+	FindExtById(headers map[string]string, collection, id string, result interface{}) error
+	SaveExt(headers map[string]string, collection string, data, result interface{}) error
+	SaveManyExt(headers map[string]string, collection string, data, result interface{}) error
+	DelExtById(headers map[string]string, collection, id string, result interface{}) error
+	UpdateExtById(headers map[string]string, collection, id string, data, result interface{}) error
+	ReplaceExtById(headers map[string]string, collection, id string, data, result interface{}) error
+	DelExtAll(headers map[string]string, tableName, result interface{}) error
 
-	FindEventQuery(query, result interface{}) error
-	FindEventById(id string, result interface{}) error
-	SaveEvent(data, result interface{}) error
-	DelEventById(id string, result interface{}) error
-	UpdateEventById(id string, data, result interface{}) error
-	ReplaceEventById(id string, data, result interface{}) error
+	FindEventQuery(headers map[string]string, query, result interface{}) error
+	FindEventById(headers map[string]string, id string, result interface{}) error
+	SaveEvent(headers map[string]string, data, result interface{}) error
+	DelEventById(headers map[string]string, id string, result interface{}) error
+	UpdateEventById(headers map[string]string, id string, data, result interface{}) error
+	ReplaceEventById(headers map[string]string, id string, data, result interface{}) error
 
-	FindSettingQuery(query, result interface{}) error
-	FindSettingById(id string, result interface{}) error
-	SaveSetting(data, result interface{}) error
-	DelSettingById(id string, result interface{}) error
-	UpdateSettingById(id string, data, result interface{}) error
-	ReplaceSettingById(id string, data, result interface{}) error
+	FindSettingQuery(headers map[string]string, query, result interface{}) error
+	FindSettingById(headers map[string]string, id string, result interface{}) error
+	SaveSetting(headers map[string]string, data, result interface{}) error
+	DelSettingById(headers map[string]string, id string, result interface{}) error
+	UpdateSettingById(headers map[string]string, id string, data, result interface{}) error
+	ReplaceSettingById(headers map[string]string, id string, data, result interface{}) error
 
-	FindTableQuery(query, result interface{}) error
-	FindTableById(id string, result interface{}) error
-	SaveTable(data, result interface{}) error
-	DelTableById(id string, result interface{}) error
-	UpdateTableById(id string, data, result interface{}) error
-	ReplaceTableById(id string, data, result interface{}) error
+	FindTableQuery(headers map[string]string, query, result interface{}) error
+	FindTableById(headers map[string]string, id string, result interface{}) error
+	SaveTable(headers map[string]string, data, result interface{}) error
+	DelTableById(headers map[string]string, id string, result interface{}) error
+	UpdateTableById(headers map[string]string, id string, data, result interface{}) error
+	ReplaceTableById(headers map[string]string, id string, data, result interface{}) error
 
-	FindWarnQuery(archive bool, query, result interface{}) error
-	FindWarnById(id string, archive bool, result interface{}) error
-	SaveWarn(data, archive bool, result interface{}) error
-	DelWarnById(id string, archive bool, result interface{}) error
-	UpdateWarnById(id string, archive bool, data, result interface{}) error
-	ReplaceWarnById(id string, archive bool, data, result interface{}) error
+	FindWarnQuery(headers map[string]string, archive bool, query, result interface{}) error
+	FindWarnById(headers map[string]string, id string, archive bool, result interface{}) error
+	SaveWarn(headers map[string]string, data, archive bool, result interface{}) error
+	DelWarnById(headers map[string]string, id string, archive bool, result interface{}) error
+	UpdateWarnById(headers map[string]string, id string, archive bool, data, result interface{}) error
+	ReplaceWarnById(headers map[string]string, id string, archive bool, data, result interface{}) error
 
-	ChangeCommand(id string, data, result interface{}) error
-	DriverConfig(driverId, serviceId string) ([]byte, error)
+	ChangeCommand(headers map[string]string, id string, data, result interface{}) error
+	DriverConfig(headers map[string]string, driverId, serviceId string) ([]byte, error)
 
-	FindGatewayQuery(query, result interface{}) error
-	FindGatewayById(id string, result interface{}) error
-	FindGatewayByType(typeName string, result interface{}) error
-	SaveGateway(data, result interface{}) error
-	DelGatewayById(id string, result interface{}) error
-	UpdateGatewayById(id string, data, result interface{}) error
-	ReplaceGatewayById(id string, data, result interface{}) error
+	FindGatewayQuery(headers map[string]string, query, result interface{}) error
+	FindGatewayById(headers map[string]string, id string, result interface{}) error
+	FindGatewayByType(headers map[string]string, typeName string, result interface{}) error
+	SaveGateway(headers map[string]string, data, result interface{}) error
+	DelGatewayById(headers map[string]string, id string, result interface{}) error
+	UpdateGatewayById(headers map[string]string, id string, data, result interface{}) error
+	ReplaceGatewayById(headers map[string]string, id string, data, result interface{}) error
 
 	// license
-	//CheckDriver(licenseName string) (*model.Signature, error)
+	//CheckDriver(headers map[string]string, licenseName string) (headers map[string]string, *model.Signature, error)
 
-	FindLogQuery(query, result interface{}) error
-	FindLogById(id string, result interface{}) error
-	SaveLog(data, result interface{}) error
-	DelLogById(id string, result interface{}) error
-	UpdateLogById(id string, data, result interface{}) error
-	ReplaceLogById(id string, data, result interface{}) error
+	FindLogQuery(headers map[string]string, query, result interface{}) error
+	FindLogById(headers map[string]string, id string, result interface{}) error
+	SaveLog(headers map[string]string, data, result interface{}) error
+	DelLogById(headers map[string]string, id string, result interface{}) error
+	UpdateLogById(headers map[string]string, id string, data, result interface{}) error
+	ReplaceLogById(headers map[string]string, id string, data, result interface{}) error
 }

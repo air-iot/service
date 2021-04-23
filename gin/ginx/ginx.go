@@ -16,20 +16,23 @@ import (
 
 // 定义上下文中的键
 const (
-	prefix           = "service"
-	UserIDKey        = prefix + "/user-id"
-	ReqBodyKey       = prefix + "/req-body"
-	ResBodyKey       = prefix + "/res-body"
-	LoggerReqBodyKey = prefix + "/logger-req-body"
-	XRequestProject  = "x-request-project"
+	prefix                      = "service"
+	UserIDKey                   = prefix + "/user-id"
+	ReqBodyKey                  = prefix + "/req-body"
+	ResBodyKey                  = prefix + "/res-body"
+	LoggerReqBodyKey            = prefix + "/logger-req-body"
+	XRequestProject             = "x-request-project"
+	XRequestProjectDefault      = "default"
+	XRequestHeaderAuthorization = "Authorization"
+	XRequestQueryAuthorization  = "token"
 )
 
 // GetToken 获取用户令牌
 func GetToken(c *gin.Context) string {
 	var token string
-	auth := c.GetHeader("Authorization")
+	auth := c.GetHeader(XRequestHeaderAuthorization)
 	if auth == "" {
-		token = c.Query("token")
+		token = c.Query(XRequestQueryAuthorization)
 		return token
 	}
 	prefix := "Bearer "
@@ -43,7 +46,7 @@ func GetToken(c *gin.Context) string {
 func GetProjectName(c *gin.Context) string {
 	project := c.GetHeader(XRequestProject)
 	if project == "" {
-		project = "default"
+		project = XRequestProjectDefault
 	}
 	return project
 }
