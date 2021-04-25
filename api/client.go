@@ -40,6 +40,7 @@ func NewClient(cli *redis.Client, cfg Config) Client {
 			"Content-Type": "application/json",
 			"Request-Type": "service",
 		},
+		tokens: map[string]*AuthToken{},
 	}
 }
 
