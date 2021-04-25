@@ -101,8 +101,7 @@ type Client interface {
 	UpdateGatewayById(headers map[string]string, id string, data, result interface{}) error
 	ReplaceGatewayById(headers map[string]string, id string, data, result interface{}) error
 
-	// license
-	//CheckDriver(headers map[string]string, licenseName string) (headers map[string]string, *model.Signature, error)
+	CheckDriver(headers map[string]string, licenseName string, signature interface{}) error
 
 	FindLogQuery(headers map[string]string, query, result interface{}) error
 	FindLogById(headers map[string]string, id string, result interface{}) error

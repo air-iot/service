@@ -1082,3 +1082,16 @@ func (p *client) FindProjectQuery(headers map[string]string, query, result inter
 	}
 	return errors.New(resp.String())
 }
+
+func (p *client) CheckDriver(headers map[string]string, licenseName string, signature interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "core:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "core/license/driver"}
+	v := url.Values{}
+	v.Set("licenseName", licenseName)
+	u.RawQuery = v.Encode()
+	return p.Get(u, headers, signature)
+
+}
