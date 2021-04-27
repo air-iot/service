@@ -48,8 +48,8 @@ func ConvertKeyUnderlineID(data interface{}) interface{} {
 	case map[string]interface{}:
 		for k, v := range val {
 			if k == "_id" {
-				delete(val, "_id")
 				val["id"] = ConvertKeyUnderlineID(v)
+				delete(val, "_id")
 			} else {
 				val[k] = ConvertKeyUnderlineID(v)
 			}
@@ -58,8 +58,8 @@ func ConvertKeyUnderlineID(data interface{}) interface{} {
 	case *map[string]interface{}:
 		for k, v := range *val {
 			if k == "_id" {
-				delete(*val, "_id")
 				(*val)["id"] = ConvertKeyUnderlineID(v)
+				delete(*val, "_id")
 			} else {
 				(*val)[k] = ConvertKeyUnderlineID(v)
 			}
@@ -68,8 +68,8 @@ func ConvertKeyUnderlineID(data interface{}) interface{} {
 	case bson.M:
 		for k, v := range val {
 			if k == "_id" {
-				delete(val, "_id")
 				val["id"] = ConvertKeyUnderlineID(v)
+				delete(val, "_id")
 			} else {
 				val[k] = ConvertKeyUnderlineID(v)
 			}
@@ -78,8 +78,8 @@ func ConvertKeyUnderlineID(data interface{}) interface{} {
 	case *bson.M:
 		for k, v := range *val {
 			if k == "_id" {
-				delete(*val, "_id")
 				(*val)["id"] = ConvertKeyUnderlineID(v)
+				delete(*val, "_id")
 			} else {
 				(*val)[k] = ConvertKeyUnderlineID(v)
 			}
@@ -128,8 +128,8 @@ func ConvertKeyID(data interface{}) interface{} {
 	case map[string]interface{}:
 		for k, v := range val {
 			if k == "id" {
-				delete(val, "id")
 				val["_id"] = ConvertKeyUnderlineID(v)
+				delete(val, "id")
 			} else {
 				val[k] = ConvertKeyUnderlineID(v)
 			}
@@ -138,8 +138,8 @@ func ConvertKeyID(data interface{}) interface{} {
 	case *map[string]interface{}:
 		for k, v := range *val {
 			if k == "id" {
-				delete(*val, "id")
 				(*val)["_id"] = ConvertKeyUnderlineID(v)
+				delete(*val, "id")
 			} else {
 				(*val)[k] = ConvertKeyUnderlineID(v)
 			}
@@ -148,8 +148,8 @@ func ConvertKeyID(data interface{}) interface{} {
 	case bson.M:
 		for k, v := range val {
 			if k == "id" {
-				delete(val, "id")
 				val["_id"] = ConvertKeyUnderlineID(v)
+				delete(val, "id")
 			} else {
 				val[k] = ConvertKeyUnderlineID(v)
 			}
@@ -158,8 +158,8 @@ func ConvertKeyID(data interface{}) interface{} {
 	case *bson.M:
 		for k, v := range *val {
 			if k == "id" {
-				delete(*val, "id")
 				(*val)["_id"] = ConvertKeyUnderlineID(v)
+				delete(*val, "id")
 			} else {
 				(*val)[k] = ConvertKeyUnderlineID(v)
 			}
