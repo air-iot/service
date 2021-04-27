@@ -107,6 +107,18 @@ func ConvertKeyUnderlineID(data interface{}) interface{} {
 			vtmp[i] = ConvertKeyUnderlineID(v)
 		}
 		return vtmp
+	case []bson.M:
+		var vtmp = make([]interface{}, len(val))
+		for i, v := range val {
+			vtmp[i] = ConvertKeyUnderlineID(v)
+		}
+		return vtmp
+	case *[]bson.M:
+		var vtmp = make([]interface{}, len(*val))
+		for i, v := range *val {
+			vtmp[i] = ConvertKeyUnderlineID(v)
+		}
+		return vtmp
 	case primitive.A:
 		for i, v := range val {
 			val[i] = ConvertKeyUnderlineID(v)
@@ -182,6 +194,18 @@ func ConvertKeyID(data interface{}) interface{} {
 		}
 		return vtmp
 	case *[]map[string]interface{}:
+		var vtmp = make([]interface{}, len(*val))
+		for i, v := range *val {
+			vtmp[i] = ConvertKeyUnderlineID(v)
+		}
+		return vtmp
+	case []bson.M:
+		var vtmp = make([]interface{}, len(val))
+		for i, v := range val {
+			vtmp[i] = ConvertKeyUnderlineID(v)
+		}
+		return vtmp
+	case *[]bson.M:
 		var vtmp = make([]interface{}, len(*val))
 		for i, v := range *val {
 			vtmp[i] = ConvertKeyUnderlineID(v)
