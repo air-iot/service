@@ -46,30 +46,6 @@ func NewClient(cli *redis.Client, cfg Config) Client {
 
 // FindToken 获取token
 func (p *client) FindToken(project string) (*AuthToken, error) {
-	project = ginx.XRequestProjectDefault
-	p.Lock()
-	defer p.Unlock()
-	if token, ok := p.tokens[project]; ok {
-		if token.ExpiresAt-5 >= time.Now().Unix() {
-			return token, nil
-		}
-	}
-	tokenStr, err := p.cli.HGet(context.Background(), "authToken", project).Result()
-	if err != nil {
-		return nil, fmt.Errorf("token查询错误: %s", err.Error())
-	}
-	auth := new(AuthToken)
-	err = json.Unmarshal([]byte(tokenStr), auth)
-	if err != nil {
-		return nil, fmt.Errorf("token解析错误: %s", err.Error())
-	}
-	p.tokens[project] = auth
-
-	return auth, nil
-}
-
-// FindProjectToken 获取token
-func (p *client) FindProjectToken(project string) (*AuthToken, error) {
 	p.Lock()
 	defer p.Unlock()
 	if token, ok := p.tokens[project]; ok {
@@ -1089,7 +1065,7 @@ func (p *client) FindProjectQuery(headers map[string]string, query, result inter
 	v := url.Values{}
 	v.Set("query", string(b))
 	u.RawQuery = v.Encode()
-	token, err := p.FindProjectToken("baseToken")
+	token, err := p.FindToken("baseToken")
 	if err != nil {
 		return err
 	}
