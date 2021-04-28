@@ -543,22 +543,22 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 
 // FindFilter 根据条件查询数据(原版)
 // result:查询结果 query:查询条件
-func FindFilter(ctx context.Context, col *mongo.Collection, result interface{}, query QueryOption) (count *int, err error) {
+func FindFilter(ctx context.Context, col *mongo.Collection, result interface{}, query QueryOption) (count int, err error) {
 	pipeLine, countPipeLine, err := QueryOptionToPipeline(query)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	if countPipeLine != nil {
 		countRaw, err := FindCount(ctx, col, countPipeLine)
 		if err != nil {
-			return nil, fmt.Errorf("query count err: %s", err.Error())
+			return 0, fmt.Errorf("query count err: %s", err.Error())
 		}
-		count = &countRaw
+		count = countRaw
 	}
 	if pipeLine != nil {
 		err = FindPipeline(ctx, col, result, pipeLine)
 		if err != nil {
-			return nil, fmt.Errorf("query data: %s", err.Error())
+			return 0, fmt.Errorf("query data: %s", err.Error())
 		}
 	}
 	return
@@ -566,7 +566,7 @@ func FindFilter(ctx context.Context, col *mongo.Collection, result interface{}, 
 
 // FindFilterLimit 根据条件查询数据(先根据条件分页)
 // result:查询结果 query:查询条件
-func FindFilterLimit(ctx context.Context, col *mongo.Collection, result interface{}, query QueryOption) (*int, error) {
+func FindFilterLimit(ctx context.Context, col *mongo.Collection, result interface{}, query QueryOption) (int, error) {
 	return FindFilter(ctx, col, result, query)
 }
 
