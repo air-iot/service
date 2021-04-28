@@ -1372,23 +1372,23 @@ func FindByID(ctx context.Context, col *mongo.Collection, result interface{}, id
 
 // FindCount 根据Pipeline查询数据量
 // pipeLine:查询管道
-func FindCount(ctx context.Context, col *mongo.Collection, pipeLine mongo.Pipeline) (*int, error) {
+func FindCount(ctx context.Context, col *mongo.Collection, pipeLine mongo.Pipeline) (int, error) {
 	pipeLine = append(pipeLine, bson.D{bson.E{Key: "$count", Value: "count"}})
 	cur, err := col.Aggregate(ctx, pipeLine)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	for cur.Next(ctx) {
 		var r QueryCount
 		err := cur.Decode(&r)
 		if err != nil {
-			return nil, err
+			return 0, err
 		}
 		if r.Count != nil {
-			return r.Count, nil
+			return *r.Count, nil
 		}
 	}
-	return nil, errors.ErrNotFound
+	return 0, nil
 }
 
 // SaveOne 保存数
