@@ -549,10 +549,11 @@ func FindFilter(ctx context.Context, col *mongo.Collection, result interface{}, 
 		return nil, err
 	}
 	if countPipeLine != nil {
-		count, err = FindCount(ctx, col, countPipeLine)
+		countRaw, err := FindCount(ctx, col, countPipeLine)
 		if err != nil {
 			return nil, fmt.Errorf("query count err: %s", err.Error())
 		}
+		count = &countRaw
 	}
 	if pipeLine != nil {
 		err = FindPipeline(ctx, col, result, pipeLine)
@@ -847,7 +848,7 @@ func FindFilterOld(ctx context.Context, col *mongo.Collection, result *[]bson.M,
 				if err != nil {
 					return 0, err
 				}
-				count = *c
+				count = c
 			}
 		} else {
 			return count, errors.New(`withCount格式不正确`)
@@ -880,7 +881,7 @@ func FindFilterOld(ctx context.Context, col *mongo.Collection, result *[]bson.M,
 				if err != nil {
 					return 0, err
 				}
-				count = *c
+				count = c
 				return count, nil
 			}
 		} else {
@@ -1189,7 +1190,7 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 				if err != nil {
 					return 0, err
 				}
-				count = *c
+				count = c
 				return count, nil
 			}
 		} else {
@@ -1259,7 +1260,7 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 				if err != nil {
 					return 0, err
 				}
-				count = *c
+				count = c
 			}
 		} else {
 			return count, errors.New(`withCount格式不正确`)
