@@ -95,13 +95,13 @@ func (a *JWTAuth) GenerateToken(ctx context.Context, projectID, userID string) (
 	expiresAt := now.Add(time.Duration(a.opts.expired) * time.Second).Unix()
 
 	claims := CustomClaims{
-		StandardClaims: jwt.StandardClaims{
+		jwt.StandardClaims{
 			IssuedAt:  now.Unix(),
 			ExpiresAt: expiresAt,
 			NotBefore: now.Unix(),
 			Subject:   userID,
 		},
-		ProjectID: projectID,
+		projectID,
 	}
 	token := jwt.NewWithClaims(a.opts.signingMethod, &claims)
 
