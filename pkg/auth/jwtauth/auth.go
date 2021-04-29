@@ -2,7 +2,6 @@ package jwtauth
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -25,6 +24,11 @@ var defaultOptions = options{
 		}
 		return []byte(defaultKey), nil
 	},
+}
+
+type CustomClaims struct {
+	jwt.StandardClaims
+	ProjectID string `json:"projectId"`
 }
 
 type options struct {
@@ -86,16 +90,20 @@ type JWTAuth struct {
 }
 
 // GenerateToken 生成令牌
-func (a *JWTAuth) GenerateToken(ctx context.Context, project, userID string) (auth.TokenInfo, error) {
+func (a *JWTAuth) GenerateToken(ctx context.Context, projectID, userID string) (auth.TokenInfo, error) {
 	now := time.Now()
 	expiresAt := now.Add(time.Duration(a.opts.expired) * time.Second).Unix()
 
-	token := jwt.NewWithClaims(a.opts.signingMethod, &jwt.StandardClaims{
-		IssuedAt:  now.Unix(),
-		ExpiresAt: expiresAt,
-		NotBefore: now.Unix(),
-		Subject:   strings.Join([]string{project, userID}, defaultTokenSplit),
-	})
+	claims := CustomClaims{
+		StandardClaims: jwt.StandardClaims{
+			IssuedAt:  now.Unix(),
+			ExpiresAt: expiresAt,
+			NotBefore: now.Unix(),
+			Subject:   userID,
+		},
+		ProjectID: projectID,
+	}
+	token := jwt.NewWithClaims(a.opts.signingMethod, &claims)
 
 	tokenString, err := token.SignedString(a.opts.signingKey)
 	if err != nil {
@@ -111,15 +119,15 @@ func (a *JWTAuth) GenerateToken(ctx context.Context, project, userID string) (au
 }
 
 // 解析令牌
-func (a *JWTAuth) parseToken(tokenString string) (*jwt.StandardClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &jwt.StandardClaims{}, a.opts.keyfunc)
+func (a *JWTAuth) parseToken(tokenString string) (*CustomClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, a.opts.keyfunc)
 	if err != nil {
 		return nil, errors.NewResponse(401, 401, err.Error())
 	} else if !token.Valid {
 		return nil, auth.ErrInvalidToken
 	}
 
-	return token.Claims.(*jwt.StandardClaims), nil
+	return token.Claims.(*CustomClaims), nil
 }
 
 func (a *JWTAuth) callStore(fn func(Storer) error) error {
@@ -165,9 +173,5 @@ func (a *JWTAuth) ParseUserID(ctx context.Context, tokenString string) (project 
 	if err != nil {
 		return "", "", err
 	}
-	subjects := strings.SplitN(claims.Subject, defaultTokenSplit, 2)
-	if len(subjects) != 2 {
-		return "", "", errors.New("token parse fail")
-	}
-	return subjects[0], subjects[1], nil
+	return claims.ProjectID, claims.Subject, nil
 }
