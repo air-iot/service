@@ -1053,7 +1053,7 @@ func (p *client) ReplaceLogById(headers map[string]string, id string, data, resu
 	return p.Put(u, headers, data, result)
 }
 
-func (p *client) FindProjectQuery(headers map[string]string, query, result interface{}) (int, error) {
+func (p *client) FindProjectQuery(headers map[string]string, timeout time.Duration, query, result interface{}) (int, error) {
 	b, err := json.Marshal(query)
 	if err != nil {
 		return http.StatusBadRequest, err
@@ -1071,7 +1071,7 @@ func (p *client) FindProjectQuery(headers map[string]string, query, result inter
 		return http.StatusBadRequest, err
 	}
 	headers[ginx.XRequestHeaderAuthorization] = fmt.Sprintf("%s %s", token.TokenType, token.AccessToken)
-	resp, err := resty.New().SetTimeout(time.Minute * 1).R().
+	resp, err := resty.New().SetTimeout(timeout).R().
 		SetHeaders(headers).
 		SetResult(result).
 		Get(u.String())

@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/url"
+	"time"
 )
 
 type AuthToken struct {
@@ -110,5 +111,5 @@ type Client interface {
 	UpdateLogById(headers map[string]string, id string, data, result interface{}) error
 	ReplaceLogById(headers map[string]string, id string, data, result interface{}) error
 
-	FindProjectQuery(headers map[string]string, query, result interface{}) (int, error)
+	FindProjectQuery(headers map[string]string, timeout time.Duration, query, result interface{}) (int, error)
 }
