@@ -116,7 +116,7 @@ eventloop:
 									//logger.Errorf(eventAlarmLog, "时间范围字段值格式错误:%s", err.Error())
 									continue
 								}
-								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+								//return restful//logger.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
 								//logger.Debugf(eventAlarmLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)

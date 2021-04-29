@@ -1,5 +1,21 @@
 package handler
 
+import (
+	"context"
+	"encoding/json"
+	"github.com/air-iot/service/api"
+	"github.com/air-iot/service/gin/ginx"
+	"github.com/air-iot/service/init/cache/entity"
+	"github.com/air-iot/service/init/cache/event"
+	"github.com/air-iot/service/init/mq"
+	"github.com/air-iot/service/logger"
+	"github.com/air-iot/service/util/timex"
+	"github.com/go-redis/redis/v8"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"time"
+)
+
 type EventType string
 type EventHandlerType string
 
@@ -36,124 +52,126 @@ const (
 
 var eventLog = map[string]interface{}{"name": "通用事件触发"}
 
-//// Trigger 事件触发
-//func Trigger(eventType EventType, data map[string]interface{}) error {
-//	result, err := clogic.EventLogic.FindLocalCacheByType(string(eventType))
-//	if err != nil {
-//		//logger.Errorf(eventLog, "查询数据库错误:%s", err.Error())
-//		return err
-//	}
-//
-//	for _, eventInfo := range *result {
-//		if eventInfo.Handlers == nil || len(eventInfo.Handlers) == 0 {
-//			//logger.Warnln(eventAlarmLog, "handlers字段数组长度为0")
-//			continue
-//		}
-//		//logger.Debugf(eventAlarmLog, "开始分析事件")
-//		eventID := eventInfo.ID
-//		settings := eventInfo.Settings
-//
-//		//判断是否已经失效
-//		if invalid, ok := settings["invalid"].(bool); ok {
-//			if invalid {
-//				logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
-//				continue
-//			}
-//		}
-//
-//		//判断禁用
-//		if disable, ok := settings["disable"].(bool); ok {
-//			if disable {
-//				logger.Warnln(eventLog, "事件(%s)已经被禁用", eventID)
-//				continue
-//			}
-//		}
-//
-//		rangeDefine := ""
-//		validTime, ok := settings["validTime"].(string)
-//		if ok {
-//			if validTime == "timeLimit" {
-//				if rangeDefine, ok = settings["range"].(string); ok {
-//					if rangeDefine != "once" {
-//						//判断有效期
-//						if startTime, ok := settings["startTime"].(string); ok {
-//							formatStartTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", startTime, time.Local)
-//							if err != nil {
-//								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
-//								formatStartTime, err = timex.ConvertStringToTime("2006-01-02T15:04:05+08:00", startTime, time.Local)
-//								if err != nil {
-//									//logger.Errorf(eventLog, "时间范围字段值格式错误:%s", err.Error())
-//									continue
-//								}
-//								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
-//							}
-//							if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
-//								//logger.Debugf(eventLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
-//								continue
-//							}
-//						}
-//
-//						if endTime, ok := settings["endTime"].(string); ok {
-//							formatEndTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", endTime, time.Local)
-//							if err != nil {
-//								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
-//								formatEndTime, err = timex.ConvertStringToTime("2006-01-02T15:04:05+08:00", endTime, time.Local)
-//								if err != nil {
-//									//logger.Errorf(eventLog, "时间范围字段值格式错误:%s", err.Error())
-//									continue
-//								}
-//								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
-//							}
-//							if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
-//								//logger.Debugf(eventLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
-//								//修改事件为失效
-//								updateMap := bson.M{"settings.invalid": true}
-//								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
-//								var r = make(map[string]interface{})
-//								err := api.Cli.UpdateEventById(eventID, updateMap, &r)
-//								if err != nil {
-//									//logger.Errorf(eventLog, "失效事件(%s)失败:%s", eventID, err.Error())
-//									continue
-//								}
-//								continue
-//							}
-//						}
-//					}
-//				}
-//			}
-//		}
-//		//判断事件是否已经触发
-//		hasExecute := false
-//
-//		sendMap := data
-//		b, err := json.Marshal(sendMap)
-//		if err != nil {
-//			continue
-//		}
-//		err = imqtt.Send(fmt.Sprintf("event/%s", eventID), b)
-//		if err != nil {
-//			//logger.Warnf(eventLog, "发送事件(%s)错误:%s", eventID, err.Error())
-//		} else {
-//			//logger.Debugf(eventLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
-//		}
-//
-//		hasExecute = true
-//
-//		//对只能执行一次的事件进行失效
-//		if validTime == "timeLimit" {
-//			if rangeDefine == "once" && hasExecute {
-//				logger.Warnln(eventLog, "事件(%s)为只执行一次的事件", eventID)
-//				//修改事件为失效
-//				updateMap := bson.M{"settings.invalid": true}
-//				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
-//				var r = make(map[string]interface{})
-//				err := api.Cli.UpdateEventById(eventID, updateMap, &r)
-//				if err != nil {
-//					//logger.Errorf(eventLog, "失效事件(%s)失败:%s", eventID, err.Error())
-//					continue
-//				}
-//			}
-//		}
-//	}
-//	return nil
-//}
+// Trigger 事件触发
+func Trigger(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client,mq mq.MQ, apiClient api.Client,projectName string,eventType EventType, data map[string]interface{}) error {
+	headerMap := map[string]string{ginx.XRequestProject:projectName}
+	result := new([]entity.Event)
+	err := event.GetByType(ctx,redisClient,mongoClient,projectName,string(eventType),result)
+	if err != nil {
+		//logger.Errorf(eventLog, "查询数据库错误:%s", err.Error())
+		return err
+	}
+
+	for _, eventInfo := range *result {
+		if eventInfo.Handlers == nil || len(eventInfo.Handlers) == 0 {
+			//logger.Warnln(eventAlarmLog, "handlers字段数组长度为0")
+			continue
+		}
+		//logger.Debugf(eventAlarmLog, "开始分析事件")
+		eventID := eventInfo.ID
+		settings := eventInfo.Settings
+
+		//判断是否已经失效
+		if invalid, ok := settings["invalid"].(bool); ok {
+			if invalid {
+				logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
+				continue
+			}
+		}
+
+		//判断禁用
+		if disable, ok := settings["disable"].(bool); ok {
+			if disable {
+				logger.Warnln(eventLog, "事件(%s)已经被禁用", eventID)
+				continue
+			}
+		}
+
+		rangeDefine := ""
+		validTime, ok := settings["validTime"].(string)
+		if ok {
+			if validTime == "timeLimit" {
+				if rangeDefine, ok = settings["range"].(string); ok {
+					if rangeDefine != "once" {
+						//判断有效期
+						if startTime, ok := settings["startTime"].(string); ok {
+							formatStartTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", startTime, time.Local)
+							if err != nil {
+								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
+								formatStartTime, err = timex.ConvertStringToTime("2006-01-02T15:04:05+08:00", startTime, time.Local)
+								if err != nil {
+									//logger.Errorf(eventLog, "时间范围字段值格式错误:%s", err.Error())
+									continue
+								}
+								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+							}
+							if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
+								//logger.Debugf(eventLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
+								continue
+							}
+						}
+
+						if endTime, ok := settings["endTime"].(string); ok {
+							formatEndTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", endTime, time.Local)
+							if err != nil {
+								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
+								formatEndTime, err = timex.ConvertStringToTime("2006-01-02T15:04:05+08:00", endTime, time.Local)
+								if err != nil {
+									//logger.Errorf(eventLog, "时间范围字段值格式错误:%s", err.Error())
+									continue
+								}
+								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+							}
+							if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
+								//logger.Debugf(eventLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
+								//修改事件为失效
+								updateMap := bson.M{"settings.invalid": true}
+								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+								var r = make(map[string]interface{})
+								err := apiClient.UpdateEventById(headerMap,eventID, updateMap, &r)
+								if err != nil {
+									//logger.Errorf(eventLog, "失效事件(%s)失败:%s", eventID, err.Error())
+									continue
+								}
+								continue
+							}
+						}
+					}
+				}
+			}
+		}
+		//判断事件是否已经触发
+		hasExecute := false
+
+		sendMap := data
+		b, err := json.Marshal(sendMap)
+		if err != nil {
+			continue
+		}
+		err = mq.Publish(ctx,[]string{"event",projectName,eventID}, b)
+		if err != nil {
+			//logger.Warnf(eventLog, "发送事件(%s)错误:%s", eventID, err.Error())
+		} else {
+			//logger.Debugf(eventLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
+		}
+
+		hasExecute = true
+
+		//对只能执行一次的事件进行失效
+		if validTime == "timeLimit" {
+			if rangeDefine == "once" && hasExecute {
+				logger.Warnln(eventLog, "事件(%s)为只执行一次的事件", eventID)
+				//修改事件为失效
+				updateMap := bson.M{"settings.invalid": true}
+				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+				var r = make(map[string]interface{})
+				err := apiClient.UpdateEventById(headerMap,eventID, updateMap, &r)
+				if err != nil {
+					//logger.Errorf(eventLog, "失效事件(%s)失败:%s", eventID, err.Error())
+					continue
+				}
+			}
+		}
+	}
+	return nil
+}
