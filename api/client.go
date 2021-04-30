@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"sync"
@@ -1052,10 +1053,10 @@ func (p *client) ReplaceLogById(headers map[string]string, id string, data, resu
 	return p.Put(u, headers, data, result)
 }
 
-func (p *client) FindProjectQuery(headers map[string]string, query, result interface{}) error {
+func (p *client) FindProjectQuery(headers map[string]string, timeout time.Duration, query, result interface{}) (int, error) {
 	b, err := json.Marshal(query)
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 	host := p.cfg.Host
 	if host == "" {
@@ -1067,20 +1068,20 @@ func (p *client) FindProjectQuery(headers map[string]string, query, result inter
 	u.RawQuery = v.Encode()
 	token, err := p.FindToken("baseToken")
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 	headers[ginx.XRequestHeaderAuthorization] = fmt.Sprintf("%s %s", token.TokenType, token.AccessToken)
-	resp, err := resty.New().SetTimeout(time.Minute * 1).R().
+	resp, err := resty.New().SetTimeout(timeout).R().
 		SetHeaders(headers).
 		SetResult(result).
 		Get(u.String())
 	if err != nil {
-		return err
+		return http.StatusInternalServerError, err
 	}
-	if resp.StatusCode() >= 200 && resp.StatusCode() <= 204 {
-		return nil
+	if resp.StatusCode() == 200 {
+		return resp.StatusCode(), nil
 	}
-	return errors.New(resp.String())
+	return resp.StatusCode(), errors.New(resp.String())
 }
 
 func (p *client) CheckDriver(headers map[string]string, licenseName string, signature interface{}) error {
