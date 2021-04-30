@@ -52,7 +52,7 @@ func InfluxResultConvertMap(results []client.Result) (map[string]interface{}, er
 							if j == timeIndex {
 								if _, ok := ele.(string); !ok {
 									if timeInt, ok := ele.(int64); ok {
-										queryTime := time.Unix(0, int64(timeInt)*int64(time.Millisecond))
+										queryTime := time.Unix(0, timeInt*int64(time.Millisecond))
 										list[j] = queryTime.Format("2006-01-02T15:04:05.000+08:00")
 									}
 								}
@@ -74,7 +74,7 @@ func InfluxResultConvertMap(results []client.Result) (map[string]interface{}, er
 
 }
 
-// influxResultConvert InfluxDB的查询结果[]api.Result转换成[][]map[string]interface{}
+// InfluxResultConvert InfluxDB的查询结果[]api.Result转换成[][]map[string]interface{}
 func InfluxResultConvert(results []client.Result) ([][]map[string]interface{}, error) {
 	newResults := make([][]map[string]interface{}, 0)
 	for _, v := range results {

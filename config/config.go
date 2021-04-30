@@ -69,6 +69,7 @@ type Config struct {
 	Redis       Redis
 	Mongo       Mongo
 	Influx      Influx
+	Taos        Taos
 	Gorm        Gorm
 	MySQL       MySQL
 	Postgres    Postgres
@@ -224,6 +225,11 @@ type Mongo struct {
 	MaxConnIdleTime   uint16
 }
 
+// TSDB 时序数据库配置参数
+type TSDB struct {
+	DBType string
+}
+
 // Influx influxdb配置参数
 type Influx struct {
 	Protocol string
@@ -231,6 +237,12 @@ type Influx struct {
 	Username string
 	Password string
 	DBName   string
+}
+
+// Taos 涛思配置参数
+type Taos struct {
+	Addr   string
+	DBName string
 }
 
 // Gorm gorm配置参数
