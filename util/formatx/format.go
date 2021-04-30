@@ -64,7 +64,6 @@ func AddNonRepPrimitiveAByLoop(slc primitive.A, addEle primitive.M) primitive.A 
 	return slc
 }
 
-
 // AddNonRepObjectIDByLoop 通过循环添加非重复元素
 func AddNonRepObjectIDByLoop(slc []string, addEle string) []string {
 	flag := true
@@ -119,6 +118,64 @@ func AddNonRepMapByLoop(slc []map[string]interface{}, addEle map[string]interfac
 	return slc
 }
 
+// AddNonRepMapByLoop 通过循环添加非重复元素（[]map[string]interface{}）
+func AddNonRepEventByLoop(slc []entity.Event, addEle entity.Event) []entity.Event {
+	flag := true
+	newResult := make([]entity.Event, 0)
+	for i := range slc {
+		if slc[i].ID == addEle.ID {
+			newResult = append(newResult, addEle)
+			flag = false
+		} else {
+			newResult = append(newResult, slc[i])
+		}
+	}
+	if flag { // 标识为false，不添加进结果
+		newResult = append(newResult, addEle)
+	}
+	return newResult
+}
+
+// AddNonRepMapByLoop 通过循环添加非重复元素（[]map[string]interface{}）
+func AddNonRepUserByLoop(slc []entity.User, addEle entity.User) []entity.User {
+	flag := true
+	newResult := make([]entity.User, 0)
+	for i := range slc {
+		if slc[i].ID == addEle.ID {
+			newResult = append(newResult, addEle)
+			flag = false
+		} else {
+			newResult = append(newResult, slc[i])
+		}
+	}
+	if flag { // 标识为false，不添加进结果
+		newResult = append(newResult, addEle)
+	}
+	return newResult
+}
+
+// AddNonRepMapByLoop 通过循环添加非重复元素（[]map[string]interface{}）
+func DelEleEventByLoop(slc []entity.Event, id string) []entity.Event {
+	newResult := make([]entity.Event, 0)
+	for i := range slc {
+		if slc[i].ID != id {
+			newResult = append(newResult, slc[i])
+		}
+	}
+	return newResult
+}
+
+// AddNonRepMapByLoop 通过循环添加非重复元素（[]map[string]interface{}）
+func DelEleUserByLoop(slc []entity.User, id string) []entity.User {
+	newResult := make([]entity.User, 0)
+	for i := range slc {
+		if slc[i].ID != id {
+			newResult = append(newResult, slc[i])
+		}
+	}
+	return newResult
+}
+
 
 //// StringListToObjectIdList 字符串数组转ObjectId数组
 //func StringListToObjectIdList(idStringList []string) ([]primitive.ObjectID, error) {
@@ -159,7 +216,7 @@ func InterfaceListToStringList(params []interface{}) ([]string) {
 			paramSlice = append(paramSlice, param.(string))
 		} else {
 			//默认是走这条分支
-			if paramRaw,ok := param.(primitive.ObjectID);ok{
+			if paramRaw, ok := param.(primitive.ObjectID); ok {
 				paramSlice = append(paramSlice, paramRaw.Hex())
 			}
 		}

@@ -63,6 +63,59 @@ func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ) (
 				userMap[id] = result
 			}
 			MemoryUserData.Cache[project] = userMap
+
+			//部门用户map
+			userInfo := entity.User{}
+			err = json.Unmarshal([]byte(result), &userInfo)
+			if err != nil {
+				logger.Errorf("解序列化事件失败[ %s %s ]错误, %s", project, id, err.Error())
+				return
+			}
+			deptUserTypeMap, ok := MemoryUserData.CacheByDept[project]
+			if ok {
+				for _, deptID := range userInfo.Department {
+					if userListForType, ok := deptUserTypeMap[deptID]; ok {
+						userInfoList := make([]entity.User, 0)
+						err = json.Unmarshal([]byte(userListForType), &userInfoList)
+						if err != nil {
+							logger.Errorf("解序列化缓存的部门下用户列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						b, err := json.Marshal(formatx.AddNonRepUserByLoop(userInfoList, userInfo))
+						if err != nil {
+							logger.Errorf("序列化合并的部门下用户列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						deptUserTypeMap[deptID] = string(b)
+					}
+				}
+				//eventMap[id] = result
+			}
+			MemoryUserData.CacheByDept[project] = deptUserTypeMap
+
+			//角色用户map
+			roleUserTypeMap, ok := MemoryUserData.CacheByRole[project]
+			if ok {
+				for _, roleID := range userInfo.Department {
+					if userListForType, ok := roleUserTypeMap[roleID]; ok {
+						userInfoList := make([]entity.User, 0)
+						err = json.Unmarshal([]byte(userListForType), &userInfoList)
+						if err != nil {
+							logger.Errorf("解序列化缓存的角色下用户列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						b, err := json.Marshal(formatx.AddNonRepUserByLoop(userInfoList, userInfo))
+						if err != nil {
+							logger.Errorf("序列化合并的角色下用户列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						roleUserTypeMap[roleID] = string(b)
+					}
+				}
+				//eventMap[id] = result
+			}
+			MemoryUserData.CacheByRole[project] = roleUserTypeMap
+
 			MemoryUserData.Unlock()
 		case cache.Delete:
 			MemoryUserData.Lock()
@@ -71,6 +124,50 @@ func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ) (
 				delete(userMap, id)
 				MemoryUserData.Cache[project] = userMap
 			}
+			deptUserTypeMap, ok := MemoryUserData.CacheByDept[project]
+			if ok {
+				for index, listString := range deptUserTypeMap {
+					if listString != "" {
+						userInfoList := make([]entity.User, 0)
+						err := json.Unmarshal([]byte(listString), &userInfoList)
+						if err != nil {
+							logger.Errorf("解序列化缓存的部门用户列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						b, err := json.Marshal(formatx.DelEleUserByLoop(userInfoList, id))
+						if err != nil {
+							logger.Errorf("序列化合并的部门用户列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						deptUserTypeMap[index] = string(b)
+					}
+				}
+				//eventMap[id] = result
+			}
+			MemoryUserData.CacheByDept[project] = deptUserTypeMap
+
+			roleUserTypeMap, ok := MemoryUserData.CacheByRole[project]
+			if ok {
+				for index, listString := range roleUserTypeMap {
+					if listString != "" {
+						userInfoList := make([]entity.User, 0)
+						err := json.Unmarshal([]byte(listString), &userInfoList)
+						if err != nil {
+							logger.Errorf("解序列化缓存的角色用户列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						b, err := json.Marshal(formatx.DelEleUserByLoop(userInfoList, id))
+						if err != nil {
+							logger.Errorf("序列化合并的角色用户列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						roleUserTypeMap[index] = string(b)
+					}
+				}
+				//eventMap[id] = result
+			}
+			MemoryUserData.CacheByRole[project] = roleUserTypeMap
+
 			MemoryUserData.Unlock()
 		default:
 			return
@@ -126,8 +223,8 @@ func GetByDept(ctx context.Context, redisClient *redis.Client, mongoClient *mong
 	MemoryUserData.Lock()
 	defer MemoryUserData.Unlock()
 	var user string
-	userList := make([]map[string]interface{},0)
-	for _, id := range ids{
+	userList := make([]map[string]interface{}, 0)
+	for _, id := range ids {
 		userMap, ok := MemoryUserData.CacheByDept[project]
 		if ok {
 			user, ok = userMap[id]
@@ -152,10 +249,10 @@ func GetByDept(ctx context.Context, redisClient *redis.Client, mongoClient *mong
 		if err := json.Unmarshal([]byte(user), &userInfo); err != nil {
 			return errors.WithStack(err)
 		}
-		userList = formatx.AddNonRepMapByLoop(userList,userInfo)
+		userList = formatx.AddNonRepMapByLoop(userList, userInfo)
 	}
 
-	resultByte,err := json.Marshal(userList)
+	resultByte, err := json.Marshal(userList)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -183,7 +280,7 @@ func getByDBAndDept(ctx context.Context, redisClient *redis.Client, mongoClient 
 	if err != nil {
 		return "", err
 	}
-	for _,user := range userTmp{
+	for _, user := range userTmp {
 		userEleBytes, err := json.Marshal(&user)
 		if err != nil {
 			return "", err
@@ -203,8 +300,8 @@ func GetByRole(ctx context.Context, redisClient *redis.Client, mongoClient *mong
 	MemoryUserData.Lock()
 	defer MemoryUserData.Unlock()
 	var user string
-	userList := make([]map[string]interface{},0)
-	for _, id := range ids{
+	userList := make([]map[string]interface{}, 0)
+	for _, id := range ids {
 		userMap, ok := MemoryUserData.CacheByRole[project]
 		if ok {
 			user, ok = userMap[id]
@@ -229,10 +326,10 @@ func GetByRole(ctx context.Context, redisClient *redis.Client, mongoClient *mong
 		if err := json.Unmarshal([]byte(user), &userInfo); err != nil {
 			return errors.WithStack(err)
 		}
-		userList = formatx.AddNonRepMapByLoop(userList,userInfo)
+		userList = formatx.AddNonRepMapByLoop(userList, userInfo)
 	}
 
-	resultByte,err := json.Marshal(userList)
+	resultByte, err := json.Marshal(userList)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -260,7 +357,7 @@ func getByDBAndRole(ctx context.Context, redisClient *redis.Client, mongoClient 
 	if err != nil {
 		return "", err
 	}
-	for _,user := range userTmp{
+	for _, user := range userTmp {
 		userEleBytes, err := json.Marshal(&user)
 		if err != nil {
 			return "", err
@@ -274,7 +371,6 @@ func getByDBAndRole(ctx context.Context, redisClient *redis.Client, mongoClient 
 	//}
 	return user, nil
 }
-
 
 func getByDB(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project, id string) (string, error) {
 	user, err := redisClient.HGet(ctx, fmt.Sprintf("%s/user", project), id).Result()
