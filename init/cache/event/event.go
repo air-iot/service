@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/air-iot/service/init/cache/entity"
 	"github.com/air-iot/service/init/mongodb"
+	"github.com/air-iot/service/util/formatx"
 	"go.mongodb.org/mongo-driver/mongo"
 	"math/rand"
 	"sync"
@@ -59,6 +60,33 @@ func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ) (
 				eventMap[id] = result
 			}
 			MemoryEventData.Cache[project] = eventMap
+
+			eventInfo := entity.Event{}
+			err = json.Unmarshal([]byte(result), &eventInfo)
+			if err != nil {
+				logger.Errorf("解序列化事件失败[ %s %s ]错误, %s", project, id, err.Error())
+				return
+			}
+			eventTypeMap, ok := MemoryEventData.CacheByType[project]
+			if ok {
+				if eventListForType, ok := eventTypeMap[eventInfo.Type]; ok {
+					eventInfoList := make([]entity.Event, 0)
+					err = json.Unmarshal([]byte(eventListForType), &eventInfoList)
+					if err != nil {
+						logger.Errorf("解序列化缓存的事件列表失败[ %s %s ]错误, %s", project, id, err.Error())
+						return
+					}
+					b, err := json.Marshal(formatx.AddNonRepEventByLoop(eventInfoList, eventInfo))
+					if err != nil {
+						logger.Errorf("序列化合并的事件列表失败[ %s %s ]错误, %s", project, id, err.Error())
+						return
+					}
+					eventTypeMap[eventInfo.Type] = string(b)
+				}
+				//eventMap[id] = result
+			}
+			MemoryEventData.CacheByType[project] = eventTypeMap
+
 			MemoryEventData.Unlock()
 		case cache.Delete:
 			MemoryEventData.Lock()
@@ -67,6 +95,27 @@ func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ) (
 				delete(eventMap, id)
 				MemoryEventData.Cache[project] = eventMap
 			}
+			eventTypeMap, ok := MemoryEventData.CacheByType[project]
+			if ok {
+				for index, listString := range eventTypeMap {
+					if listString != "" {
+						eventInfoList := make([]entity.Event, 0)
+						err := json.Unmarshal([]byte(listString), &eventInfoList)
+						if err != nil {
+							logger.Errorf("解序列化缓存的事件列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						b, err := json.Marshal(formatx.DelEleEventByLoop(eventInfoList, id))
+						if err != nil {
+							logger.Errorf("序列化合并的事件列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						eventTypeMap[index] = string(b)
+					}
+				}
+				//eventMap[id] = result
+			}
+			MemoryEventData.CacheByType[project] = eventTypeMap
 			MemoryEventData.Unlock()
 		default:
 			return
@@ -174,7 +223,7 @@ func getByDBAndType(ctx context.Context, redisClient *redis.Client, mongoClient 
 	if err != nil {
 		return "", err
 	}
-	for _,event := range eventTmp{
+	for _, event := range eventTmp {
 		eventEleBytes, err := json.Marshal(&event)
 		if err != nil {
 			return "", err

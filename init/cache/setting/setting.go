@@ -52,10 +52,24 @@ func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ) (
 			}
 			MemorySettingData.Lock()
 			MemorySettingData.Cache[project] = result
+
+			settingInfo := entity.Setting{}
+			err = json.Unmarshal([]byte(result), &settingInfo)
+			if err != nil {
+				return
+			}
+			settingMap := map[string]string{}
+			for _, warnKind := range settingInfo.Warning.WarningKind {
+				if warnKind.ID != "" {
+					settingMap[warnKind.ID] = warnKind.Name
+				}
+			}
+			MemorySettingData.CacheByType[project] = settingMap
 			MemorySettingData.Unlock()
 		case cache.Delete:
 			MemorySettingData.Lock()
 			delete(MemorySettingData.Cache, project)
+			delete(MemorySettingData.CacheByType, project)
 			MemorySettingData.Unlock()
 		default:
 			return
