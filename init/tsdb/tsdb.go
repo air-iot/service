@@ -22,5 +22,3 @@ type Row struct {
 	Tags         map[string]string
 	Fields       map[string]interface{}
 }
-
-type TSDBQuery func(interface{}) (interface{}, error)

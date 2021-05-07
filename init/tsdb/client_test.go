@@ -10,18 +10,17 @@ import (
 func TestWrite(t *testing.T) {
 	cfg := config.TSDB{
 		DBType: "influx",
+		DBName: "test",
 		Taos: config.Taos{
 			Addr:    "root:taosdata@/tcp(taos:0)/",
 			MaxConn: 10,
 			Timeout: 10,
-			DBName:  "test",
 		},
 		Influx: config.Influx{
 			Protocol: "UDP",
 			Addr:     "air.htkjbjf.com:18089",
 			Username: "admin",
 			Password: "dell123",
-			DBName:   "tsdb",
 		},
 	}
 
@@ -30,7 +29,7 @@ func TestWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clean()
-	err = tsdb.Write(cfg.Taos.DBName, []Row{
+	err = tsdb.Write(cfg.DBName, []Row{
 		{
 			TableName:    "model1",
 			SubTableName: "node1",
@@ -48,18 +47,17 @@ func TestWrite(t *testing.T) {
 func TestQuery(t *testing.T) {
 	cfg := config.TSDB{
 		DBType: "influx",
+		DBName: "test",
 		Taos: config.Taos{
 			Addr:    "root:taosdata@/tcp(taos:0)/",
 			MaxConn: 10,
 			Timeout: 10,
-			DBName:  "test",
 		},
 		Influx: config.Influx{
 			Protocol: "HTTP",
 			Addr:     "http://taos:18086",
 			Username: "admin",
 			Password: "dell123",
-			DBName:   "tsdb",
 		},
 	}
 
@@ -68,7 +66,7 @@ func TestQuery(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clean()
-	res, err := tsdb.Query(cfg.Influx.DBName, "select * from model1")
+	res, err := tsdb.Query(cfg.DBName, "select * from model1")
 
 	if err != nil {
 		t.Fatal(err)
