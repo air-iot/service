@@ -11,12 +11,12 @@ import (
 
 func TestWrite(t *testing.T) {
 	cfg := config.TSDB{
-		DBType: "influx",
-		DBName: "test",
+		DBType:  "influx",
+		DBName:  "test",
+		Timeout: 10,
 		Taos: config.Taos{
 			Addr:    "root:taosdata@/tcp(taos:0)/",
 			MaxConn: 10,
-			Timeout: 10,
 		},
 		Influx: config.Influx{
 			Protocol: "UDP",
@@ -50,12 +50,12 @@ func TestWrite(t *testing.T) {
 
 func TestQuery(t *testing.T) {
 	cfg := config.TSDB{
-		DBType: "influx",
-		DBName: "tsdb",
+		DBType:  "influx",
+		DBName:  "tsdb",
+		Timeout: 10,
 		Taos: config.Taos{
 			Addr:    "root:taosdata@/tcp(taos:0)/",
 			MaxConn: 10,
-			Timeout: 10,
 		},
 		Influx: config.Influx{
 			Protocol: "HTTP",
