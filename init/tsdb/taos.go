@@ -264,3 +264,7 @@ func (a *Taos) query(ctx context.Context, db *sqlx.DB, sqlString string) ([]stri
 
 	return colList, resultCombineList, nil
 }
+
+func (a *Taos) QueryFilter(ctx context.Context, database string, query []map[string]interface{}) (res []client.Result, err error) {
+	return nil, nil
+}

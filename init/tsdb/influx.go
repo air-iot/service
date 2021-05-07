@@ -63,3 +63,7 @@ func (a *Influx) Query(ctx context.Context, database string, query string) (res 
 		return nil, err
 	}
 }
+
+func (a *Influx) QueryFilter(ctx context.Context, database string, query []map[string]interface{}) (res []client.Result, err error) {
+	return nil, nil
+}
