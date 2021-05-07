@@ -68,8 +68,7 @@ type Config struct {
 	GZIP        GZIP
 	Redis       Redis
 	Mongo       Mongo
-	Influx      Influx
-	Taos        Taos
+	TSDB        TSDB
 	Gorm        Gorm
 	MySQL       MySQL
 	Postgres    Postgres
@@ -228,6 +227,8 @@ type Mongo struct {
 // TSDB 时序数据库配置参数
 type TSDB struct {
 	DBType string
+	Influx Influx
+	Taos   Taos
 }
 
 // Influx influxdb配置参数
@@ -241,8 +242,10 @@ type Influx struct {
 
 // Taos 涛思配置参数
 type Taos struct {
-	Addr   string
-	DBName string
+	Addr    string
+	MaxConn int
+	Timeout int
+	DBName  string
 }
 
 // Gorm gorm配置参数

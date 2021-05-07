@@ -4,7 +4,6 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/influxdata/influxdb1-client" // this is important because of the bug in go mod
 	client "github.com/influxdata/influxdb1-client/v2"
 
 	"github.com/air-iot/service/config"
@@ -13,7 +12,7 @@ import (
 
 // InitInfluxDB 初始化influx存储
 func InitInfluxDB() (client.Client, func(), error) {
-	cfg := config.C.Influx
+	cfg := config.C.TSDB.Influx
 	return NewInfluxDB(cfg)
 }
 

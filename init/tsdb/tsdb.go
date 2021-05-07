@@ -1,12 +1,26 @@
 package tsdb
 
-import "time"
+import (
+	"time"
+
+	client "github.com/influxdata/influxdb1-client/v2"
+)
 
 // TSDB 时序数据库接口
 type TSDB interface {
 	// Write 写数据
-	Write(database, tableName string, ts time.Time, tags map[string]string, fields map[string]interface{}) error
-	// Query makes an InfluxDB Query on the database. This will fail if using
-	// the UDP client.
-	Query(database string, sql string, result interface{}) error
+	Write(database string, row []Row) error
+	// Query 查询数据
+	Query(database string, sql string) (res []client.Result, err error)
 }
+
+// Row 每行数据
+type Row struct {
+	TableName    string
+	SubTableName string
+	Ts           time.Time
+	Tags         map[string]string
+	Fields       map[string]interface{}
+}
+
+type TSDBQuery func(interface{}) (interface{}, error)
