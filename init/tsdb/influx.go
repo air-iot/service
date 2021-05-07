@@ -1,6 +1,8 @@
 package tsdb
 
 import (
+	"context"
+
 	client "github.com/influxdata/influxdb1-client/v2"
 )
 
@@ -15,7 +17,7 @@ func NewInflux(cli client.Client) TSDB {
 	return a
 }
 
-func (a *Influx) Write(database string, rows []Row) (err error) {
+func (a *Influx) Write(ctx context.Context, database string, rows []Row) (err error) {
 	ps := make([]*client.Point, 0)
 	for _, row := range rows {
 		pt, err := client.NewPoint(
@@ -46,7 +48,7 @@ func (a *Influx) Write(database string, rows []Row) (err error) {
 	return nil
 }
 
-func (a *Influx) Query(database string, query string) (res []client.Result, err error) {
+func (a *Influx) Query(ctx context.Context, database string, query string) (res []client.Result, err error) {
 	q := client.Query{
 		Command:  query,
 		Database: database,

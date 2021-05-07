@@ -1,6 +1,7 @@
 package tsdb
 
 import (
+	"context"
 	"time"
 
 	client "github.com/influxdata/influxdb1-client/v2"
@@ -9,9 +10,9 @@ import (
 // TSDB 时序数据库接口
 type TSDB interface {
 	// Write 写数据
-	Write(database string, row []Row) error
+	Write(ctx context.Context, database string, row []Row) error
 	// Query 查询数据
-	Query(database string, sql string) (res []client.Result, err error)
+	Query(ctx context.Context, database string, sql string) (res []client.Result, err error)
 }
 
 // Row 每行数据

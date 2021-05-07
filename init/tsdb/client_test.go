@@ -1,10 +1,12 @@
 package tsdb
 
 import (
-	"github.com/air-iot/service/config"
+	"context"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/air-iot/service/config"
 )
 
 func TestWrite(t *testing.T) {
@@ -18,7 +20,7 @@ func TestWrite(t *testing.T) {
 		},
 		Influx: config.Influx{
 			Protocol: "UDP",
-			Addr:     "air.htkjbjf.com:18089",
+			Addr:     "taos:18089",
 			Username: "admin",
 			Password: "dell123",
 		},
@@ -29,7 +31,9 @@ func TestWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clean()
-	err = tsdb.Write(cfg.DBName, []Row{
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	err = tsdb.Write(ctx, cfg.DBName, []Row{
 		{
 			TableName:    "model1",
 			SubTableName: "node1",
@@ -47,7 +51,7 @@ func TestWrite(t *testing.T) {
 func TestQuery(t *testing.T) {
 	cfg := config.TSDB{
 		DBType: "influx",
-		DBName: "test",
+		DBName: "tsdb",
 		Taos: config.Taos{
 			Addr:    "root:taosdata@/tcp(taos:0)/",
 			MaxConn: 10,
@@ -66,7 +70,10 @@ func TestQuery(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clean()
-	res, err := tsdb.Query(cfg.DBName, "select * from model1")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	res, err := tsdb.Query(ctx, cfg.DBName, "select * from model1")
 
 	if err != nil {
 		t.Fatal(err)

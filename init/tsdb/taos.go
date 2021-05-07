@@ -34,7 +34,7 @@ func NewTaos(cfg config.Taos) TSDB {
 	return a
 }
 
-func (a *Taos) Write(database string, rows []Row) (err error) {
+func (a *Taos) Write(ctx context.Context, database string, rows []Row) (err error) {
 	wg := sync.WaitGroup{}
 	ch := make(chan struct{}, a.cfg.MaxConn)
 	wg.Add(len(rows))
@@ -42,7 +42,7 @@ func (a *Taos) Write(database string, rows []Row) (err error) {
 		ch <- struct{}{}
 		go func(database string, sqlTmp Row) {
 			defer wg.Done()
-			if err := a.insert(database, sqlTmp); err != nil {
+			if err := a.insert(ctx, database, sqlTmp); err != nil {
 				logger.Errorf(err.Error())
 			}
 			<-ch
@@ -52,7 +52,7 @@ func (a *Taos) Write(database string, rows []Row) (err error) {
 	return nil
 }
 
-func (a *Taos) insert(database string, row Row) (err error) {
+func (a *Taos) insert(ctx context.Context, database string, row Row) (err error) {
 	db, err := sqlx.Open("taosSql", a.cfg.Addr)
 	if err != nil {
 		return err
@@ -93,8 +93,6 @@ func (a *Taos) insert(database string, row Row) (err error) {
 		tagNames = append(tagNames, fmt.Sprintf("%s binary(100)", name))
 		tagValues = append(tagValues, fmt.Sprintf("'%s'", val))
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(a.cfg.Timeout))
-	defer cancel()
 
 	createStbSql := fmt.Sprintf(`create table if not exists %s.m_%s (%s) TAGS(%s)`,
 		database,
@@ -185,7 +183,7 @@ func (a *Taos) insert(database string, row Row) (err error) {
 	return nil
 }
 
-func (a *Taos) Query(database string, sql string) (res []client.Result, err error) {
+func (a *Taos) Query(ctx context.Context, database string, sql string) (res []client.Result, err error) {
 	db, err := sqlx.Open("taosSql", a.cfg.Addr)
 	if err != nil {
 		return nil, err
@@ -195,8 +193,7 @@ func (a *Taos) Query(database string, sql string) (res []client.Result, err erro
 			logger.Errorf("关闭连接错误: %s", err.Error())
 		}
 	}()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(a.cfg.Timeout))
-	defer cancel()
+	_ = database
 	colList, resultCombineList, err := a.query(ctx, db, sql)
 	if err != nil {
 		return nil, err
