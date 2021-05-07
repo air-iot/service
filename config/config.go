@@ -226,10 +226,11 @@ type Mongo struct {
 
 // TSDB 时序数据库配置参数
 type TSDB struct {
-	DBType string
-	DBName string
-	Influx Influx
-	Taos   Taos
+	DBType  string
+	DBName  string
+	Timeout int
+	Influx  Influx
+	Taos    Taos
 }
 
 // Influx influxdb配置参数
@@ -244,7 +245,6 @@ type Influx struct {
 type Taos struct {
 	Addr    string
 	MaxConn int
-	Timeout int
 }
 
 // Gorm gorm配置参数
