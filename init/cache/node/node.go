@@ -114,6 +114,31 @@ func Get(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Clie
 	return nil
 }
 
+// Get 根据项目ID和资产ID查询数据
+func GetByList(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project string, ids []string, result interface{}) (err error) {
+	MemoryNodeData.Lock()
+	defer MemoryNodeData.Unlock()
+	nodeList := make([]map[string]interface{},0)
+	for _, id := range ids {
+		deptInfo := map[string]interface{}{}
+		err := Get(ctx,redisClient,mongoClient,project,id,&deptInfo)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		nodeList = append(nodeList,deptInfo)
+	}
+
+	resultByte,err := json.Marshal(nodeList)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if err := json.Unmarshal(resultByte, result); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+
 func getByDB(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project, id string) (string, error) {
 	node, err := redisClient.HGet(ctx, fmt.Sprintf("%s/node", project), id).Result()
 	if err != nil && err != redis.Nil {
