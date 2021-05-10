@@ -1,6 +1,7 @@
 package timex
 
 import (
+	"regexp"
 	"strconv"
 	"time"
 )
@@ -84,7 +85,7 @@ func GetLastServeralHoursFromZero(i int) time.Time {
 
 //循环中获取前几分钟时间
 func GetLastServeralMinuteFromZero(i int) time.Time {
-	currentMinute  := time.Now().Minute()
+	currentMinute := time.Now().Minute()
 	oldMinute := currentMinute - i
 	t := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Hour(), oldMinute, 0, 0, time.Local)
 	return t
@@ -142,4 +143,40 @@ func GetUnixToOldYearQuarterTime(i, month int) time.Time {
 	oldYear := currentYear - i
 	t := time.Date(oldYear, time.Month(month), 1, 0, 0, 0, 0, time.Local)
 	return t
+}
+
+func IsTimeGroup(data string) bool {
+	pattern, _ := regexp.Compile("^time\\(\\d+(s|m|h|d|w|mo|y)\\)$")
+	return pattern.MatchString(data)
+}
+
+func GetInfluxOffset(startTime, intervalSecond int64) int64 {
+	epoch := time.Unix(0, 0).Unix()
+	offset := (startTime - epoch) % intervalSecond
+	return offset
+}
+
+func GetFutureMonthTime(referTime *time.Time, i int) *time.Time {
+	month := referTime.Month()
+
+	newMonth := int(month) + i
+	t := time.Date(referTime.Year(), time.Month(newMonth), referTime.Day(), referTime.Hour(), referTime.Minute(), referTime.Second(), 0, time.Local)
+	return &t
+}
+
+func GetFutureYearTime(referTime *time.Time, i int) *time.Time {
+	year := referTime.Year()
+
+	newYear := int(year) + i
+	t := time.Date(newYear, referTime.Month(), referTime.Day(), referTime.Hour(), referTime.Minute(), referTime.Second(), 0, time.Local)
+	return &t
+}
+
+func IsSameDay(referTime, endTime *time.Time) bool {
+	if referTime.Year() == endTime.Year() &&
+		referTime.Month() == endTime.Month() &&
+		referTime.Day() == endTime.Day() {
+		return true
+	}
+	return false
 }
