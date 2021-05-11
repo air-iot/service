@@ -1236,3 +1236,25 @@ func FormatObjectIDPrimitiveList(doc *bson.M, key string, formatKey string) erro
 	}
 	return nil
 }
+
+// AddNonRepByLoop 通过循环添加非重复元素
+func AddNonRepTagMongoByLoop(slc []entity.TagMongo, addEle entity.TagMongo) []entity.TagMongo {
+	flag := true
+	for i := range slc {
+		slcID := slc[i].ID
+		if slcID == "" {
+			return slc
+		}
+		addEleID := addEle.ID
+		if addEleID == "" {
+			return slc
+		}
+		if slc[i].ID == addEle.ID {
+			flag = false // 存在重复元素，标识为false
+		}
+	}
+	if flag { // 标识为false，不添加进结果
+		slc = append(slc, addEle)
+	}
+	return slc
+}
