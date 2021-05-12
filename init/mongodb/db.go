@@ -1414,7 +1414,7 @@ func UpdateByID(ctx context.Context, col *mongo.Collection, id string, item inte
 // ReplaceByID 根据ID及数据替换
 // id:主键_id model:替换的数据
 func ReplaceByID(ctx context.Context, col *mongo.Collection, id string, item interface{}) (*mongo.UpdateResult, error) {
-	return col.ReplaceOne(ctx, bson.M{"_id": id}, bson.D{bson.E{Key: "$set", Value: item}})
+	return col.ReplaceOne(ctx, bson.M{"_id": id}, item)
 }
 
 // DeleteByID 根据ID删除数据
