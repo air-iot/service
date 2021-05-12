@@ -275,6 +275,12 @@ func cacheEvent() error {
 		for k, v := range *eventCacheMapType {
 			EventLogic.eventCache.Store(k, v)
 		}
+		if len(result.Event) == 0{
+			EventLogic.eventCacheWithEventID = &sync.Map{}
+		}
+		if len(*eventCacheMapRaw) == 0 && len(*eventCacheMapType) == 0 {
+			EventLogic.eventCache = &sync.Map{}
+		}
 	}
 	return nil
 }
@@ -303,6 +309,9 @@ func cacheEventHandler() error {
 		}
 		for k, v := range *eventHandlerCacheMapRaw {
 			EventHandlerLogic.eventHandlerCache.Store(k, v)
+		}
+		if len(*eventHandlerCacheMapRaw) == 0{
+			EventHandlerLogic.eventHandlerCache = &sync.Map{}
 		}
 	}
 	return nil
