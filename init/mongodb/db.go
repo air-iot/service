@@ -266,7 +266,7 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 					query.Filter["$lookups"] = lookups
 				}
 			} else {
-				lookups = []interface{}{groupMap}
+				lookups = []interface{}{map[string]interface{}{"$group":groupMap}}
 			}
 		} else {
 
@@ -275,7 +275,7 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 				lookupsTmp = append(lookupsTmp, bson.M{"$project": projectMap})
 			}
 			if len(groupMap) > 0 {
-				lookupsTmp = append(lookupsTmp, groupMap)
+				lookupsTmp = append(lookupsTmp, map[string]interface{}{"$group":groupMap})
 			}
 
 			if len(lookupsTmp) > 0 {
@@ -623,10 +623,10 @@ func FindFilterOld(ctx context.Context, col *mongo.Collection, result *[]bson.M,
 							filterMap["$lookups"] = lookups
 						}
 					} else {
-						lookups = primitive.A{groupMap}
+						lookups = primitive.A{map[string]interface{}{"$group":groupMap}}
 					}
 				} else {
-					filterMap["$lookups"] = primitive.A{bson.M{"$project": projectMap}, groupMap}
+					filterMap["$lookups"] = primitive.A{bson.M{"$project": projectMap}, map[string]interface{}{"$group":groupMap}}
 				}
 				delete(query, "group")
 			}
@@ -975,10 +975,10 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 							filterMap["$lookups"] = lookups
 						}
 					} else {
-						lookups = primitive.A{groupMap}
+						lookups = primitive.A{map[string]interface{}{"$group":groupMap}}
 					}
 				} else {
-					filterMap["$lookups"] = primitive.A{bson.M{"$project": projectMap}, groupMap}
+					filterMap["$lookups"] = primitive.A{bson.M{"$project": projectMap}, map[string]interface{}{"$group":groupMap}}
 				}
 				delete(query, "group")
 			}
