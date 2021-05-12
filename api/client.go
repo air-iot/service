@@ -80,7 +80,9 @@ func (p *client) Get(url url.URL, headers map[string]string, result interface{})
 		return err
 	}
 	for k, v := range p.headers {
-		headers[k] = v
+		if _, ok := headers[k]; !ok {
+			headers[k] = v
+		}
 	}
 	headers[ginx.XRequestHeaderAuthorization] = fmt.Sprintf("%s %s", token.TokenType, token.AccessToken)
 	resp, err := resty.New().SetTimeout(time.Minute * 1).R().
@@ -108,12 +110,11 @@ func (p *client) Post(url url.URL, headers map[string]string, data, result inter
 	if err != nil {
 		return err
 	}
-	for k, v := range p.headers {
-		headers[k] = v
-	}
 	headers[ginx.XRequestHeaderAuthorization] = fmt.Sprintf("%s %s", token.TokenType, token.AccessToken)
 	for k, v := range p.headers {
-		headers[k] = v
+		if _, ok := headers[k]; !ok {
+			headers[k] = v
+		}
 	}
 	resp, err := resty.New().SetTimeout(time.Minute * 1).R().
 		SetHeaders(headers).
@@ -141,12 +142,12 @@ func (p *client) Delete(url url.URL, headers map[string]string, result interface
 	if err != nil {
 		return err
 	}
-	for k, v := range p.headers {
-		headers[k] = v
-	}
+
 	headers[ginx.XRequestHeaderAuthorization] = fmt.Sprintf("%s %s", token.TokenType, token.AccessToken)
 	for k, v := range p.headers {
-		headers[k] = v
+		if _, ok := headers[k]; !ok {
+			headers[k] = v
+		}
 	}
 	resp, err := resty.New().SetTimeout(time.Minute * 1).R().
 		SetHeaders(headers).
@@ -172,12 +173,12 @@ func (p *client) Put(url url.URL, headers map[string]string, data, result interf
 	if err != nil {
 		return err
 	}
-	for k, v := range p.headers {
-		headers[k] = v
-	}
+
 	headers[ginx.XRequestHeaderAuthorization] = fmt.Sprintf("%s %s", token.TokenType, token.AccessToken)
 	for k, v := range p.headers {
-		headers[k] = v
+		if _, ok := headers[k]; !ok {
+			headers[k] = v
+		}
 	}
 	resp, err := resty.New().SetTimeout(time.Minute * 1).R().
 		SetHeaders(p.headers).
@@ -204,12 +205,11 @@ func (p *client) Patch(url url.URL, headers map[string]string, data, result inte
 	if err != nil {
 		return err
 	}
-	for k, v := range p.headers {
-		headers[k] = v
-	}
 	headers[ginx.XRequestHeaderAuthorization] = fmt.Sprintf("%s %s", token.TokenType, token.AccessToken)
 	for k, v := range p.headers {
-		headers[k] = v
+		if _, ok := headers[k]; !ok {
+			headers[k] = v
+		}
 	}
 	resp, err := resty.New().SetTimeout(time.Minute * 1).R().
 		SetHeaders(p.headers).
