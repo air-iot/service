@@ -1,13 +1,15 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/air-iot/service/api/v2"
 	"github.com/air-iot/service/logic"
+	"github.com/air-iot/service/restful-api"
 	"go.mongodb.org/mongo-driver/mongo"
 	"time"
 
+	idb "github.com/air-iot/service/db/mongo"
 	"github.com/air-iot/service/logger"
 	imqtt "github.com/air-iot/service/mq/mqtt"
 	"github.com/air-iot/service/tools"
@@ -73,8 +75,7 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 				//修改事件为失效
 				updateMap := bson.M{"settings.invalid": true}
 				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
-				var r = make(map[string]interface{})
-				err := api.Cli.UpdateEventById(eventID, updateMap, &r)
+				_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 				if err != nil {
 					logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 					return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
@@ -128,8 +129,7 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 					//修改事件为失效
 					updateMap := bson.M{"settings.invalid": true}
 					//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
-					var r = make(map[string]interface{})
-					err := api.Cli.UpdateEventById(eventID, updateMap, &r)
+					_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 					if err != nil {
 						logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 						return
@@ -167,9 +167,9 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 			logger.Warnln(eventAlarmLog, "事件(%s)为只执行一次的事件", eventID)
 			//修改事件为失效
 			updateMap := bson.M{"settings.invalid": true}
-			//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
-			var r = make(map[string]interface{})
-			err := api.Cli.UpdateEventById(eventID, updateMap, &r)
+			_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+			//var r = make(map[string]interface{})
+			//err := api.Cli.UpdateEventById(eventID, updateMap, &r)
 			if err != nil {
 				logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 				return
@@ -263,7 +263,7 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 		logger.Debugf(eventScheduleLog, "开始分析事件")
 		eventID := eventInfo.ID
 		settings := eventInfo.Settings
-		if settings == nil || len(settings) == 0{
+		if settings == nil || len(settings) == 0 {
 			logger.Errorf(eventScheduleLog, "事件的配置不存在")
 			continue
 		}
@@ -296,9 +296,7 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 				logger.Debugf(eventScheduleLog, "事件(%s)的定时任务结束事件已到，不再执行", eventID.Hex())
 				//修改事件为失效
 				updateMap := bson.M{"settings.invalid": true}
-				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
-				var r = make(map[string]interface{})
-				err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
+				_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
 				if err != nil {
 					logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 					continue
@@ -318,7 +316,7 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 			scheduleType := ""
 			isOnce := false
 			settings := eventInfoCron.Settings
-			if settings != nil && len(settings) == 0{
+			if settings != nil && len(settings) != 0 {
 				scheduleType, ok := settings["type"].(string)
 				if ok {
 					if scheduleType == "once" {
@@ -352,8 +350,7 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 						//修改事件为失效
 						updateMap := bson.M{"settings.invalid": true}
 						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
-						var r = make(map[string]interface{})
-						err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
+						_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
 						if err != nil {
 							logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 							return
@@ -399,8 +396,7 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 				//修改事件为失效
 				updateMap := bson.M{"settings.invalid": true}
 				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
-				var r = make(map[string]interface{})
-				err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
+				_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
 				if err != nil {
 					logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
 					return
