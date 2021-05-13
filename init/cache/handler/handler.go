@@ -3,7 +3,9 @@ package handler
 import (
 	"context"
 	"fmt"
+	"github.com/air-iot/service/init/cache/entity"
 	"github.com/air-iot/service/init/mongodb"
+	"github.com/air-iot/service/util/formatx"
 	"go.mongodb.org/mongo-driver/mongo"
 	"math/rand"
 	"sync"
@@ -22,8 +24,10 @@ const CacheHandlerPrefix = "cacheHandler"
 var MemoryHandlerData = struct {
 	sync.Mutex
 	Cache map[string]map[string]string
+	CacheByEvent map[string]map[string]string
 }{
 	Cache: map[string]map[string]string{},
+	CacheByEvent: map[string]map[string]string{},
 }
 
 // CacheHandler 初始化handler缓存
@@ -56,6 +60,33 @@ func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ) (
 				handlerMap[id] = result
 			}
 			MemoryHandlerData.Cache[project] = handlerMap
+
+			eventHanlderInfo := entity.EventHandler{}
+			err = json.Unmarshal([]byte(result), &eventHanlderInfo)
+			if err != nil {
+				logger.Errorf("解序列化事件handle失败[ %s %s ]错误, %s", project, id, err.Error())
+				return
+			}
+			eventHanlderMap, ok := MemoryHandlerData.CacheByEvent[project]
+			if ok {
+				if eventHanlderListForType, ok := eventHanlderMap[eventHanlderInfo.Event]; ok {
+					eventHandlerInfoList := make([]entity.EventHandler, 0)
+					err = json.Unmarshal([]byte(eventHanlderListForType), &eventHandlerInfoList)
+					if err != nil {
+						logger.Errorf("解序列化缓存的事件handle列表失败[ %s %s ]错误, %s", project, id, err.Error())
+						return
+					}
+					b, err := json.Marshal(formatx.AddNonRepEventHandlerByLoop(eventHandlerInfoList, eventHanlderInfo))
+					if err != nil {
+						logger.Errorf("序列化合并的事件handle列表失败[ %s %s ]错误, %s", project, id, err.Error())
+						return
+					}
+					eventHanlderMap[eventHanlderInfo.Event] = string(b)
+				}
+				//eventMap[id] = result
+			}
+			MemoryHandlerData.CacheByEvent[project] = eventHanlderMap
+
 			MemoryHandlerData.Unlock()
 		case cache.Delete:
 			MemoryHandlerData.Lock()
@@ -64,6 +95,29 @@ func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ) (
 				delete(handlerMap, id)
 				MemoryHandlerData.Cache[project] = handlerMap
 			}
+
+			eventHandlerMap, ok := MemoryHandlerData.CacheByEvent[project]
+			if ok {
+				for index, listString := range eventHandlerMap {
+					if listString != "" {
+						eventHandlerInfoList := make([]entity.EventHandler, 0)
+						err := json.Unmarshal([]byte(listString), &eventHandlerInfoList)
+						if err != nil {
+							logger.Errorf("解序列化缓存的事件handle列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						b, err := json.Marshal(formatx.DelEleEventHandlerByLoop(eventHandlerInfoList, id))
+						if err != nil {
+							logger.Errorf("序列化合并的事件handle列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						eventHandlerMap[index] = string(b)
+					}
+				}
+				//eventMap[id] = result
+			}
+			MemoryHandlerData.CacheByEvent[project] = eventHandlerMap
+
 			MemoryHandlerData.Unlock()
 		default:
 			return
@@ -160,6 +214,70 @@ func getByDB(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.
 		handler = string(handlerBytes)
 	}
 	return handler, nil
+}
+
+// Get 根据项目ID和资产ID查询数据
+func GetByEvent(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project, eventID string, result interface{}) (err error) {
+	MemoryHandlerData.Lock()
+	defer MemoryHandlerData.Unlock()
+	var event string
+	eventMap, ok := MemoryHandlerData.CacheByEvent[project]
+	if ok {
+		event, ok = eventMap[eventID]
+		if !ok {
+			event, err = getByDBAndEvent(ctx, redisClient, mongoClient, project, eventID)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			eventMap[eventID] = event
+			MemoryHandlerData.CacheByEvent[project] = eventMap
+		}
+	} else {
+		event, err = getByDBAndEvent(ctx, redisClient, mongoClient, project, eventID)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		eventMap = make(map[string]string)
+		eventMap[eventID] = event
+		MemoryHandlerData.CacheByEvent[project] = eventMap
+	}
+
+	if err := json.Unmarshal([]byte(event), result); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+func getByDBAndEvent(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project, eventID string) (string, error) {
+	//event, err := redisClient.HGet(ctx, fmt.Sprintf("%s/event", project), id).Result()
+	//if err != nil && err != redis.Nil {
+	//	return "", err
+	//} else if err == redis.Nil {
+	col := mongoClient.Database(project).Collection("eventhandler")
+	eventHandlerTmp := make([]entity.EventHandlerMongo, 0)
+	_, err := mongodb.FindFilter(ctx, col, &eventHandlerTmp, mongodb.QueryOption{Filter: map[string]interface{}{
+		"event": eventID,
+	}})
+	if err != nil {
+		return "", err
+	}
+	eventHandlerBytes, err := json.Marshal(&eventHandlerTmp)
+	if err != nil {
+		return "", err
+	}
+	for _, handler := range eventHandlerTmp {
+		eventHandlerEleBytes, err := json.Marshal(&handler)
+		if err != nil {
+			return "", err
+		}
+		_, err = redisClient.HMSet(ctx, fmt.Sprintf("%s/handler", project), map[string]interface{}{handler.ID: eventHandlerEleBytes}).Result()
+		if err != nil {
+			return "", fmt.Errorf("更新redis数据错误, %s", err.Error())
+		}
+	}
+	eventHandler := string(eventHandlerBytes)
+	//}
+	return eventHandler, nil
 }
 
 // TriggerUpdate 更新redis资产数据,并发送消息通知

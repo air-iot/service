@@ -396,6 +396,31 @@ func getByDB(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.
 	return user, nil
 }
 
+// Get 根据项目ID和资产ID查询数据
+func GetByList(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project string, ids []string, result interface{}) (err error) {
+	MemoryUserData.Lock()
+	defer MemoryUserData.Unlock()
+	userList := make([]map[string]interface{},0)
+	for _, id := range ids {
+		userInfo := map[string]interface{}{}
+		err := Get(ctx,redisClient,mongoClient,project,id,&userInfo)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		userList = append(userList,userInfo)
+	}
+
+	resultByte,err := json.Marshal(userList)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if err := json.Unmarshal(resultByte, result); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+
 // TriggerUpdate 更新redis资产数据,并发送消息通知
 func TriggerUpdate(ctx context.Context, mqCli mq.MQ, redisClient *redis.Client, project, id string, user []byte) error {
 	_, err := redisClient.HMSet(ctx, fmt.Sprintf("%s/user", project), map[string]interface{}{id: user}).Result()

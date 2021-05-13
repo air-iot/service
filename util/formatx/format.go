@@ -137,6 +137,25 @@ func AddNonRepEventByLoop(slc []entity.Event, addEle entity.Event) []entity.Even
 }
 
 // AddNonRepMapByLoop 通过循环添加非重复元素（[]map[string]interface{}）
+func AddNonRepEventHandlerByLoop(slc []entity.EventHandler, addEle entity.EventHandler) []entity.EventHandler {
+	flag := true
+	newResult := make([]entity.EventHandler, 0)
+	for i := range slc {
+		if slc[i].ID == addEle.ID {
+			newResult = append(newResult, addEle)
+			flag = false
+		} else {
+			newResult = append(newResult, slc[i])
+		}
+	}
+	if flag { // 标识为false，不添加进结果
+		newResult = append(newResult, addEle)
+	}
+	return newResult
+}
+
+
+// AddNonRepMapByLoop 通过循环添加非重复元素（[]map[string]interface{}）
 func AddNonRepUserByLoop(slc []entity.User, addEle entity.User) []entity.User {
 	flag := true
 	newResult := make([]entity.User, 0)
@@ -157,6 +176,17 @@ func AddNonRepUserByLoop(slc []entity.User, addEle entity.User) []entity.User {
 // AddNonRepMapByLoop 通过循环添加非重复元素（[]map[string]interface{}）
 func DelEleEventByLoop(slc []entity.Event, id string) []entity.Event {
 	newResult := make([]entity.Event, 0)
+	for i := range slc {
+		if slc[i].ID != id {
+			newResult = append(newResult, slc[i])
+		}
+	}
+	return newResult
+}
+
+// AddNonRepMapByLoop 通过循环添加非重复元素（[]map[string]interface{}）
+func DelEleEventHandlerByLoop(slc []entity.EventHandler, id string) []entity.EventHandler {
+	newResult := make([]entity.EventHandler, 0)
 	for i := range slc {
 		if slc[i].ID != id {
 			newResult = append(newResult, slc[i])
