@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/air-iot/service/api/v2"
+	"github.com/air-iot/service/logic"
+	"go.mongodb.org/mongo-driver/mongo"
 	"time"
 
 	"github.com/air-iot/service/logger"
@@ -219,24 +221,24 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 	//
 	//pipeline := mongo.Pipeline{}
 	//pipeline = append(pipeline, paramMatch, paramLookup)
-	eventInfoList := make([]bson.M, 0)
 	//err := restfulapi.FindPipeline(ctx, idb.Database.Collection("event"), &eventInfoList, pipeline, nil)
 
-	query := map[string]interface{}{
-		"filter": map[string]interface{}{
-			"type": Schedule,
-			"$lookups": []map[string]interface{}{
-				{
-					"from":         "eventhandler",
-					"localField":   "_id",
-					"foreignField": "event",
-					"as":           "handlers",
-				},
+	//获取所有事件列表
+	pipeline := mongo.Pipeline{}
+	paramMatch := bson.D{bson.E{Key: "$match", Value: bson.M{"type": Schedule}}}
+	paramLookup := bson.D{
+		bson.E{
+			Key: "$lookup",
+			Value: bson.M{
+				"from":         "eventhandler",
+				"localField":   "_id",
+				"foreignField": "event",
+				"as":           "handlers",
 			},
 		},
 	}
-
-	err := api.Cli.FindEventQuery(query, &eventInfoList)
+	pipeline = append(pipeline, paramMatch, paramLookup)
+	eventInfoList, err := logic.EventLogic.FindByPipeline(pipeline)
 
 	if err != nil {
 		return fmt.Errorf("获取所有计划事件失败:%s", err.Error())
@@ -248,50 +250,105 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 		j := i
 		eventInfo = eventInfoList[j]
 		logger.Debugf(eventScheduleLog, "事件信息为:%+v", eventInfo)
-		handlers, ok := eventInfo["handlers"].(primitive.A)
-		if !ok {
-			logger.Warnln(eventScheduleLog, "handlers字段不存在或类型错误")
-			continue
-		}
+		handlers := eventInfo.Handlers
 		if len(handlers) == 0 {
 			logger.Warnln(eventScheduleLog, "handlers字段数组长度为0")
 			continue
 		}
-		eventName, ok := eventInfo["name"].(string)
-		if !ok {
-			logger.Errorf(eventScheduleLog, "传入参数中事件名称不存在或类型错误")
+		eventName := eventInfo.Name
+		if eventName == "" {
+			logger.Errorf(eventScheduleLog, "传入参数中事件名称为空")
 			continue
 		}
 		logger.Debugf(eventScheduleLog, "开始分析事件")
-		if eventID, ok := eventInfo["id"].(primitive.ObjectID); ok {
-			if settings, ok := eventInfo["settings"].(primitive.M); ok {
-				//判断是否已经失效
-				if invalid, ok := settings["invalid"].(bool); ok {
-					if invalid {
-						logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
+		eventID := eventInfo.ID
+		settings := eventInfo.Settings
+		if settings == nil || len(settings) == 0{
+			logger.Errorf(eventScheduleLog, "事件的配置不存在")
+			continue
+		}
+		//判断是否已经失效
+		if invalid, ok := settings["invalid"].(bool); ok {
+			if invalid {
+				logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
+				continue
+			}
+		}
+		cronExpression := ""
+		if scheduleType, ok := settings["type"].(string); ok {
+			if scheduleType == "once" {
+				if startTime, ok := settings["startTime"].(primitive.DateTime); ok {
+					formatStartTime := time.Unix(int64(startTime/1e3), 0)
+					if err != nil {
+						logger.Errorf(eventScheduleLog, "时间转time.Time失败:%s", err.Error())
 						continue
 					}
+					cronExpression = tools.GetCronExpressionOnce(scheduleType, &formatStartTime)
 				}
-				cronExpression := ""
-				if scheduleType, ok := settings["type"].(string); ok {
+			} else {
+				if startTime, ok := settings["startTime"].(primitive.M); ok {
+					cronExpression = tools.GetCronExpression(scheduleType, startTime)
+				}
+			}
+		}
+		if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
+			if tools.GetLocalTimeNow(time.Now()).Unix() >= int64(endTime)/1000 {
+				logger.Debugf(eventScheduleLog, "事件(%s)的定时任务结束事件已到，不再执行", eventID.Hex())
+				//修改事件为失效
+				updateMap := bson.M{"settings.invalid": true}
+				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+				var r = make(map[string]interface{})
+				err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
+				if err != nil {
+					logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
+					continue
+				}
+				continue
+			}
+		}
+		if cronExpression == "" {
+			logger.Errorf(eventScheduleLog, "事件(%s)的定时表达式解析失败", eventID)
+			continue
+		}
+		logger.Debugf(eventScheduleLog, "事件(%s)的定时cron为:(%s)", eventID, cronExpression)
+
+		eventInfoCron := eventInfo
+		eventIDCron := eventID
+		_, _ = c.AddFunc(cronExpression, func() {
+			scheduleType := ""
+			isOnce := false
+			settings := eventInfoCron.Settings
+			if settings != nil && len(settings) == 0{
+				scheduleType, ok := settings["type"].(string)
+				if ok {
 					if scheduleType == "once" {
-						if startTime, ok := settings["startTime"].(primitive.DateTime); ok {
+						isOnce = true
+						if startTime, ok := settings["startTime"].(primitive.M); ok {
+							if year, ok := startTime["year"]; ok {
+								yearString := tools.InterfaceTypeToString(year)
+								if time.Now().Format("2006") != yearString {
+									logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
+									return
+								}
+							}
+						} else if startTime, ok := settings["startTime"].(primitive.DateTime); ok {
 							formatStartTime := time.Unix(int64(startTime/1e3), 0)
 							if err != nil {
 								logger.Errorf(eventScheduleLog, "时间转time.Time失败:%s", err.Error())
-								continue
+								return
 							}
-							cronExpression = tools.GetCronExpressionOnce(scheduleType, &formatStartTime)
-						}
-					} else {
-						if startTime, ok := settings["startTime"].(primitive.M); ok {
-							cronExpression = tools.GetCronExpression(scheduleType, startTime)
+							yearString := tools.InterfaceTypeToString(formatStartTime.Year())
+							if time.Now().Format("2006") != yearString {
+								logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
+								return
+							}
 						}
 					}
 				}
 				if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
 					if tools.GetLocalTimeNow(time.Now()).Unix() >= int64(endTime)/1000 {
 						logger.Debugf(eventScheduleLog, "事件(%s)的定时任务结束事件已到，不再执行", eventID.Hex())
+
 						//修改事件为失效
 						updateMap := bson.M{"settings.invalid": true}
 						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
@@ -299,118 +356,62 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 						err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
 						if err != nil {
 							logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
-							continue
-						}
-						continue
-					}
-				}
-				if cronExpression == "" {
-					logger.Errorf(eventScheduleLog, "事件(%s)的定时表达式解析失败", eventID)
-					continue
-				}
-				logger.Debugf(eventScheduleLog, "事件(%s)的定时cron为:(%s)", eventID, cronExpression)
-
-				eventInfoCron := eventInfo
-				eventIDCron := eventID
-				_, _ = c.AddFunc(cronExpression, func() {
-					scheduleType := ""
-					isOnce := false
-					if settings, ok := eventInfoCron["settings"].(primitive.M); ok {
-						scheduleType, ok = settings["type"].(string)
-						if ok {
-							if scheduleType == "once" {
-								isOnce = true
-								if startTime, ok := settings["startTime"].(primitive.M); ok {
-									if year, ok := startTime["year"]; ok {
-										yearString := tools.InterfaceTypeToString(year)
-										if time.Now().Format("2006") != yearString {
-											logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
-											return
-										}
-									}
-								} else if startTime, ok := settings["startTime"].(primitive.DateTime); ok {
-									formatStartTime := time.Unix(int64(startTime/1e3), 0)
-									if err != nil {
-										logger.Errorf(eventScheduleLog, "时间转time.Time失败:%s", err.Error())
-										return
-									}
-									yearString := tools.InterfaceTypeToString(formatStartTime.Year())
-									if time.Now().Format("2006") != yearString {
-										logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
-										return
-									}
-								}
-							}
-						}
-						if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
-							if tools.GetLocalTimeNow(time.Now()).Unix() >= int64(endTime)/1000 {
-								logger.Debugf(eventScheduleLog, "事件(%s)的定时任务结束事件已到，不再执行", eventID.Hex())
-
-								//修改事件为失效
-								updateMap := bson.M{"settings.invalid": true}
-								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
-								var r = make(map[string]interface{})
-								err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
-								if err != nil {
-									logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
-									return
-								}
-								return
-							}
-						}
-					}
-					scheduleTypeMap := map[string]string{
-						"hour":  "每小时",
-						"day":   "每天",
-						"week":  "每周",
-						"month": "每月",
-						"year":  "每年",
-						"once":  "仅一次",
-					}
-					sendMap := map[string]interface{}{
-						"time":      tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
-						"interval":  scheduleTypeMap[scheduleType],
-						"eventName": eventName,
-					}
-					//b, err := json.Marshal(sendMap)
-					//if err != nil {
-					//	return
-					//}
-					//imqtt.SendMsg(emqttConn, "event"+"/"+eventID.Hex(), string(b))
-					b, err := json.Marshal(sendMap)
-					if err != nil {
-						logger.Debugf(eventScheduleLog, "事件(%s)的发送map序列化失败:%s", err.Error())
-						return
-					}
-					err = imqtt.Send(fmt.Sprintf("event/%s", eventIDCron.Hex()), b)
-					if err != nil {
-						logger.Warnf(eventScheduleLog, "发送事件(%s)错误:%s", eventIDCron.Hex(), err.Error())
-						//fmt.Println(eventScheduleLog, "发送事件(%s)错误:%s", eventIDCron.Hex(), err.Error())
-					} else {
-						logger.Debugf(eventScheduleLog, "发送事件成功:%s,数据为:%+v", eventIDCron.Hex(), sendMap)
-						//fmt.Println(eventScheduleLog, "发送事件成功:%s,数据为:%+v", eventIDCron.Hex(), sendMap)
-					}
-
-					if isOnce {
-						logger.Warnln(eventAlarmLog, "事件(%s)为只执行一次的事件", eventID)
-						//修改事件为失效
-						updateMap := bson.M{"settings.invalid": true}
-						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
-						var r = make(map[string]interface{})
-						err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
-						if err != nil {
-							logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
 							return
 						}
+						return
 					}
-				})
-				//if err != nil{
-				//	fmt.Println("AddFunc err:",err.Error())
-				//}
-
-				//fmt.Println("AddFunc entryID:",entryID,"eventIDCron:",eventIDCron)
+				}
 			}
-		}
+			scheduleTypeMap := map[string]string{
+				"hour":  "每小时",
+				"day":   "每天",
+				"week":  "每周",
+				"month": "每月",
+				"year":  "每年",
+				"once":  "仅一次",
+			}
+			sendMap := map[string]interface{}{
+				"time":      tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
+				"interval":  scheduleTypeMap[scheduleType],
+				"eventName": eventName,
+			}
+			//b, err := json.Marshal(sendMap)
+			//if err != nil {
+			//	return
+			//}
+			//imqtt.SendMsg(emqttConn, "event"+"/"+eventID.Hex(), string(b))
+			b, err := json.Marshal(sendMap)
+			if err != nil {
+				logger.Debugf(eventScheduleLog, "事件(%s)的发送map序列化失败:%s", err.Error())
+				return
+			}
+			err = imqtt.Send(fmt.Sprintf("event/%s", eventIDCron.Hex()), b)
+			if err != nil {
+				logger.Warnf(eventScheduleLog, "发送事件(%s)错误:%s", eventIDCron.Hex(), err.Error())
+				//fmt.Println(eventScheduleLog, "发送事件(%s)错误:%s", eventIDCron.Hex(), err.Error())
+			} else {
+				logger.Debugf(eventScheduleLog, "发送事件成功:%s,数据为:%+v", eventIDCron.Hex(), sendMap)
+				//fmt.Println(eventScheduleLog, "发送事件成功:%s,数据为:%+v", eventIDCron.Hex(), sendMap)
+			}
+
+			if isOnce {
+				logger.Warnln(eventAlarmLog, "事件(%s)为只执行一次的事件", eventID)
+				//修改事件为失效
+				updateMap := bson.M{"settings.invalid": true}
+				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID.Hex(), updateMap)
+				var r = make(map[string]interface{})
+				err := api.Cli.UpdateEventById(eventID.Hex(), updateMap, &r)
+				if err != nil {
+					logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID.Hex(), err.Error())
+					return
+				}
+			}
+		})
+		//if err != nil{
+		//	fmt.Println("AddFunc err:",err.Error())
+		//}
+
+		//fmt.Println("AddFunc entryID:",entryID,"eventIDCron:",eventIDCron)
 	}
 
 	c.Start()
