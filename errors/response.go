@@ -8,6 +8,7 @@ type ResponseError struct {
 	Message    string // 错误消息
 	StatusCode int    // 响应状态码
 	ERR        error  // 响应错误
+	Key        string // 错误字段
 }
 
 func (r *ResponseError) Error() string {
