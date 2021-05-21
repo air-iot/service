@@ -26,8 +26,7 @@ type ErrorResult struct {
 
 // ErrorItem 响应错误项
 type ErrorItem struct {
-	Code    int    `json:"code"` // 错误码
-	Key     string `json:"key"`
+	Code    int    `json:"code"`    // 错误码
 	Message string `json:"message"` // 错误信息
 }
 

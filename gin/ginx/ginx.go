@@ -162,11 +162,20 @@ func ResError(c *gin.Context, err error, status ...int) {
 		}
 	}
 
-	eitem := schema.ErrorItem{
-		Code:    res.Code,
-		Key:     res.Key,
-		Message: res.Message,
+	if res.Key == "" {
+		eitem := schema.ErrorItem{
+			Code:    res.Code,
+			Message: res.Message,
+		}
+		//ResJSON(c, res.StatusCode, schema.ErrorResult{Error: eitem})
+		ResJSON(c, res.StatusCode, eitem)
+		return
+	} else {
+		eitem := map[string]interface{}{
+			"code":  res.Code,
+			res.Key: res.Message,
+		}
+		ResJSON(c, res.StatusCode, eitem)
+		return
 	}
-	//ResJSON(c, res.StatusCode, schema.ErrorResult{Error: eitem})
-	ResJSON(c, res.StatusCode, eitem)
 }
