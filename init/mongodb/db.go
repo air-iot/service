@@ -529,6 +529,11 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 								k = k + "._id"
 							}
 							v = RemoveEmptyOrNilArray(v)
+							if removeList,ok := v.([]interface{});ok{
+								if len(removeList) == 0{
+									continue
+								}
+							}
 							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 						}
 					}
@@ -567,6 +572,11 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 								k = k + "._id"
 							}
 							v = RemoveEmptyOrNilArray(v)
+							if removeList,ok := v.([]interface{});ok{
+								if len(removeList) == 0{
+									continue
+								}
+							}
 							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 						}
 					}
@@ -602,6 +612,11 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 						k = k + "._id"
 					}
 					v = RemoveEmptyOrNilArray(v)
+					if removeList,ok := v.([]interface{});ok{
+						if len(removeList) == 0{
+							continue
+						}
+					}
 					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 				}
 			}
@@ -940,6 +955,11 @@ func FindFilterOld(ctx context.Context, col *mongo.Collection, result *[]bson.M,
 						}
 					}
 					v = RemoveEmptyOrNilArray(v)
+					if removeList,ok := v.([]interface{});ok{
+						if len(removeList) == 0{
+							continue
+						}
+					}
 					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 				}
 			}
@@ -1236,6 +1256,11 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 										k = k + "._id"
 									}
 									v = RemoveEmptyOrNilArray(v)
+									if removeList,ok := v.([]interface{});ok{
+										if len(removeList) == 0{
+											continue
+										}
+									}
 									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 								}
 							}
@@ -1277,6 +1302,11 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 										k = k + "._id"
 									}
 									v = RemoveEmptyOrNilArray(v)
+									if removeList,ok := v.([]interface{});ok{
+										if len(removeList) == 0{
+											continue
+										}
+									}
 									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 								}
 							}
@@ -1316,6 +1346,11 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 									k = k + "._id"
 								}
 								v = RemoveEmptyOrNilArray(v)
+								if removeList,ok := v.([]interface{});ok{
+									if len(removeList) == 0{
+										continue
+									}
+								}
 								pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 							}
 						}
@@ -1352,6 +1387,11 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 								k = k + "._id"
 							}
 							v = RemoveEmptyOrNilArray(v)
+							if removeList,ok := v.([]interface{});ok{
+								if len(removeList) == 0{
+									continue
+								}
+							}
 							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 						}
 					}
@@ -1388,6 +1428,11 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 							k = k + "._id"
 						}
 						v = RemoveEmptyOrNilArray(v)
+						if removeList,ok := v.([]interface{});ok{
+							if len(removeList) == 0{
+								continue
+							}
+						}
 						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 					}
 				}
