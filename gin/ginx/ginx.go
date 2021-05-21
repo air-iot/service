@@ -163,8 +163,51 @@ func ResError(c *gin.Context, err error, status ...int) {
 	}
 
 	eitem := schema.ErrorItem{
-		Code:    res.Code,
+		Code: res.Code,
+
 		Message: res.Message,
 	}
 	ResJSON(c, res.StatusCode, schema.ErrorResult{Error: eitem})
+}
+
+// ResKeyError 响应错误
+func ResKeyError(c *gin.Context, key string, err error, status ...int) {
+	ctx := c.Request.Context()
+	var res *errors.ResponseError
+
+	if err != nil {
+		if e, ok := err.(*errors.ResponseError); ok {
+			res = e
+		} else {
+			res = errors.UnWrapResponse(errors.ErrBadRequest)
+			res.ERR = err
+		}
+	} else {
+		res = errors.UnWrapResponse(errors.ErrInternalServer)
+	}
+
+	if len(status) > 0 {
+		res.StatusCode = status[0]
+	}
+
+	if err := res.ERR; err != nil {
+		if res.Message == "" {
+			res.Message = err.Error()
+		}
+
+		if status := res.StatusCode; status >= 400 && status < 500 {
+			logger.WithContext(ctx).Warnf(err.Error())
+		} else if status >= 500 {
+			logger.WithContext(logger.NewStackContext(ctx, err)).Errorf(err.Error())
+		}
+	}
+
+	item := map[string]map[string]interface{}{
+		"error": {
+			"code":    res.Code,
+			key:       res.Message,
+			"message": res.Message,
+		},
+	}
+	ResJSON(c, res.StatusCode, item)
 }
