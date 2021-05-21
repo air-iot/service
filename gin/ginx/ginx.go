@@ -172,7 +172,6 @@ func ResError(c *gin.Context, err error, status ...int) {
 		return
 	} else {
 		eitem := map[string]interface{}{
-			"code":  res.Code,
 			res.Key: res.Message,
 		}
 		ResJSON(c, res.StatusCode, eitem)

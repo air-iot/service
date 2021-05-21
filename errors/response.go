@@ -8,7 +8,7 @@ type ResponseError struct {
 	Message    string // 错误消息
 	StatusCode int    // 响应状态码
 	ERR        error  // 响应错误
-	Key        string // 错误字段
+	Key        string
 }
 
 func (r *ResponseError) Error() string {
@@ -57,9 +57,25 @@ func NewResponse(code, statusCode int, msg string, args ...interface{}) error {
 	return res
 }
 
+// NewKeyResponse 创建响应错误
+func NewKeyResponse(code, statusCode int, key, msg string, args ...interface{}) error {
+	res := &ResponseError{
+		Code:       code,
+		Message:    fmt.Sprintf(msg, args...),
+		StatusCode: statusCode,
+		Key:        key,
+	}
+	return res
+}
+
 // New400Response 创建错误码为400的响应错误
 func New400Response(msg string, args ...interface{}) error {
 	return NewResponse(400, 400, msg, args...)
+}
+
+// New400KeyResponse 创建错误码为400的响应错误
+func New400KeyResponse(key, msg string, args ...interface{}) error {
+	return NewKeyResponse(400, 400, key, msg, args...)
 }
 
 // New500Response 创建错误码为500的响应错误
