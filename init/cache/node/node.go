@@ -169,14 +169,44 @@ func Get(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Clie
 	return nil
 }
 
-// Get 根据项目ID和资产ID查询数据
+// GetWithoutLock 根据项目ID和资产ID查询数据
+func GetWithoutLock(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project, id string, result interface{}) (err error) {
+	var node string
+	nodeMap, ok := MemoryNodeData.Cache[project]
+	if ok {
+		node, ok = nodeMap[id]
+		if !ok {
+			node, err = getByDB(ctx, redisClient, mongoClient, project, id)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			nodeMap[id] = node
+			MemoryNodeData.Cache[project] = nodeMap
+		}
+	} else {
+		node, err = getByDB(ctx, redisClient, mongoClient, project, id)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		nodeMap = make(map[string]string)
+		nodeMap[id] = node
+		MemoryNodeData.Cache[project] = nodeMap
+	}
+
+	if err := json.Unmarshal([]byte(node), result); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+// GetByList 根据项目ID和资产ID查询数据
 func GetByList(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project string, ids []string, result interface{}) (err error) {
 	MemoryNodeData.Lock()
 	defer MemoryNodeData.Unlock()
 	nodeList := make([]map[string]interface{},0)
 	for _, id := range ids {
 		deptInfo := map[string]interface{}{}
-		err := Get(ctx,redisClient,mongoClient,project,id,&deptInfo)
+		err := GetWithoutLock(ctx,redisClient,mongoClient,project,id,&deptInfo)
 		if err != nil {
 			return errors.WithStack(err)
 		}
