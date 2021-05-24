@@ -23,11 +23,13 @@ const CacheNodePrefix = "cacheNode"
 
 var MemoryNodeData = struct {
 	sync.Mutex
-	Cache map[string]map[string]string
-	CacheByModel map[string]map[string]string
+	Cache         map[string]map[string]string
+	CacheByModel  map[string]map[string]string
+	CacheByParent map[string]map[string]string
 }{
-	Cache: map[string]map[string]string{},
-	CacheByModel: map[string]map[string]string{},
+	Cache:         map[string]map[string]string{},
+	CacheByModel:  map[string]map[string]string{},
+	CacheByParent: map[string]map[string]string{},
 }
 
 // CacheHandler 初始化node缓存
@@ -87,6 +89,27 @@ func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ) (
 			}
 			MemoryNodeData.CacheByModel[project] = nodeMap
 
+			nodeMap, ok = MemoryNodeData.CacheByParent[project]
+			if ok {
+				for _, parent := range nodeInfo.Parent {
+					if nodeListForType, ok := nodeMap[parent]; ok {
+						nodeInfoList := make([]entity.Node, 0)
+						err = json.Unmarshal([]byte(nodeListForType), &nodeInfoList)
+						if err != nil {
+							logger.Errorf("解序列化缓存的资产列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						b, err := json.Marshal(formatx.AddNonRepNodeByLoop(nodeInfoList, nodeInfo))
+						if err != nil {
+							logger.Errorf("序列化合并的资产列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						nodeMap[parent] = string(b)
+					}
+				}
+			}
+			MemoryNodeData.CacheByParent[project] = nodeMap
+
 			MemoryNodeData.Unlock()
 		case cache.Delete:
 			MemoryNodeData.Lock()
@@ -103,12 +126,12 @@ func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ) (
 						nodeInfoList := make([]entity.Node, 0)
 						err := json.Unmarshal([]byte(listString), &nodeInfoList)
 						if err != nil {
-							logger.Errorf("解序列化缓存的事件handle列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							logger.Errorf("解序列化缓存的模型资产列表失败[ %s %s ]错误, %s", project, id, err.Error())
 							return
 						}
 						b, err := json.Marshal(formatx.DelEleNodeByLoop(nodeInfoList, id))
 						if err != nil {
-							logger.Errorf("序列化合并的事件handle列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							logger.Errorf("序列化合并的模型资产列表失败[ %s %s ]错误, %s", project, id, err.Error())
 							return
 						}
 						nodeMap[index] = string(b)
@@ -118,6 +141,27 @@ func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ) (
 			}
 			MemoryNodeData.CacheByModel[project] = nodeMap
 
+			nodeMap, ok = MemoryNodeData.CacheByParent[project]
+			if ok {
+				for index, listString := range nodeMap {
+					if listString != "" {
+						nodeInfoList := make([]entity.Node, 0)
+						err := json.Unmarshal([]byte(listString), &nodeInfoList)
+						if err != nil {
+							logger.Errorf("解序列化缓存的子资产列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						b, err := json.Marshal(formatx.DelEleNodeByLoop(nodeInfoList, id))
+						if err != nil {
+							logger.Errorf("序列化合并的子资产列表失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						nodeMap[index] = string(b)
+					}
+				}
+				//eventMap[id] = result
+			}
+			MemoryNodeData.CacheByParent[project] = nodeMap
 
 			MemoryNodeData.Unlock()
 		default:
@@ -203,17 +247,17 @@ func GetWithoutLock(ctx context.Context, redisClient *redis.Client, mongoClient 
 func GetByList(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project string, ids []string, result interface{}) (err error) {
 	MemoryNodeData.Lock()
 	defer MemoryNodeData.Unlock()
-	nodeList := make([]map[string]interface{},0)
+	nodeList := make([]map[string]interface{}, 0)
 	for _, id := range ids {
 		deptInfo := map[string]interface{}{}
-		err := GetWithoutLock(ctx,redisClient,mongoClient,project,id,&deptInfo)
+		err := GetWithoutLock(ctx, redisClient, mongoClient, project, id, &deptInfo)
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		nodeList = append(nodeList,deptInfo)
+		nodeList = append(nodeList, deptInfo)
 	}
 
-	resultByte,err := json.Marshal(nodeList)
+	resultByte, err := json.Marshal(nodeList)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -288,6 +332,70 @@ func getByDBAndModel(ctx context.Context, redisClient *redis.Client, mongoClient
 	nodeTmp := make([]entity.NodeMongo, 0)
 	_, err := mongodb.FindFilter(ctx, col, &nodeTmp, mongodb.QueryOption{Filter: map[string]interface{}{
 		"model": id,
+	}})
+	if err != nil {
+		return "", err
+	}
+	nodeBytes, err := json.Marshal(&nodeTmp)
+	if err != nil {
+		return "", err
+	}
+	for _, nodeEle := range nodeTmp {
+		nodeEleBytes, err := json.Marshal(&nodeEle)
+		if err != nil {
+			return "", err
+		}
+		_, err = redisClient.HMSet(ctx, fmt.Sprintf("%s/node", project), map[string]interface{}{nodeEle.ID: nodeEleBytes}).Result()
+		if err != nil {
+			return "", fmt.Errorf("更新redis数据错误, %s", err.Error())
+		}
+	}
+	node := string(nodeBytes)
+	//}
+	return node, nil
+}
+
+// GetByParent 根据项目ID和资产ID查询数据
+func GetByParent(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project, parentID string, result interface{}) (err error) {
+	MemoryNodeData.Lock()
+	defer MemoryNodeData.Unlock()
+	var node string
+	nodeMap, ok := MemoryNodeData.CacheByParent[project]
+	if ok {
+		node, ok = nodeMap[parentID]
+		if !ok {
+			node, err = getByDBAndParent(ctx, redisClient, mongoClient, project, parentID)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			nodeMap[parentID] = node
+			MemoryNodeData.CacheByParent[project] = nodeMap
+		}
+	} else {
+		node, err = getByDBAndParent(ctx, redisClient, mongoClient, project, parentID)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		nodeMap = make(map[string]string)
+		nodeMap[parentID] = node
+		MemoryNodeData.CacheByParent[project] = nodeMap
+	}
+
+	if err := json.Unmarshal([]byte(node), result); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+func getByDBAndParent(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project, id string) (string, error) {
+	//event, err := redisClient.HGet(ctx, fmt.Sprintf("%s/event", project), id).Result()
+	//if err != nil && err != redis.Nil {
+	//	return "", err
+	//} else if err == redis.Nil {
+	col := mongoClient.Database(project).Collection("node")
+	nodeTmp := make([]entity.NodeMongo, 0)
+	_, err := mongodb.FindFilter(ctx, col, &nodeTmp, mongodb.QueryOption{Filter: map[string]interface{}{
+		"parent": id,
 	}})
 	if err != nil {
 		return "", err

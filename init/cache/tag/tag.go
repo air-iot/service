@@ -40,22 +40,21 @@ func FindLocalCache(ctx context.Context, redisClient *redis.Client, mongoClient 
 		}
 
 		if modelAuto {
+			nodeInfoList := make([]entity.Node,0)
+			err = node.GetByParent(ctx, redisClient, mongoClient, project, nodeID, &nodeInfoList)
 			// 查询节点子节点
-			for _, c := range nodeInfo.Child {
+			for _, r := range nodeInfoList {
 				// 查询子节点
-				r := entity.Node{}
-				if err := 	node.Get(ctx, redisClient, mongoClient, project, c, &r); err == nil {
-					if t, err := tagNode(&r, tagID); err == nil {
-						//p.tagCache.Store(cacheID, t)
+				if t, err := tagNode(&r, tagID); err == nil {
+					//p.tagCache.Store(cacheID, t)
+					return t, err
+				}
+				// 查询子节点模型
+				m := entity.Model{}
+				if err := model.Get(ctx, redisClient, mongoClient, project, r.Model, &m); err == nil {
+					if t, err := tagModel(&m, tagID); err == nil {
+						//tagCache.Store(cacheID, t)
 						return t, err
-					}
-					// 查询子节点模型
-					m := entity.Model{}
-					if err := model.Get(ctx, redisClient, mongoClient, project, r.Model, &m); err == nil {
-						if t, err := tagModel(&m, tagID); err == nil {
-							//tagCache.Store(cacheID, t)
-							return t, err
-						}
 					}
 				}
 			}
