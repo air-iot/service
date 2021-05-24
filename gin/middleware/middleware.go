@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -68,6 +69,23 @@ func AllowMethodAndPathPrefixSkipper(prefixes ...string) SkipperFunc {
 				return true
 			}
 		}
+		return false
+	}
+}
+
+// AllowMatchRegexpSkipper 正则
+func AllowMatchRegexpSkipper(prefixes ...string) SkipperFunc {
+	return func(c *gin.Context) bool {
+		path := c.Request.URL.Path
+
+		for _, p := range prefixes {
+			//文件正则 不区分大小写 ?i:
+			picFileRegexp, _ := regexp.Compile(p)
+			if picFileRegexp.MatchString(path) {
+				return true
+			}
+		}
+
 		return false
 	}
 }
