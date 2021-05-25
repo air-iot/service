@@ -174,7 +174,7 @@ func getByDB(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.
 	if err != nil && err != redis.Nil {
 		return "", err
 	} else if err == redis.Nil {
-		col := mongoClient.Database(project).Collection("department")
+		col := mongoClient.Database(project).Collection("dept")
 		departmentTmp := make(map[string]interface{})
 		err := mongodb.FindByID(ctx, col, &departmentTmp, id)
 		if err != nil {

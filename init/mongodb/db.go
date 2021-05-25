@@ -251,6 +251,11 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 						return val
 					}
 				}
+				if strings.HasSuffix(k, "Id"){
+					delete(val, k)
+					k = k[:len(k)-2]
+					k = k + "._id"
+				}
 				val[k] = recursionVal
 			}
 		}
@@ -276,6 +281,11 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 						delete(*val,k)
 						return val
 					}
+				}
+				if strings.HasSuffix(k, "Id"){
+					delete(*val, k)
+					k = k[:len(k)-2]
+					k = k + "._id"
 				}
 				(*val)[k] = recursionVal
 			}
@@ -303,6 +313,11 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 						return val
 					}
 				}
+				if strings.HasSuffix(k, "Id"){
+					delete(val, k)
+					k = k[:len(k)-2]
+					k = k + "._id"
+				}
 				val[k] = recursionVal
 			}
 		}
@@ -328,6 +343,11 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 						delete(*val,k)
 						return val
 					}
+				}
+				if strings.HasSuffix(k, "Id"){
+					delete(*val, k)
+					k = k[:len(k)-2]
+					k = k + "._id"
 				}
 				(*val)[k] = recursionVal
 			}
@@ -455,39 +475,41 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 
 	// TODO filter nil
 	if query.Filter != nil {
-		if lookups, ok := query.Filter["$lookups"].([]interface{}); ok {
-			lookupsOtherList := make([]interface{}, 0)
-			if len(lookups) != 0 {
-				if projectM, ok := lookups[0].(map[string]interface{})["$project"].(map[string]interface{}); ok {
-					for k := range projectMap {
-						projectM[k] = 1
+		if len(groupMap) > 0 {
+			if lookups, ok := query.Filter["$lookups"].([]interface{}); ok {
+				lookupsOtherList := make([]interface{}, 0)
+				if len(lookups) != 0 {
+					if projectM, ok := lookups[0].(map[string]interface{})["$project"].(map[string]interface{}); ok {
+						for k := range projectMap {
+							projectM[k] = 1
+						}
+						lookupsOtherList = append(lookupsOtherList, lookups[0])
+						lookupsOtherList = append(lookupsOtherList, map[string]interface{}{"$group": groupMap})
+						lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
+						lookups = lookupsOtherList
+						query.Filter["$lookups"] = lookups
+					} else {
+						lookupsOtherList = append(lookupsOtherList, map[string]interface{}{"$group": groupMap})
+						lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
+						lookups = lookupsOtherList
+						query.Filter["$lookups"] = lookups
 					}
-					lookupsOtherList = append(lookupsOtherList, lookups[0])
-					lookupsOtherList = append(lookupsOtherList, map[string]interface{}{"$group": groupMap})
-					lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
-					lookups = lookupsOtherList
-					query.Filter["$lookups"] = lookups
 				} else {
-					lookupsOtherList = append(lookupsOtherList, map[string]interface{}{"$group": groupMap})
-					lookupsOtherList = append(lookupsOtherList, lookups[1:]...)
-					lookups = lookupsOtherList
-					query.Filter["$lookups"] = lookups
+					lookups = []interface{}{map[string]interface{}{"$group": groupMap}}
 				}
 			} else {
-				lookups = []interface{}{map[string]interface{}{"$group":groupMap}}
-			}
-		} else {
 
-			lookupsTmp := make([]interface{}, 0)
-			if len(projectMap) > 0 {
-				lookupsTmp = append(lookupsTmp, bson.M{"$project": projectMap})
-			}
-			if len(groupMap) > 0 {
-				lookupsTmp = append(lookupsTmp, map[string]interface{}{"$group":groupMap})
-			}
+				lookupsTmp := make([]interface{}, 0)
+				if len(projectMap) > 0 {
+					lookupsTmp = append(lookupsTmp, bson.M{"$project": projectMap})
+				}
+				//if len(groupMap) > 0 {
+				lookupsTmp = append(lookupsTmp, map[string]interface{}{"$group": groupMap})
+				//}
 
-			if len(lookupsTmp) > 0 {
-				query.Filter["$lookups"] = lookupsTmp
+				if len(lookupsTmp) > 0 {
+					query.Filter["$lookups"] = lookupsTmp
+				}
 			}
 		}
 	}

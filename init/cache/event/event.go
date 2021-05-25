@@ -207,8 +207,8 @@ func getByDBAndType(ctx context.Context, redisClient *redis.Client, mongoClient 
 	eventTmp := make([]entity.EventMongo, 0)
 	_, err := mongodb.FindFilter(ctx, col, &eventTmp, mongodb.QueryOption{Filter: map[string]interface{}{
 		"type": eventType,
-		"$lookups": []map[string]interface{}{
-			{
+		"$lookups": []interface{}{
+			map[string]interface{}{
 				"from":         "eventhandler",
 				"localField":   "_id",
 				"foreignField": "event",
@@ -216,6 +216,7 @@ func getByDBAndType(ctx context.Context, redisClient *redis.Client, mongoClient 
 			},
 		},
 	}})
+
 	if err != nil {
 		return "", err
 	}
