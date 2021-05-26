@@ -181,7 +181,7 @@ func (p *client) Put(url url.URL, headers map[string]string, data, result interf
 		}
 	}
 	resp, err := resty.New().SetTimeout(time.Minute * 1).R().
-		SetHeaders(p.headers).
+		SetHeaders(headers).
 		SetResult(result).
 		SetBody(data).
 		Put(url.String())
@@ -212,7 +212,7 @@ func (p *client) Patch(url url.URL, headers map[string]string, data, result inte
 		}
 	}
 	resp, err := resty.New().SetTimeout(time.Minute * 1).R().
-		SetHeaders(p.headers).
+		SetHeaders(headers).
 		SetResult(result).
 		SetBody(data).
 		Patch(url.String())
