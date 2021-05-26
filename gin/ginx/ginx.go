@@ -46,7 +46,10 @@ func GetToken(c *gin.Context) string {
 func GetProjectName(c *gin.Context) string {
 	project := c.GetHeader(XRequestProject)
 	if project == "" {
-		project = XRequestProjectDefault
+		project = c.Query(XRequestProject)
+		if project == "" {
+			project = XRequestProjectDefault
+		}
 	}
 	return project
 }
