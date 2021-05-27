@@ -238,20 +238,20 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 					if len(list) == 0 {
 						return "dropBadValueEmptyArray"
 					}
-				}else if list, ok := v.([]string); ok {
+				} else if list, ok := v.([]string); ok {
 					if len(list) == 0 {
 						return "dropBadValueEmptyArray"
 					}
 				}
 			} else {
 				recursionVal := RemoveEmptyOrNilArray(v)
-				if recursionValString ,ok := recursionVal.(string);ok{
-					if recursionValString == "dropBadValueEmptyArray"{
-						delete(val,k)
+				if recursionValString, ok := recursionVal.(string); ok {
+					if recursionValString == "dropBadValueEmptyArray" {
+						delete(val, k)
 						return val
 					}
 				}
-				if strings.HasSuffix(k, "Id"){
+				if strings.HasSuffix(k, "Id") {
 					delete(val, k)
 					k = k[:len(k)-2]
 					k = k + "._id"
@@ -269,20 +269,20 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 					if len(list) == 0 {
 						return "dropBadValueEmptyArray"
 					}
-				}else if list, ok := v.([]string); ok {
+				} else if list, ok := v.([]string); ok {
 					if len(list) == 0 {
 						return "dropBadValueEmptyArray"
 					}
 				}
 			} else {
 				recursionVal := RemoveEmptyOrNilArray(v)
-				if recursionValString ,ok := recursionVal.(string);ok{
-					if recursionValString == "dropBadValueEmptyArray"{
-						delete(*val,k)
+				if recursionValString, ok := recursionVal.(string); ok {
+					if recursionValString == "dropBadValueEmptyArray" {
+						delete(*val, k)
 						return val
 					}
 				}
-				if strings.HasSuffix(k, "Id"){
+				if strings.HasSuffix(k, "Id") {
 					delete(*val, k)
 					k = k[:len(k)-2]
 					k = k + "._id"
@@ -300,20 +300,20 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 					if len(list) == 0 {
 						return "dropBadValueEmptyArray"
 					}
-				}else if list, ok := v.([]string); ok {
+				} else if list, ok := v.([]string); ok {
 					if len(list) == 0 {
 						return "dropBadValueEmptyArray"
 					}
 				}
 			} else {
 				recursionVal := RemoveEmptyOrNilArray(v)
-				if recursionValString ,ok := recursionVal.(string);ok{
-					if recursionValString == "dropBadValueEmptyArray"{
-						delete(val,k)
+				if recursionValString, ok := recursionVal.(string); ok {
+					if recursionValString == "dropBadValueEmptyArray" {
+						delete(val, k)
 						return val
 					}
 				}
-				if strings.HasSuffix(k, "Id"){
+				if strings.HasSuffix(k, "Id") {
 					delete(val, k)
 					k = k[:len(k)-2]
 					k = k + "._id"
@@ -338,13 +338,13 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 				}
 			} else {
 				recursionVal := RemoveEmptyOrNilArray(v)
-				if recursionValString ,ok := recursionVal.(string);ok{
-					if recursionValString == "dropBadValueEmptyArray"{
-						delete(*val,k)
+				if recursionValString, ok := recursionVal.(string); ok {
+					if recursionValString == "dropBadValueEmptyArray" {
+						delete(*val, k)
 						return val
 					}
 				}
-				if strings.HasSuffix(k, "Id"){
+				if strings.HasSuffix(k, "Id") {
 					delete(*val, k)
 					k = k[:len(k)-2]
 					k = k + "._id"
@@ -354,99 +354,99 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 		}
 		return val
 	case []interface{}:
-		var vtmp = make([]interface{},0)
+		var vtmp = make([]interface{}, 0)
 		for _, v := range val {
 			result := RemoveEmptyOrNilArray(v)
-			if resultMap,ok := result.(map[string]interface{});ok{
-				if len(resultMap) == 0{
+			if resultMap, ok := result.(map[string]interface{}); ok {
+				if len(resultMap) == 0 {
 					continue
 				}
 			}
-			vtmp = append(vtmp,result)
+			vtmp = append(vtmp, result)
 		}
 		return vtmp
 	case *[]interface{}:
-		var vtmp = make([]interface{},0)
+		var vtmp = make([]interface{}, 0)
 		for _, v := range *val {
 			result := RemoveEmptyOrNilArray(v)
-			if resultMap,ok := result.(map[string]interface{});ok{
-				if len(resultMap) == 0{
+			if resultMap, ok := result.(map[string]interface{}); ok {
+				if len(resultMap) == 0 {
 					continue
 				}
 			}
-			vtmp = append(vtmp,result)
+			vtmp = append(vtmp, result)
 		}
 		return vtmp
 	case []map[string]interface{}:
-		var vtmp = make([]interface{},0)
+		var vtmp = make([]interface{}, 0)
 		for _, v := range val {
 			result := RemoveEmptyOrNilArray(v)
-			if resultMap,ok := result.(map[string]interface{});ok{
-				if len(resultMap) == 0{
+			if resultMap, ok := result.(map[string]interface{}); ok {
+				if len(resultMap) == 0 {
 					continue
 				}
 			}
-			vtmp = append(vtmp,result)
+			vtmp = append(vtmp, result)
 		}
 		return vtmp
 	case *[]map[string]interface{}:
-		var vtmp = make([]interface{},0)
+		var vtmp = make([]interface{}, 0)
 		for _, v := range *val {
 			result := RemoveEmptyOrNilArray(v)
-			if resultMap,ok := result.(map[string]interface{});ok{
-				if len(resultMap) == 0{
+			if resultMap, ok := result.(map[string]interface{}); ok {
+				if len(resultMap) == 0 {
 					continue
 				}
 			}
-			vtmp = append(vtmp,result)
+			vtmp = append(vtmp, result)
 		}
 		return vtmp
 	case []bson.M:
-		var vtmp = make([]interface{},0)
+		var vtmp = make([]interface{}, 0)
 		for _, v := range val {
 			result := RemoveEmptyOrNilArray(v)
-			if resultMap,ok := result.(bson.M);ok{
-				if len(resultMap) == 0{
+			if resultMap, ok := result.(bson.M); ok {
+				if len(resultMap) == 0 {
 					continue
 				}
 			}
-			vtmp = append(vtmp,result)
+			vtmp = append(vtmp, result)
 		}
 		return vtmp
 	case *[]bson.M:
-		var vtmp = make([]interface{},0)
+		var vtmp = make([]interface{}, 0)
 		for _, v := range *val {
 			result := RemoveEmptyOrNilArray(v)
-			if resultMap,ok := result.(bson.M);ok{
-				if len(resultMap) == 0{
+			if resultMap, ok := result.(bson.M); ok {
+				if len(resultMap) == 0 {
 					continue
 				}
 			}
-			vtmp = append(vtmp,result)
+			vtmp = append(vtmp, result)
 		}
 		return vtmp
 	case primitive.A:
-		var vtmp = make([]interface{},0)
+		var vtmp = make([]interface{}, 0)
 		for _, v := range val {
 			result := RemoveEmptyOrNilArray(v)
-			if resultMap,ok := result.(primitive.M);ok{
-				if len(resultMap) == 0{
+			if resultMap, ok := result.(primitive.M); ok {
+				if len(resultMap) == 0 {
 					continue
 				}
 			}
-			vtmp = append(vtmp,result)
+			vtmp = append(vtmp, result)
 		}
 		return vtmp
 	case *primitive.A:
-		var vtmp = make([]interface{},0)
+		var vtmp = make([]interface{}, 0)
 		for _, v := range *val {
 			result := RemoveEmptyOrNilArray(v)
-			if resultMap,ok := result.(primitive.M);ok{
-				if len(resultMap) == 0{
+			if resultMap, ok := result.(primitive.M); ok {
+				if len(resultMap) == 0 {
 					continue
 				}
 			}
-			vtmp = append(vtmp,result)
+			vtmp = append(vtmp, result)
 		}
 		return vtmp
 	default:
@@ -458,6 +458,8 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPipeLine mongo.Pipeline, err error) {
 	pipeLine = mongo.Pipeline{}
 	projectMap := make(map[string]interface{})
+
+	unwidePipeline := mongo.Pipeline{}
 
 	var groupMap = make(map[string]interface{})
 	if query.GroupFields != nil {
@@ -551,12 +553,25 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 								k = k + "._id"
 							}
 							v = RemoveEmptyOrNilArray(v)
-							if removeList,ok := v.([]interface{});ok{
-								if len(removeList) == 0{
+							if removeList, ok := v.([]interface{}); ok {
+								if len(removeList) == 0 {
 									continue
 								}
 							}
-							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+							if k == "$unwinds" {
+								switch vals := v.(type) {
+								case primitive.A:
+									for _, tmp1 := range vals {
+										unwidePipeline = append(unwidePipeline, bson.D{bson.E{Key: "$unwind", Value: tmp1}})
+									}
+								case []interface{}:
+									for _, tmp1 := range vals {
+										unwidePipeline = append(unwidePipeline, bson.D{bson.E{Key: "$unwind", Value: tmp1}})
+									}
+								}
+							} else {
+								pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+							}
 						}
 					}
 				}
@@ -594,12 +609,27 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 								k = k + "._id"
 							}
 							v = RemoveEmptyOrNilArray(v)
-							if removeList,ok := v.([]interface{});ok{
-								if len(removeList) == 0{
+							if removeList, ok := v.([]interface{}); ok {
+								if len(removeList) == 0 {
 									continue
 								}
 							}
-							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+
+							if k == "$unwinds" {
+								switch vals := v.(type) {
+								case primitive.A:
+									for _, tmp1 := range vals {
+										unwidePipeline = append(unwidePipeline, bson.D{bson.E{Key: "$unwind", Value: tmp1}})
+									}
+								case []interface{}:
+									for _, tmp1 := range vals {
+										unwidePipeline = append(unwidePipeline, bson.D{bson.E{Key: "$unwind", Value: tmp1}})
+									}
+								}
+							} else {
+								pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+							}
+
 						}
 					}
 				}
@@ -634,12 +664,25 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 						k = k + "._id"
 					}
 					v = RemoveEmptyOrNilArray(v)
-					if removeList,ok := v.([]interface{});ok{
-						if len(removeList) == 0{
+					if removeList, ok := v.([]interface{}); ok {
+						if len(removeList) == 0 {
 							continue
 						}
 					}
-					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+					if k == "$unwinds" {
+						switch vals := v.(type) {
+						case primitive.A:
+							for _, tmp1 := range vals {
+								unwidePipeline = append(unwidePipeline, bson.D{bson.E{Key: "$unwind", Value: tmp1}})
+							}
+						case []interface{}:
+							for _, tmp1 := range vals {
+								unwidePipeline = append(unwidePipeline, bson.D{bson.E{Key: "$unwind", Value: tmp1}})
+							}
+						}
+					} else {
+						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+					}
 				}
 			}
 		}
@@ -786,6 +829,7 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 	if len(projectMap) > 0 {
 		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$project", Value: projectMap}})
 	}
+	pipeLine = append(pipeLine, unwidePipeline...)
 	return pipeLine, countPipeLine, nil
 }
 
@@ -871,10 +915,10 @@ func FindFilterOld(ctx context.Context, col *mongo.Collection, result *[]bson.M,
 							filterMap["$lookups"] = lookups
 						}
 					} else {
-						lookups = primitive.A{map[string]interface{}{"$group":groupMap}}
+						lookups = primitive.A{map[string]interface{}{"$group": groupMap}}
 					}
 				} else {
-					filterMap["$lookups"] = primitive.A{bson.M{"$project": projectMap}, map[string]interface{}{"$group":groupMap}}
+					filterMap["$lookups"] = primitive.A{bson.M{"$project": projectMap}, map[string]interface{}{"$group": groupMap}}
 				}
 				delete(query, "group")
 			}
@@ -977,8 +1021,8 @@ func FindFilterOld(ctx context.Context, col *mongo.Collection, result *[]bson.M,
 						}
 					}
 					v = RemoveEmptyOrNilArray(v)
-					if removeList,ok := v.([]interface{});ok{
-						if len(removeList) == 0{
+					if removeList, ok := v.([]interface{}); ok {
+						if len(removeList) == 0 {
 							continue
 						}
 					}
@@ -1229,10 +1273,10 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 							filterMap["$lookups"] = lookups
 						}
 					} else {
-						lookups = primitive.A{map[string]interface{}{"$group":groupMap}}
+						lookups = primitive.A{map[string]interface{}{"$group": groupMap}}
 					}
 				} else {
-					filterMap["$lookups"] = primitive.A{bson.M{"$project": projectMap}, map[string]interface{}{"$group":groupMap}}
+					filterMap["$lookups"] = primitive.A{bson.M{"$project": projectMap}, map[string]interface{}{"$group": groupMap}}
 				}
 				delete(query, "group")
 			}
@@ -1278,8 +1322,8 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 										k = k + "._id"
 									}
 									v = RemoveEmptyOrNilArray(v)
-									if removeList,ok := v.([]interface{});ok{
-										if len(removeList) == 0{
+									if removeList, ok := v.([]interface{}); ok {
+										if len(removeList) == 0 {
 											continue
 										}
 									}
@@ -1324,8 +1368,8 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 										k = k + "._id"
 									}
 									v = RemoveEmptyOrNilArray(v)
-									if removeList,ok := v.([]interface{});ok{
-										if len(removeList) == 0{
+									if removeList, ok := v.([]interface{}); ok {
+										if len(removeList) == 0 {
 											continue
 										}
 									}
@@ -1368,8 +1412,8 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 									k = k + "._id"
 								}
 								v = RemoveEmptyOrNilArray(v)
-								if removeList,ok := v.([]interface{});ok{
-									if len(removeList) == 0{
+								if removeList, ok := v.([]interface{}); ok {
+									if len(removeList) == 0 {
 										continue
 									}
 								}
@@ -1409,8 +1453,8 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 								k = k + "._id"
 							}
 							v = RemoveEmptyOrNilArray(v)
-							if removeList,ok := v.([]interface{});ok{
-								if len(removeList) == 0{
+							if removeList, ok := v.([]interface{}); ok {
+								if len(removeList) == 0 {
 									continue
 								}
 							}
@@ -1450,8 +1494,8 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 							k = k + "._id"
 						}
 						v = RemoveEmptyOrNilArray(v)
-						if removeList,ok := v.([]interface{});ok{
-							if len(removeList) == 0{
+						if removeList, ok := v.([]interface{}); ok {
+							if len(removeList) == 0 {
 								continue
 							}
 						}
