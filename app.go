@@ -212,11 +212,22 @@ func NewApp() App {
 	srv.DataAction = viper.GetString("data.action")
 	e := echo.New()
 	e.Use(mw.CORSWithConfig(mw.CORSConfig{
-		AllowMethods:  []string{http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodPost, http.MethodDelete},
+		AllowMethods:  []string{http.MethodOptions, http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodPost, http.MethodDelete},
 		ExposeHeaders: []string{"count", "token"},
 		AllowOrigins:  []string{"*"},
 		AllowHeaders:  []string{"Authorization", echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept},
 	}))
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if c.Request().Method == http.MethodOptions {
+				return c.NoContent(http.StatusNoContent)
+			}
+			if err := next(c); err != nil {
+				return err
+			}
+			return nil
+		}
+	})
 	e.Use(mw.Recover())
 	if viper.GetBool("auth.middleware") {
 		e.Use(imw.AuthFilter())
