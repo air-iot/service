@@ -172,7 +172,6 @@ func AddNonRepNodeByLoop(slc []entity.Node, addEle entity.Node) []entity.Node {
 	return newResult
 }
 
-
 // AddNonRepMapByLoop 通过循环添加非重复元素（[]map[string]interface{}）
 func AddNonRepUserByLoop(slc []entity.User, addEle entity.User) []entity.User {
 	flag := true
@@ -234,7 +233,6 @@ func DelEleUserByLoop(slc []entity.User, id string) []entity.User {
 	}
 	return newResult
 }
-
 
 //// StringListToObjectIdList 字符串数组转ObjectId数组
 //func StringListToObjectIdList(idStringList []string) ([]primitive.ObjectID, error) {
@@ -833,8 +831,8 @@ func GetJsonLogicVarListSystemVar(data primitive.M, varList *[]string) {
 		case string:
 			if k == "var" || k == "varrate" {
 				if strings.HasPrefix(val, "systemVar.") {
-					splitList := strings.Split(val, ".")
-					*varList = AddNonRepByLoop(*varList, splitList[1])
+					systemVarKey := val[10:]
+					*varList = AddNonRepByLoop(*varList, systemVarKey)
 				}
 			}
 		case map[string]interface{}:
@@ -857,8 +855,8 @@ func convertJsonLogicMapSystemVar(varList *[]string, key string, value primitive
 		case string:
 			if k == "var" || k == "varrate" {
 				if strings.HasPrefix(val, "systemVar.") {
-					splitList := strings.Split(val, ".")
-					*varList = AddNonRepByLoop(*varList, splitList[1])
+					systemVarKey := val[10:]
+					*varList = AddNonRepByLoop(*varList, systemVarKey)
 				}
 			}
 		case map[string]interface{}:
@@ -881,8 +879,8 @@ func convertJsonLogicASystemVar(varList *[]string, key string, val primitive.A) 
 		case string:
 			if key == "var" || key == "varrate" {
 				if strings.HasPrefix(val, "systemVar.") {
-					splitList := strings.Split(val, ".")
-					*varList = AddNonRepByLoop(*varList, splitList[1])
+					systemVarKey := val[10:]
+					*varList = AddNonRepByLoop(*varList, systemVarKey)
 				}
 			}
 		case map[string]interface{}:
@@ -1169,8 +1167,8 @@ func FormulaLogicMappingSystem(templateModelString string) []string {
 		formatVariable := replaceBrace.ReplaceAllString(v, "")
 		//映射为具体值
 		if strings.HasPrefix(formatVariable, "systemVar.") {
-			splitList := strings.Split(formatVariable, ".")
-			returnIDList = AddNonRepByLoop(returnIDList, splitList[1])
+			systemVarKey := formatVariable[10:]
+			returnIDList = AddNonRepByLoop(returnIDList, systemVarKey)
 		}
 	}
 	return returnIDList
