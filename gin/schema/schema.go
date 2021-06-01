@@ -127,3 +127,9 @@ func NewIDResult(id string) *IDResult {
 type IDResult struct {
 	ID string `json:"id"`
 }
+
+
+// InsertedID 响应唯一标识(InsertedID)
+type InsertedIDResult struct {
+	ID  string `json:"InsertedID" example:"5cceba2cc7157e23ae172c28"`
+}
