@@ -123,6 +123,13 @@ func NewIDResult(id string) *IDResult {
 	}
 }
 
+// NewInsertedIDResult 创建响应唯一标识实例(InsertedID)
+func NewInsertedIDResult(id string) *InsertedIDResult {
+	return &InsertedIDResult{
+		ID: id,
+	}
+}
+
 // IDResult 响应唯一标识
 type IDResult struct {
 	ID string `json:"id"`
