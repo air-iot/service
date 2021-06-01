@@ -3,6 +3,7 @@ package systemVariable
 import (
 	"context"
 	"fmt"
+	"github.com/air-iot/service/init/cache/entity"
 	"github.com/air-iot/service/init/mongodb"
 	"go.mongodb.org/mongo-driver/mongo"
 	"math/rand"
@@ -21,9 +22,11 @@ const CacheSystemVariablePrefix = "cacheSystemVariable"
 
 var MemorySystemVariableData = struct {
 	sync.Mutex
-	Cache map[string]map[string]string
+	Cache      map[string]map[string]string
+	CacheByUid map[string]map[string]string
 }{
-	Cache: map[string]map[string]string{},
+	Cache:      map[string]map[string]string{},
+	CacheByUid: map[string]map[string]string{},
 }
 
 // CacheHandler 初始化systemVariable缓存
@@ -56,6 +59,23 @@ func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ) (
 				systemVariableMap[id] = result
 			}
 			MemorySystemVariableData.Cache[project] = systemVariableMap
+
+			systemVariableInfo := entity.SystemVariable{}
+			err = json.Unmarshal([]byte(result), &systemVariableInfo)
+			if err != nil {
+				logger.Errorf("解序列化系统变量失败[ %s %s ]错误, %s", project, id, err.Error())
+				return
+			}
+			systemVariableMap, ok = MemorySystemVariableData.CacheByUid[project]
+			if ok {
+				systemVariableMap[systemVariableInfo.Uid] = result
+				//eventMap[id] = result
+			} else {
+				systemVariableMap = make(map[string]string)
+				systemVariableMap[systemVariableInfo.Uid] = result
+			}
+			MemorySystemVariableData.CacheByUid[project] = systemVariableMap
+
 			MemorySystemVariableData.Unlock()
 		case cache.Delete:
 			MemorySystemVariableData.Lock()
@@ -64,6 +84,28 @@ func CacheHandler(ctx context.Context, redisClient *redis.Client, mqCli mq.MQ) (
 				delete(systemVariableMap, id)
 				MemorySystemVariableData.Cache[project] = systemVariableMap
 			}
+
+
+			systemVariableMapByUid, ok := MemorySystemVariableData.CacheByUid[project]
+			if ok {
+				for _, listString := range systemVariableMapByUid {
+					if listString != "" {
+						systemVariableEle := entity.SystemVariable{}
+						err := json.Unmarshal([]byte(listString), &systemVariableEle)
+						if err != nil {
+							logger.Errorf("解序列化缓存的系统变量失败[ %s %s ]错误, %s", project, id, err.Error())
+							return
+						}
+						if systemVariableEle.ID == id{
+							delete(systemVariableMapByUid, id)
+							MemorySystemVariableData.CacheByUid[project] = systemVariableMapByUid
+							break
+						}
+					}
+				}
+			}
+
+
 			MemorySystemVariableData.Unlock()
 		default:
 			return
@@ -136,6 +178,74 @@ func getByDB(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.
 		systemVariable = string(systemVariableBytes)
 	}
 	return systemVariable, nil
+}
+
+// Get 根据项目ID和资产ID查询数据
+func GetByUid(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project, eventType string, result interface{}) (err error) {
+	MemorySystemVariableData.Lock()
+	defer MemorySystemVariableData.Unlock()
+	var event string
+	eventMap, ok := MemorySystemVariableData.CacheByUid[project]
+	if ok {
+		event, ok = eventMap[eventType]
+		if !ok {
+			event, err = getByDBAndUid(ctx, redisClient, mongoClient, project, eventType)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			eventMap[eventType] = event
+			MemorySystemVariableData.CacheByUid[project] = eventMap
+		}
+	} else {
+		event, err = getByDBAndUid(ctx, redisClient, mongoClient, project, eventType)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		eventMap = make(map[string]string)
+		eventMap[eventType] = event
+		MemorySystemVariableData.CacheByUid[project] = eventMap
+	}
+
+	if err := json.Unmarshal([]byte(event), result); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+func getByDBAndUid(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project, eventType string) (string, error) {
+	//event, err := redisClient.HGet(ctx, fmt.Sprintf("%s/event", project), id).Result()
+	//if err != nil && err != redis.Nil {
+	//	return "", err
+	//} else if err == redis.Nil {
+	col := mongoClient.Database(project).Collection("systemVariable")
+	eventTmp := make([]entity.SystemVariableMongo, 0)
+	_, err := mongodb.FindFilter(ctx, col, &eventTmp, mongodb.QueryOption{Filter: map[string]interface{}{
+		"uid": eventType,
+	}})
+
+	if err != nil {
+		return "", err
+	}
+	eventBytes := make([]byte, 0)
+	if len(eventTmp) != 0 {
+		eventBytes, err = json.Marshal(eventTmp[0])
+		if err != nil {
+			return "", err
+		}
+	}
+	for _, event := range eventTmp {
+		eventEleBytes, err := json.Marshal(&event)
+		if err != nil {
+			return "", err
+		}
+		_, err = redisClient.HMSet(ctx, fmt.Sprintf("%s/systemVariable", project), map[string]interface{}{event.ID: eventEleBytes}).Result()
+		if err != nil {
+			return "", fmt.Errorf("更新redis数据错误, %s", err.Error())
+		}
+	}
+	event := string(eventBytes)
+	//}
+	return event, nil
 }
 
 // TriggerUpdate 更新redis资产数据,并发送消息通知
