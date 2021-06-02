@@ -36,7 +36,7 @@ type QueryOption struct {
 	QueryLookupList []interface{}          `json:"queryLookupList,omitempty"` //
 	SortFirst       *bool                  `json:"sortFirst,omitempty"`       //
 
-	Pipeline mongo.Pipeline `json:"pipeline,omitempty"`
+	Pipeline *mongo.Pipeline `json:"pipeline,omitempty"`
 }
 
 // QueryCount 查询数量
@@ -457,11 +457,11 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 }
 
 // QueryOptionToPipeline 转换查询到pipeline
-func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPipeLine mongo.Pipeline, err error) {
+func QueryOptionToPipeline(query QueryOption) (pipeLine *mongo.Pipeline, countPipeLine *mongo.Pipeline, err error) {
 	if query.Pipeline != nil {
 		return query.Pipeline, nil, nil
 	}
-	pipeLine = mongo.Pipeline{}
+	pipeLine = &mongo.Pipeline{}
 	projectMap := make(map[string]interface{})
 
 	unwidePipeline := mongo.Pipeline{}
@@ -534,7 +534,7 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 				if query.Filter != nil {
 					for k, v := range query.Filter {
 						if k == "$lookup" {
-							pipeLine = append(pipeLine, bson.D{bson.E{Key: k, Value: v}})
+							*pipeLine = append(*pipeLine, bson.D{bson.E{Key: k, Value: v}})
 							// 特殊处理lookup数组
 						} else if k != "$lookups" {
 							//判断空对象
@@ -575,22 +575,22 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 									}
 								}
 							} else {
-								pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+								*pipeLine = append(*pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 							}
 						}
 					}
 				}
 				for _, lookup := range queryLookupList {
-					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+					*pipeLine = append(*pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
 				}
 			} else {
 				for _, lookup := range queryLookupList {
-					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+					*pipeLine = append(*pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
 				}
 				if query.Filter != nil {
 					for k, v := range query.Filter {
 						if k == "$lookup" {
-							pipeLine = append(pipeLine, bson.D{bson.E{Key: k, Value: v}})
+							*pipeLine = append(*pipeLine, bson.D{bson.E{Key: k, Value: v}})
 							// 特殊处理lookup数组
 						} else if k != "$lookups" {
 							//判断空对象
@@ -632,7 +632,7 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 									}
 								}
 							} else {
-								pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+								*pipeLine = append(*pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 							}
 
 						}
@@ -644,7 +644,7 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 		if query.Filter != nil {
 			for k, v := range query.Filter {
 				if k == "$lookup" {
-					pipeLine = append(pipeLine, bson.D{bson.E{Key: k, Value: v}})
+					*pipeLine = append(*pipeLine, bson.D{bson.E{Key: k, Value: v}})
 					// 特殊处理lookup数组
 				} else if k != "$lookups" {
 					//判断空对象
@@ -686,7 +686,7 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 							}
 						}
 					} else {
-						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
+						*pipeLine = append(*pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 					}
 				}
 			}
@@ -735,18 +735,18 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 				afterGroupFlag := false
 				for _, lookup := range lookups {
 					if afterGroupFlag {
-						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+						*pipeLine = append(*pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
 					}
 
 					switch lookupM := lookup.(type) {
 					case map[string]interface{}:
 						if group, ok := lookupM["$group"]; ok {
-							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: group}})
+							*pipeLine = append(*pipeLine, bson.D{bson.E{Key: "$group", Value: group}})
 							afterGroupFlag = true
 						}
 					case bson.M:
 						if group, ok := lookupM["$group"]; ok {
-							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$group", Value: group}})
+							*pipeLine = append(*pipeLine, bson.D{bson.E{Key: "$group", Value: group}})
 							afterGroupFlag = true
 						}
 					}
@@ -755,21 +755,21 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 		}
 	}
 	if query.WithCount != nil && *(query.WithCount) {
-		countPipeLine = mongo.Pipeline{}
-		if err := json.CopyByJson(&countPipeLine, &pipeLine); err != nil {
+		countPipeLine = &mongo.Pipeline{}
+		if err := json.CopyByJson(countPipeLine, pipeLine); err != nil {
 			return nil, nil, err
 		}
 	}
 	if query.Sort != nil && len(query.Sort) > 0 {
-		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: query.Sort}})
+		*pipeLine = append(*pipeLine, bson.D{bson.E{Key: "$sort", Value: query.Sort}})
 	} else {
-		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
+		*pipeLine = append(*pipeLine, bson.D{bson.E{Key: "$sort", Value: bson.M{"_id": 1}}})
 	}
 	if query.Skip != nil && *(query.Skip) >= 0 {
-		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$skip", Value: query.Skip}})
+		*pipeLine = append(*pipeLine, bson.D{bson.E{Key: "$skip", Value: query.Skip}})
 	}
 	if query.Limit != nil && *(query.Limit) >= 0 {
-		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$limit", Value: query.Limit}})
+		*pipeLine = append(*pipeLine, bson.D{bson.E{Key: "$limit", Value: query.Limit}})
 	}
 
 	if query.WithoutBody != nil && *(query.WithoutBody) {
@@ -803,7 +803,7 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 							return nil, nil, fmt.Errorf("%s的关联查询时内部project格式错误，不是Map", k)
 						}
 					} else {
-						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+						*pipeLine = append(*pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
 					}
 				case bson.M:
 					if _, ok := lookupMap["$group"]; ok {
@@ -819,7 +819,7 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 							return nil, nil, fmt.Errorf("%s的关联查询时内部project格式错误，不是Map", k)
 						}
 					} else {
-						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
+						*pipeLine = append(*pipeLine, bson.D{bson.E{Key: "$lookup", Value: lookup}})
 					}
 				}
 
@@ -832,9 +832,9 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPip
 		}
 	}
 	if len(projectMap) > 0 {
-		pipeLine = append(pipeLine, bson.D{bson.E{Key: "$project", Value: projectMap}})
+		*pipeLine = append(*pipeLine, bson.D{bson.E{Key: "$project", Value: projectMap}})
 	}
-	pipeLine = append(pipeLine, unwidePipeline...)
+	*pipeLine = append(*pipeLine, unwidePipeline...)
 	return pipeLine, countPipeLine, nil
 }
 
@@ -846,14 +846,14 @@ func FindFilter(ctx context.Context, col *mongo.Collection, result interface{}, 
 		return 0, err
 	}
 	if countPipeLine != nil {
-		countRaw, err := FindCount(ctx, col, countPipeLine)
+		countRaw, err := FindCount(ctx, col, *countPipeLine)
 		if err != nil {
 			return 0, fmt.Errorf("query count err: %s", err.Error())
 		}
 		count = countRaw
 	}
 	if pipeLine != nil {
-		err = FindPipeline(ctx, col, result, pipeLine)
+		err = FindPipeline(ctx, col, result, *pipeLine)
 		if err != nil {
 			return 0, fmt.Errorf("query data: %s", err.Error())
 		}
