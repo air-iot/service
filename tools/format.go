@@ -1109,8 +1109,8 @@ func GetJsonLogicVarListSystemVar(data primitive.M, varList *[]string) {
 		case string:
 			if k == "var" || k == "varrate" {
 				if strings.HasPrefix(val, "systemVar.") {
-					splitList := strings.Split(val, ".")
-					*varList = AddNonRepByLoop(*varList, splitList[1])
+					systemVarKey := val[10:]
+					*varList = AddNonRepByLoop(*varList, systemVarKey)
 				}
 			}
 		case map[string]interface{}:
@@ -1133,8 +1133,8 @@ func convertJsonLogicMapSystemVar(varList *[]string, key string, value primitive
 		case string:
 			if k == "var" || k == "varrate" {
 				if strings.HasPrefix(val, "systemVar.") {
-					splitList := strings.Split(val, ".")
-					*varList = AddNonRepByLoop(*varList, splitList[1])
+					systemVarKey := val[10:]
+					*varList = AddNonRepByLoop(*varList, systemVarKey)
 				}
 			}
 		case map[string]interface{}:
@@ -1157,8 +1157,8 @@ func convertJsonLogicASystemVar(varList *[]string, key string, val primitive.A) 
 		case string:
 			if key == "var" || key == "varrate" {
 				if strings.HasPrefix(val, "systemVar.") {
-					splitList := strings.Split(val, ".")
-					*varList = AddNonRepByLoop(*varList, splitList[1])
+					systemVarKey := val[10:]
+					*varList = AddNonRepByLoop(*varList, systemVarKey)
 				}
 			}
 		case map[string]interface{}:
