@@ -35,6 +35,8 @@ type QueryOption struct {
 	HasForeignKey   *bool                  `json:"hasForeignKey,omitempty"`   // 是否有外键关联字段筛选,有就需要管理去查询数据
 	QueryLookupList []interface{}          `json:"queryLookupList,omitempty"` //
 	SortFirst       *bool                  `json:"sortFirst,omitempty"`       //
+
+	Pipeline mongo.Pipeline `json:"pipeline,omitempty"`
 }
 
 // QueryCount 查询数量
@@ -456,6 +458,9 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 
 // QueryOptionToPipeline 转换查询到pipeline
 func QueryOptionToPipeline(query QueryOption) (pipeLine mongo.Pipeline, countPipeLine mongo.Pipeline, err error) {
+	if query.Pipeline != nil {
+		return query.Pipeline, nil, nil
+	}
 	pipeLine = mongo.Pipeline{}
 	projectMap := make(map[string]interface{})
 
