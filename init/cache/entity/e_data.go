@@ -1,6 +1,5 @@
 package entity
 
-
 type Cache struct {
 	Time  int64  `json:"time"`
 	Value string `json:"value"`

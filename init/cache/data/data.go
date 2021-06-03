@@ -3,14 +3,16 @@ package data
 import (
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"time"
 
+	"github.com/go-redis/redis/v8"
+
+	"github.com/air-iot/service/init/redisdb"
 	"github.com/air-iot/service/util/json"
 )
 
-func FindCacheByIDTagIDAndInterval(ctx context.Context, redisClient *redis.Client, project, id, tagID,interval string) (*map[string]interface{}, error) {
-	dataString, err := redisClient.HGet(ctx, fmt.Sprintf("%s/data", project), fmt.Sprintf("%s|%s|%s", id, tagID,interval)).Result()
+func FindCacheByIDTagIDAndInterval(ctx context.Context, redisClient redisdb.Client, project, id, tagID, interval string) (*map[string]interface{}, error) {
+	dataString, err := redisClient.HGet(ctx, fmt.Sprintf("%s/data", project), fmt.Sprintf("%s|%s|%s", id, tagID, interval)).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -27,14 +29,13 @@ func FindCacheByIDTagIDAndInterval(ctx context.Context, redisClient *redis.Clien
 	return &resultMap, nil
 }
 
-
-func SaveDifferenceCacheByIDTagID(ctx context.Context, redisClient *redis.Client, project, id string, t time.Time, data map[string]interface{}, interval string) error {
+func SaveDifferenceCacheByIDTagID(ctx context.Context, redisClient redisdb.Client, project, id string, t time.Time, data map[string]interface{}, interval string) error {
 	//d := make(map[string]map[string]interface{})
 	var p redis.Pipeliner
 	p = redisClient.TxPipeline()
 	for k, v := range data {
-		b,err := json.Marshal(map[string]interface{}{
-			"time":  t.Unix(),
+		b, err := json.Marshal(map[string]interface{}{
+			"time":  t.UnixNano() / 1e6,
 			"value": v,
 		})
 		if err != nil {
@@ -45,7 +46,7 @@ func SaveDifferenceCacheByIDTagID(ctx context.Context, redisClient *redis.Client
 			return fmt.Errorf("更新redis数据错误, %s", err.Error())
 		}
 	}
-	if _, err := p.Exec(context.Background()); err != nil {
+	if _, err := p.Exec(ctx); err != nil {
 		return err
 	}
 	return nil

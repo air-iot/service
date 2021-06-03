@@ -210,7 +210,8 @@ type GZIP struct {
 
 // Redis redis配置参数
 type Redis struct {
-	Addr     string
+	Type     string
+	Addrs    []string
 	Password string
 	PoolSize int
 }

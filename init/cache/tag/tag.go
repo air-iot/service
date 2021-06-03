@@ -3,24 +3,17 @@ package tag
 import (
 	"context"
 	"fmt"
+
+	"go.mongodb.org/mongo-driver/mongo"
+
 	"github.com/air-iot/service/init/cache/entity"
 	"github.com/air-iot/service/init/cache/model"
 	"github.com/air-iot/service/init/cache/node"
-	"github.com/go-redis/redis/v8"
-	"go.mongodb.org/mongo-driver/mongo"
+	"github.com/air-iot/service/init/redisdb"
 )
 
-
-// 根据模型id、节点id与数据点id查询数据点信息
-func FindLocalCache(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project, modelID, nodeID, tagID string) (*entity.Tag, error) {
-	//cacheID := fmt.Sprintf("%s|%s", nodeID, tagID)
-	//tag1, ok := p.tagCache.Load(cacheID)
-	//if ok {
-	//	t, ok := tag1.(model.Tag)
-	//	if ok {
-	//		return &t, err
-	//	}
-	//}
+// FindLocalCache 根据模型id、节点id与数据点id查询数据点信息
+func FindLocalCache(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, project, modelID, nodeID, tagID string) (*entity.Tag, error) {
 	var modelAuto = false
 	// 查询模型tag
 	modelInfo := entity.Model{}
@@ -40,7 +33,7 @@ func FindLocalCache(ctx context.Context, redisClient *redis.Client, mongoClient 
 		}
 
 		if modelAuto {
-			nodeInfoList := make([]entity.Node,0)
+			nodeInfoList := make([]entity.Node, 0)
 			err = node.GetByParent(ctx, redisClient, mongoClient, project, nodeID, &nodeInfoList)
 			// 查询节点子节点
 			for _, r := range nodeInfoList {
