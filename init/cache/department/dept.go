@@ -33,7 +33,7 @@ func GetByList(ctx context.Context, redisClient *redis.Client, mongoClient *mong
 }
 
 // TriggerUpdate 更新redis资产数据
-func TriggerUpdate(ctx context.Context, cli redisdb.Client, project, id string, department []byte) error {
+func TriggerUpdate(ctx context.Context, cli redisdb.Client, project, id string, department interface{}) error {
 	return cache.Update(ctx, cli, project, entity.T_DEPT, id, department)
 }
 

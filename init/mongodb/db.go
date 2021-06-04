@@ -1704,6 +1704,19 @@ func FindByID(ctx context.Context, col *mongo.Collection, result interface{}, id
 	return nil
 }
 
+// FindOne 根据过滤查询数据
+func FindOne(ctx context.Context, col *mongo.Collection, result interface{}, filter interface{}) error {
+	singleResult := col.FindOne(ctx, filter)
+	if singleResult.Err() != nil {
+		return singleResult.Err()
+	}
+	if err := singleResult.Decode(result); err != nil {
+		return err
+	}
+	result = ConvertKeyUnderlineID(result)
+	return nil
+}
+
 // FindCount 根据Pipeline查询数据量
 // pipeLine:查询管道
 func FindCount(ctx context.Context, col *mongo.Collection, pipeLine mongo.Pipeline) (int, error) {

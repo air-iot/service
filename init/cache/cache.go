@@ -48,13 +48,18 @@ func GetByDB(ctx context.Context, cli redisdb.Client, mongoClient *mongo.Client,
 	return model, nil
 }
 
-func Set(ctx context.Context, cli redisdb.Client, project, tableName, id string, node []byte) error {
-	locked, err := cli.HSetNX(ctx, fmt.Sprintf("%s/%s/lock", project, tableName), id, 0).Result()
+func Set(ctx context.Context, cli redisdb.Client, project, tableName, id string, data interface{}) error {
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("序列化数据错误, %v", err)
+	}
+	tx := cli.TxPipeline()
+	locked, err := tx.HSetNX(ctx, fmt.Sprintf("%s/%s/lock", project, tableName), id, 0).Result()
 	if err != nil {
 		return fmt.Errorf("增加缓存锁错误, %v", err)
 	}
 	if locked {
-		b, err := cli.HMSet(ctx, fmt.Sprintf("%s/%s", project, tableName), map[string]interface{}{id: node}).Result()
+		b, err := tx.HMSet(ctx, fmt.Sprintf("%s/%s", project, tableName), map[string]interface{}{id: dataBytes}).Result()
 		if err != nil {
 			return fmt.Errorf("更新缓存数据错误, %v", err)
 		}
@@ -62,19 +67,29 @@ func Set(ctx context.Context, cli redisdb.Client, project, tableName, id string,
 			return fmt.Errorf("保存数据未成功")
 		}
 	}
+	if _, err := tx.Exec(ctx); err != nil {
+		return fmt.Errorf("提交更新缓存数据事务错误, %v", err)
+	}
 	return nil
 }
 
 // Update 更新redis数据
-func Update(ctx context.Context, cli redisdb.Client, project, tableName, id string, event []byte) error {
+func Update(ctx context.Context, cli redisdb.Client, project, tableName, id string, data interface{}) error {
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("序列化数据错误, %v", err)
+	}
 	tx := cli.TxPipeline()
-	_, err := tx.HSetNX(ctx, fmt.Sprintf("%s/%s/lock", project, tableName), id, 0).Result()
+	_, err = tx.HSetNX(ctx, fmt.Sprintf("%s/%s/lock", project, tableName), id, 0).Result()
 	if err != nil {
 		return fmt.Errorf("增加缓存数据锁错误, %v", err)
 	}
-	_, err = tx.HMSet(ctx, fmt.Sprintf("%s/%s", project, tableName), map[string]interface{}{id: event}).Result()
+	b, err := tx.HMSet(ctx, fmt.Sprintf("%s/%s", project, tableName), map[string]interface{}{id: dataBytes}).Result()
 	if err != nil {
 		return fmt.Errorf("更新缓存数据错误, %v", err)
+	}
+	if !b {
+		return fmt.Errorf("保存数据未成功")
 	}
 	if _, err := tx.Exec(ctx); err != nil {
 		return fmt.Errorf("提交更新缓存数据事务错误, %v", err)

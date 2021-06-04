@@ -27,6 +27,7 @@ type Client interface {
 	HMSet(ctx context.Context, key string, values ...interface{}) *redis.BoolCmd
 	HSetNX(ctx context.Context, key, field string, value interface{}) *redis.BoolCmd
 	SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.BoolCmd
+	HGetAll(ctx context.Context, key string) *redis.StringStringMapCmd
 	TxPipeline() redis.Pipeliner
 }
 

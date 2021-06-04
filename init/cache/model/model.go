@@ -16,7 +16,7 @@ func Get(ctx context.Context, cli redisdb.Client, mongoClient *mongo.Client, pro
 }
 
 // TriggerUpdate 更新redis数据
-func TriggerUpdate(ctx context.Context, cli redisdb.Client, project, id string, model []byte) error {
+func TriggerUpdate(ctx context.Context, cli redisdb.Client, project, id string, model interface{}) error {
 	return cache.Update(ctx, cli, project, entity.T_MODEL, id, model)
 }
 

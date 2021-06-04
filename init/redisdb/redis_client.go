@@ -51,6 +51,10 @@ func (a *RedisClient) SetNX(ctx context.Context, key string, value interface{}, 
 	return a.Client.SetNX(ctx, key, value, expiration)
 }
 
+func (a *RedisClient) HGetAll(ctx context.Context, key string) *redis.StringStringMapCmd {
+	return a.Client.HGetAll(ctx, key)
+}
+
 func (a *RedisClient) TxPipeline() redis.Pipeliner {
 	return a.Client.TxPipeline()
 }
