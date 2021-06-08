@@ -4,6 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+
 	"github.com/air-iot/service/api"
 	"github.com/air-iot/service/gin/ginx"
 	"github.com/air-iot/service/init/cache/department"
@@ -12,26 +17,22 @@ import (
 	"github.com/air-iot/service/init/cache/role"
 	"github.com/air-iot/service/init/cache/user"
 	"github.com/air-iot/service/init/mq"
+	"github.com/air-iot/service/init/redisdb"
 	"github.com/air-iot/service/util/formatx"
 	"github.com/air-iot/service/util/timex"
-	"github.com/go-redis/redis/v8"
-	"go.mongodb.org/mongo-driver/mongo"
-	"time"
-
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 var eventLoginLog = map[string]interface{}{"name": "用户登录事件触发"}
 
-func TriggerLogin(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client,mq mq.MQ, apiClient api.Client,projectName string,data map[string]interface{}) error {
+func TriggerLogin(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, data map[string]interface{}) error {
 	////logger.Debugf(eventLoginLog, "开始执行计算事件触发器")
 	////logger.Debugf(eventLoginLog, "传入参数为:%+v", data)
 
 	////logger.Debugf(eventLoginLog, "开始获取当前模型的用户登录事件")
 	//获取当前用户登录事件=============================================
-	headerMap := map[string]string{ginx.XRequestProject:projectName}
+	headerMap := map[string]string{ginx.XRequestProject: projectName}
 	eventInfoList := new([]entity.Event)
-	err := event.GetByType(ctx,redisClient,mongoClient,projectName,string(Login),eventInfoList)
+	err := event.GetByType(ctx, redisClient, mongoClient, projectName, string(Login), eventInfoList)
 	if err != nil {
 		//logger.Debugf(eventLoginLog, fmt.Sprintf("获取用户登录事件失败:%s", err.Error()))
 		return fmt.Errorf("获取用户登录事件失败:%s", err.Error())
@@ -118,7 +119,7 @@ func TriggerLogin(ctx context.Context, redisClient *redis.Client, mongoClient *m
 								updateMap := bson.M{"settings.invalid": true}
 								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 								var r = make(map[string]interface{})
-								err := apiClient.UpdateEventById(headerMap,eventID, updateMap, &r)
+								err := apiClient.UpdateEventById(headerMap, eventID, updateMap, &r)
 								if err != nil {
 									//logger.Errorf(eventLoginLog, "失效事件(%s)失败:%s", eventID, err.Error())
 									continue
@@ -165,13 +166,13 @@ func TriggerLogin(ctx context.Context, redisClient *redis.Client, mongoClient *m
 			}
 			if len(departmentListInSettings) != 0 && len(roleListInSettings) != 0 {
 				userInfoListByDept := new([]entity.User)
-				err := user.GetByDept(ctx,redisClient,mongoClient,projectName,departmentListInSettings,userInfoListByDept)
+				err := user.GetByDept(ctx, redisClient, mongoClient, projectName, departmentListInSettings, userInfoListByDept)
 				if err != nil {
 					//logger.Warnln(eventLoginLog, "部门ID获取用户缓存失败:%s", err.Error())
 					continue
 				}
 				userInfoListByRole := new([]entity.User)
-				err = user.GetByRole(ctx,redisClient,mongoClient,projectName,roleListInSettings,userInfoListByRole)
+				err = user.GetByRole(ctx, redisClient, mongoClient, projectName, roleListInSettings, userInfoListByRole)
 				if err != nil {
 					//logger.Warnln(eventLoginLog, "角色ID获取用户缓存失败:%s", err.Error())
 					continue
@@ -191,7 +192,7 @@ func TriggerLogin(ctx context.Context, redisClient *redis.Client, mongoClient *m
 
 			} else if len(departmentListInSettings) != 0 && len(roleListInSettings) == 0 {
 				userInfoListByDept := new([]entity.User)
-				err := user.GetByDept(ctx,redisClient,mongoClient,projectName,departmentListInSettings,userInfoListByDept)
+				err := user.GetByDept(ctx, redisClient, mongoClient, projectName, departmentListInSettings, userInfoListByDept)
 				if err != nil {
 					//logger.Warnln(eventLoginLog, "部门ID获取用户缓存失败:%s", err.Error())
 					continue
@@ -203,12 +204,11 @@ func TriggerLogin(ctx context.Context, redisClient *redis.Client, mongoClient *m
 
 			} else if len(departmentListInSettings) == 0 && len(roleListInSettings) != 0 {
 				userInfoListByRole := new([]entity.User)
-				err = user.GetByRole(ctx,redisClient,mongoClient,projectName,roleListInSettings,userInfoListByRole)
+				err = user.GetByRole(ctx, redisClient, mongoClient, projectName, roleListInSettings, userInfoListByRole)
 				if err != nil {
 					//logger.Warnln(eventLoginLog, "角色ID获取用户缓存失败:%s", err.Error())
 					continue
 				}
-
 
 				for _, user := range *userInfoListByRole {
 					userIDList = formatx.AddNonRepByLoop(userIDList, user.ID)
@@ -253,7 +253,7 @@ func TriggerLogin(ctx context.Context, redisClient *redis.Client, mongoClient *m
 
 		deptInfoList := make([]map[string]interface{}, 0)
 		if len(departmentStringIDList) != 0 {
-			err := department.GetByList(ctx,redisClient,mongoClient,projectName,departmentStringIDList,&deptInfoList)
+			err := department.GetByList(ctx, redisClient, mongoClient, projectName, departmentStringIDList, &deptInfoList)
 			if err != nil {
 				//logger.Warnln(eventLoginLog, "部门ID获取用户缓存失败:%s", err.Error())
 			}
@@ -261,7 +261,7 @@ func TriggerLogin(ctx context.Context, redisClient *redis.Client, mongoClient *m
 		}
 
 		userInfo := &entity.User{}
-		err = user.Get(ctx,redisClient,mongoClient,projectName,userID,userInfo)
+		err = user.Get(ctx, redisClient, mongoClient, projectName, userID, userInfo)
 		if err != nil {
 			//logger.Warnf(eventLoginLog, "获取用户(%s)缓存失败:%s", userID, err.Error())
 			userInfo = &entity.User{}
@@ -270,7 +270,7 @@ func TriggerLogin(ctx context.Context, redisClient *redis.Client, mongoClient *m
 		roleIDs := userInfo.Roles
 		roleInfoList := make([]map[string]interface{}, 0)
 		if len(roleIDs) != 0 {
-			err := role.GetByList(ctx,redisClient,mongoClient,projectName,roleIDs,&roleInfoList)
+			err := role.GetByList(ctx, redisClient, mongoClient, projectName, roleIDs, &roleInfoList)
 			if err != nil {
 				//logger.Warnf(eventLoginLog, "获取当前用户(%s)拥有的角色失败:%s", userID, err.Error())
 			}
@@ -282,7 +282,7 @@ func TriggerLogin(ctx context.Context, redisClient *redis.Client, mongoClient *m
 		if err != nil {
 			continue
 		}
-		err = mq.Publish(ctx,[]string{"event",projectName,eventID}, b)
+		err = mq.Publish(ctx, []string{"event", projectName, eventID}, b)
 		if err != nil {
 			//logger.Warnf(eventLoginLog, "发送事件(%s)错误:%s", eventID, err.Error())
 		} else {
@@ -299,7 +299,7 @@ func TriggerLogin(ctx context.Context, redisClient *redis.Client, mongoClient *m
 				updateMap := bson.M{"settings.invalid": true}
 				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 				var r = make(map[string]interface{})
-				err := apiClient.UpdateEventById(headerMap,eventID, updateMap, &r)
+				err := apiClient.UpdateEventById(headerMap, eventID, updateMap, &r)
 				if err != nil {
 					//logger.Errorf(eventLoginLog, "失效事件(%s)失败:%s", eventID, err.Error())
 					continue

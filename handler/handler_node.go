@@ -4,30 +4,31 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+
 	"github.com/air-iot/service/api"
 	"github.com/air-iot/service/gin/ginx"
 	"github.com/air-iot/service/init/cache/department"
 	"github.com/air-iot/service/init/cache/model"
 	"github.com/air-iot/service/init/cache/node"
 	"github.com/air-iot/service/init/mq"
+	"github.com/air-iot/service/init/redisdb"
 	"github.com/air-iot/service/util/formatx"
 	"github.com/air-iot/service/util/timex"
-	"github.com/go-redis/redis/v8"
-	"go.mongodb.org/mongo-driver/mongo"
-	"time"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var eventDeviceModifyLog = map[string]interface{}{"name": "模型资产事件触发"}
 
-func TriggerDeviceModify(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client,mq mq.MQ, apiClient api.Client,projectName string,data map[string]interface{}) error {
+func TriggerDeviceModify(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, data map[string]interface{}) error {
 	////logger.Debugf(eventDeviceModifyLog, "开始执行资产修改事件触发器")
 	////logger.Debugf(eventDeviceModifyLog, "传入参数为:%+v", data)
 	//ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30)*time.Second)
 	//defer cancel()
-	headerMap := map[string]string{ginx.XRequestProject:projectName}
+	headerMap := map[string]string{ginx.XRequestProject: projectName}
 	nodeID, ok := data["node"].(string)
 	if !ok {
 		return fmt.Errorf("数据消息中nodeId字段不存在或类型错误")
@@ -95,7 +96,7 @@ func TriggerDeviceModify(ctx context.Context, redisClient *redis.Client, mongoCl
 			},
 		},
 	}
-	err := apiClient.FindEventQuery(headerMap,query, &eventInfoList)
+	err := apiClient.FindEventQuery(headerMap, query, &eventInfoList)
 
 	if err != nil {
 		return fmt.Errorf("获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
@@ -114,7 +115,6 @@ eventloop:
 			//logger.Warnln(eventDeviceModifyLog, "handlers字段数组长度为0")
 			continue
 		}
-
 
 		//logger.Debugf(eventDeviceModifyLog, "开始分析事件")
 		if eventID, ok := eventInfo["id"].(string); ok {
@@ -159,7 +159,7 @@ eventloop:
 										updateMap := bson.M{"settings.invalid": true}
 										//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 										var r = make(map[string]interface{})
-										err := apiClient.UpdateEventById(headerMap,eventID, updateMap, &r)
+										err := apiClient.UpdateEventById(headerMap, eventID, updateMap, &r)
 										if err != nil {
 											//logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID, err.Error())
 											continue
@@ -211,7 +211,7 @@ eventloop:
 											if initNode, ok := data["initNode"].(map[string]interface{}); ok {
 												nodeInfo = initNode
 											} else {
-												err = node.Get(ctx,redisClient,mongoClient,projectName,nodeID,&nodeInfo)
+												err = node.Get(ctx, redisClient, mongoClient, projectName, nodeID, &nodeInfo)
 												if err != nil {
 													//logger.Errorf(eventDeviceModifyLog, "事件(%s)的资产缓存(%+v)查询失败", eventID, nodeID)
 													nodeInfo = bson.M{}
@@ -221,7 +221,7 @@ eventloop:
 
 											departmentStringIDList := departmentObjectIDList
 											departmentMList := make([]map[string]interface{}, 0)
-											err := department.GetByList(ctx,redisClient,mongoClient,projectName,departmentStringIDList,&departmentMList)
+											err := department.GetByList(ctx, redisClient, mongoClient, projectName, departmentStringIDList, &departmentMList)
 											if err != nil {
 												//logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID, departmentStringIDList)
 												departmentMList = make([]map[string]interface{}, 0)
@@ -230,7 +230,7 @@ eventloop:
 											data["departmentName"] = formatx.FormatKeyInfoMapList(departmentMList, "name")
 
 											modelEle := bson.M{}
-											err = model.Get(ctx,redisClient,mongoClient,projectName,modelID,&modelEle)
+											err = model.Get(ctx, redisClient, mongoClient, projectName, modelID, &modelEle)
 											if err != nil {
 												//logger.Errorf(eventDeviceModifyLog, "事件(%s)的模型缓存(%+v)查询失败", eventID, departmentStringIDList)
 												continue
@@ -261,7 +261,7 @@ eventloop:
 											if err != nil {
 												continue
 											}
-											err = mq.Publish(ctx,[]string{"event",projectName,eventID}, b)
+											err = mq.Publish(ctx, []string{"event", projectName, eventID}, b)
 											if err != nil {
 												//logger.Warnf(eventDeviceModifyLog, "发送事件(%s)错误:%s", eventID, err.Error())
 											} else {
@@ -339,7 +339,7 @@ eventloop:
 					if initNode, ok := data["initNode"].(map[string]interface{}); ok {
 						nodeInfo = initNode
 					} else {
-						err = node.Get(ctx,redisClient,mongoClient,projectName,nodeID,&nodeInfo)
+						err = node.Get(ctx, redisClient, mongoClient, projectName, nodeID, &nodeInfo)
 						if err != nil {
 							//logger.Errorf(eventDeviceModifyLog, "事件(%s)的资产缓存(%+v)查询失败", eventID, nodeID)
 							nodeInfo = bson.M{}
@@ -349,7 +349,7 @@ eventloop:
 
 					departmentStringIDList := departmentObjectIDList
 					departmentMList := make([]map[string]interface{}, 0)
-					err := department.GetByList(ctx,redisClient,mongoClient,projectName,departmentStringIDList,&departmentMList)
+					err := department.GetByList(ctx, redisClient, mongoClient, projectName, departmentStringIDList, &departmentMList)
 					if err != nil {
 						//logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID, departmentStringIDList)
 						departmentMList = make([]map[string]interface{}, 0)
@@ -358,7 +358,7 @@ eventloop:
 					data["departmentName"] = formatx.FormatKeyInfoMapList(departmentMList, "name")
 
 					modelEle := bson.M{}
-					err = model.Get(ctx,redisClient,mongoClient,projectName,modelID,&modelEle)
+					err = model.Get(ctx, redisClient, mongoClient, projectName, modelID, &modelEle)
 					if err != nil {
 						//logger.Errorf(eventDeviceModifyLog, "事件(%s)的模型缓存(%+v)查询失败", eventID, departmentStringIDList)
 						continue
@@ -389,7 +389,7 @@ eventloop:
 					if err != nil {
 						continue
 					}
-					err = mq.Publish(ctx,[]string{"event",projectName,eventID}, b)
+					err = mq.Publish(ctx, []string{"event", projectName, eventID}, b)
 					if err != nil {
 						//logger.Warnf(eventDeviceModifyLog, "发送事件(%s)错误:%s", eventID, err.Error())
 					} else {
@@ -407,7 +407,7 @@ eventloop:
 						updateMap := bson.M{"settings.invalid": true}
 						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 						var r = make(map[string]interface{})
-						err := apiClient.UpdateEventById(headerMap,eventID, updateMap, &r)
+						err := apiClient.UpdateEventById(headerMap, eventID, updateMap, &r)
 						if err != nil {
 							//logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID, err.Error())
 							continue
@@ -422,7 +422,7 @@ eventloop:
 	return nil
 }
 
-func TriggerModelModify(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client,mq mq.MQ, apiClient api.Client,projectName string,data map[string]interface{}) error {
+func TriggerModelModify(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, data map[string]interface{}) error {
 	////logger.Debugf(eventDeviceModifyLog, "开始执行资产修改事件触发器")
 	////logger.Debugf(eventDeviceModifyLog, "传入参数为:%+v", data)
 	//ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30)*time.Second)
@@ -432,7 +432,7 @@ func TriggerModelModify(ctx context.Context, redisClient *redis.Client, mongoCli
 	//if !ok {
 	//	return fmt.Errorf("数据消息中nodeId字段不存在或类型错误")
 	//}
-	headerMap := map[string]string{ginx.XRequestProject:projectName}
+	headerMap := map[string]string{ginx.XRequestProject: projectName}
 	modelID, ok := data["model"].(string)
 	if !ok {
 		return fmt.Errorf("数据消息中model字段不存在或类型错误")
@@ -453,7 +453,7 @@ func TriggerModelModify(ctx context.Context, redisClient *redis.Client, mongoCli
 	//	//return fmt.Errorf("数据消息中department字段不存在或类型错误")
 	//}
 
-	departmentObjectIDList  := formatx.InterfaceListToStringList(departmentList)
+	departmentObjectIDList := formatx.InterfaceListToStringList(departmentList)
 
 	modifyType, ok := data["type"].(string)
 	if !ok {
@@ -546,7 +546,7 @@ func TriggerModelModify(ctx context.Context, redisClient *redis.Client, mongoCli
 		},
 	}
 
-	err := apiClient.FindEventQuery(headerMap,query, &eventInfoList)
+	err := apiClient.FindEventQuery(headerMap, query, &eventInfoList)
 	if err != nil {
 		//logger.Errorf(eventDeviceModifyLog, "获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
 		return fmt.Errorf("获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
@@ -686,7 +686,7 @@ func TriggerModelModify(ctx context.Context, redisClient *redis.Client, mongoCli
 										updateMap := bson.M{"settings.invalid": true}
 										//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 										var r = make(map[string]interface{})
-										err := apiClient.UpdateEventById(headerMap,eventID, updateMap, &r)
+										err := apiClient.UpdateEventById(headerMap, eventID, updateMap, &r)
 										if err != nil {
 											//logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID, err.Error())
 											continue
@@ -738,7 +738,7 @@ func TriggerModelModify(ctx context.Context, redisClient *redis.Client, mongoCli
 				if isValid {
 					departmentStringIDList := departmentObjectIDList
 					departmentMList := make([]map[string]interface{}, 0)
-					err := department.GetByList(ctx,redisClient,mongoClient,projectName,departmentStringIDList,&departmentMList)
+					err := department.GetByList(ctx, redisClient, mongoClient, projectName, departmentStringIDList, &departmentMList)
 					if err != nil {
 						//logger.Errorf(eventDeviceModifyLog, "事件(%s)的部门缓存(%+v)查询失败", eventID, departmentStringIDList)
 						departmentMList = make([]map[string]interface{}, 0)
@@ -747,7 +747,7 @@ func TriggerModelModify(ctx context.Context, redisClient *redis.Client, mongoCli
 					data["departmentName"] = formatx.FormatKeyInfoMapList(departmentMList, "name")
 
 					modelEle := bson.M{}
-					err = model.Get(ctx,redisClient,mongoClient,projectName,modelID,&modelEle)
+					err = model.Get(ctx, redisClient, mongoClient, projectName, modelID, &modelEle)
 					if err != nil {
 						//logger.Errorf(eventDeviceModifyLog, "事件(%s)的模型缓存(%+v)查询失败", eventID, departmentStringIDList)
 						continue
@@ -776,7 +776,7 @@ func TriggerModelModify(ctx context.Context, redisClient *redis.Client, mongoCli
 					if err != nil {
 						continue
 					}
-					err = mq.Publish(ctx,[]string{"event",projectName,eventID}, b)
+					err = mq.Publish(ctx, []string{"event", projectName, eventID}, b)
 					if err != nil {
 						//logger.Warnf(eventDeviceModifyLog, "发送事件(%s)错误:%s", eventID, err.Error())
 					} else {
@@ -794,7 +794,7 @@ func TriggerModelModify(ctx context.Context, redisClient *redis.Client, mongoCli
 						updateMap := bson.M{"settings.invalid": true}
 						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 						var r = make(map[string]interface{})
-						err := apiClient.UpdateEventById(headerMap,eventID, updateMap, &r)
+						err := apiClient.UpdateEventById(headerMap, eventID, updateMap, &r)
 						if err != nil {
 							//logger.Errorf(eventDeviceModifyLog, "失效事件(%s)失败:%s", eventID, err.Error())
 							continue

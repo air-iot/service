@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 
@@ -16,13 +15,14 @@ import (
 	"github.com/air-iot/service/init/cache/model"
 	"github.com/air-iot/service/init/cache/node"
 	"github.com/air-iot/service/init/mq"
+	"github.com/air-iot/service/init/redisdb"
 	"github.com/air-iot/service/logger"
 	"github.com/air-iot/service/util/formatx"
 	"github.com/air-iot/service/util/json"
 	"github.com/air-iot/service/util/timex"
 )
 
-func TriggerExecCmd(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string,
+func TriggerExecCmd(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string,
 	data map[string]interface{}) error {
 
 	nodeID, ok := data["nodeId"].(string)

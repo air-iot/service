@@ -88,9 +88,10 @@ func Update(ctx context.Context, cli redisdb.Client, project, tableName, id stri
 	if err != nil {
 		return fmt.Errorf("更新缓存数据错误, %v", err)
 	}
-	if !b {
-		return fmt.Errorf("保存数据未成功")
-	}
+	_ = b
+	//if !b {
+	//	return fmt.Errorf("保存数据未成功")
+	//}
 	if _, err := tx.Exec(ctx); err != nil {
 		return fmt.Errorf("提交更新缓存数据事务错误, %v", err)
 	}

@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/air-iot/service/init/redisdb"
 )
 
 // NewStore 创建基于redis存储实例
-func NewStore(db *redis.Client, keyPrefix string) *Store {
+func NewStore(db redisdb.Client, keyPrefix string) *Store {
 	return &Store{Cli: db, Prefix: keyPrefix}
 }
 
 // Store redis存储
 type Store struct {
-	Cli    *redis.Client
+	Cli    redisdb.Client
 	Prefix string
 }
 

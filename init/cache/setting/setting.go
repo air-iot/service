@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-redis/redis/v8"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/air-iot/service/init/cache"
@@ -34,11 +33,11 @@ func GetByWarnKindID(ctx context.Context, redisClient redisdb.Client, mongoClien
 }
 
 // TriggerUpdate 更新redis资产数据,并发送消息通知
-func TriggerUpdate(ctx context.Context, redisClient *redis.Client, project string, setting []byte) error {
+func TriggerUpdate(ctx context.Context, redisClient redisdb.Client, project string, setting interface{}) error {
 	return cache.Update(ctx, redisClient, project, entity.T_SETTING, id, setting)
 }
 
 // TriggerDelete 删除redis资产数据,并发送消息通知
-func TriggerDelete(ctx context.Context, redisClient *redis.Client, project string) error {
+func TriggerDelete(ctx context.Context, redisClient redisdb.Client, project string) error {
 	return cache.Delete(ctx, redisClient, project, entity.T_SETTING, id)
 }

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/air-iot/service/init/redisdb"
 	"github.com/air-iot/service/util/json"
 	"github.com/dgrijalva/jwt-go"
-	"github.com/go-redis/redis/v8"
 )
 
 const key = "iot_jwt_hmac_key"
@@ -58,7 +58,7 @@ func GetHMACKey() []byte {
 }
 
 // GetUserInfo 获取缓存的用户数据.
-func GetUserInfo(ctx context.Context, redisDB *redis.Client, projectName, userID string) (*map[string]interface{}, error) {
+func GetUserInfo(ctx context.Context, redisDB redisdb.Client, projectName, userID string) (*map[string]interface{}, error) {
 	result, err := redisDB.HGet(ctx, fmt.Sprintf("%s/login", projectName), userID).Result()
 	if err != nil {
 		return nil, err

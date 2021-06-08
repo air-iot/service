@@ -3,7 +3,6 @@ package department
 import (
 	"context"
 
-	"github.com/go-redis/redis/v8"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/air-iot/service/init/cache"
@@ -18,7 +17,7 @@ func Get(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Cli
 }
 
 // GetByList 根据项目ID和资产ID查询数据
-func GetByList(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, project string, ids []string, result interface{}) (err error) {
+func GetByList(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, project string, ids []string, result interface{}) (err error) {
 	departmentList := make([]map[string]interface{}, 0)
 	for _, id := range ids {
 		deptInfo := map[string]interface{}{}
@@ -38,6 +37,6 @@ func TriggerUpdate(ctx context.Context, cli redisdb.Client, project, id string, 
 }
 
 // TriggerDelete 删除redis资产数据,并发送消息通知
-func TriggerDelete(ctx context.Context, cli *redis.Client, project, id string) error {
+func TriggerDelete(ctx context.Context, cli redisdb.Client, project, id string) error {
 	return cache.Delete(ctx, cli, project, entity.T_DEPT, id)
 }

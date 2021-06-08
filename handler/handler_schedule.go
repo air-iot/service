@@ -4,24 +4,25 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/air-iot/service/api"
-	"github.com/air-iot/service/init/cache/entity"
-	mongoOps "github.com/air-iot/service/init/mongodb"
-	"github.com/air-iot/service/init/mq"
-	"github.com/air-iot/service/util/formatx"
-	"github.com/air-iot/service/util/timex"
-	"github.com/go-redis/redis/v8"
-	"go.mongodb.org/mongo-driver/mongo"
 	"time"
 
 	"github.com/robfig/cron/v3"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+
+	"github.com/air-iot/service/api"
+	"github.com/air-iot/service/init/cache/entity"
+	mongoOps "github.com/air-iot/service/init/mongodb"
+	"github.com/air-iot/service/init/mq"
+	"github.com/air-iot/service/init/redisdb"
+	"github.com/air-iot/service/util/formatx"
+	"github.com/air-iot/service/util/timex"
 )
 
 var eventScheduleLog = map[string]interface{}{"name": "计划事件触发"}
 
-func TriggerAddSchedule(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, data map[string]interface{}, c *cron.Cron) error {
+func TriggerAddSchedule(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, data map[string]interface{}, c *cron.Cron) error {
 	//headerMap := map[string]string{ginx.XRequestProject: projectName}
 	eventID, ok := data["id"].(string)
 	if !ok {
@@ -177,7 +178,7 @@ func TriggerAddSchedule(ctx context.Context, redisClient *redis.Client, mongoCli
 	return nil
 }
 
-func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, data map[string]interface{}, c *cron.Cron) error {
+func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, data map[string]interface{}, c *cron.Cron) error {
 	//headerMap := map[string]string{ginx.XRequestProject: projectName}
 	c.Stop()
 	//c = cron.New(cron.WithSeconds(), cron.WithChain(cron.DelayIfStillRunning(cron.DefaultLogger)))
@@ -227,7 +228,7 @@ func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient *redis.Client,
 		//logger.Debugf(eventScheduleLog, "开始分析事件")
 		eventID := eventInfo.ID
 		settings := eventInfo.Settings
-		if settings == nil || len(settings) == 0{
+		if settings == nil || len(settings) == 0 {
 			//logger.Errorf(eventScheduleLog, "事件的配置不存在")
 			continue
 		}
@@ -283,7 +284,7 @@ func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient *redis.Client,
 			scheduleType := ""
 			isOnce := false
 			settings := eventInfoCron.Settings
-			if settings != nil && len(settings) != 0{
+			if settings != nil && len(settings) != 0 {
 				scheduleType, ok := settings["type"].(string)
 				if ok {
 					if scheduleType == "once" {

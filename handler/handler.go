@@ -3,17 +3,19 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+
 	"github.com/air-iot/service/api"
 	"github.com/air-iot/service/gin/ginx"
 	"github.com/air-iot/service/init/cache/entity"
 	"github.com/air-iot/service/init/cache/event"
 	"github.com/air-iot/service/init/mq"
+	"github.com/air-iot/service/init/redisdb"
 	"github.com/air-iot/service/logger"
 	"github.com/air-iot/service/util/timex"
-	"github.com/go-redis/redis/v8"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"time"
 )
 
 type EventType string
@@ -53,10 +55,10 @@ const (
 var eventLog = map[string]interface{}{"name": "通用事件触发"}
 
 // Trigger 事件触发
-func Trigger(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client,mq mq.MQ, apiClient api.Client,projectName string,eventType EventType, data map[string]interface{}) error {
-	headerMap := map[string]string{ginx.XRequestProject:projectName}
+func Trigger(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, eventType EventType, data map[string]interface{}) error {
+	headerMap := map[string]string{ginx.XRequestProject: projectName}
 	result := new([]entity.Event)
-	err := event.GetByType(ctx,redisClient,mongoClient,projectName,string(eventType),result)
+	err := event.GetByType(ctx, redisClient, mongoClient, projectName, string(eventType), result)
 	if err != nil {
 		//logger.Errorf(eventLog, "查询数据库错误:%s", err.Error())
 		return err
@@ -128,7 +130,7 @@ func Trigger(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.
 								updateMap := bson.M{"settings.invalid": true}
 								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 								var r = make(map[string]interface{})
-								err := apiClient.UpdateEventById(headerMap,eventID, updateMap, &r)
+								err := apiClient.UpdateEventById(headerMap, eventID, updateMap, &r)
 								if err != nil {
 									//logger.Errorf(eventLog, "失效事件(%s)失败:%s", eventID, err.Error())
 									continue
@@ -148,7 +150,7 @@ func Trigger(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.
 		if err != nil {
 			continue
 		}
-		err = mq.Publish(ctx,[]string{"event",projectName,eventID}, b)
+		err = mq.Publish(ctx, []string{"event", projectName, eventID}, b)
 		if err != nil {
 			//logger.Warnf(eventLog, "发送事件(%s)错误:%s", eventID, err.Error())
 		} else {
@@ -165,7 +167,7 @@ func Trigger(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.
 				updateMap := bson.M{"settings.invalid": true}
 				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 				var r = make(map[string]interface{})
-				err := apiClient.UpdateEventById(headerMap,eventID, updateMap, &r)
+				err := apiClient.UpdateEventById(headerMap, eventID, updateMap, &r)
 				if err != nil {
 					//logger.Errorf(eventLog, "失效事件(%s)失败:%s", eventID, err.Error())
 					continue

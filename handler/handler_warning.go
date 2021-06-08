@@ -4,6 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+
 	"github.com/air-iot/service/api"
 	"github.com/air-iot/service/gin/ginx"
 	"github.com/air-iot/service/init/cache/department"
@@ -13,22 +18,17 @@ import (
 	"github.com/air-iot/service/init/cache/node"
 	"github.com/air-iot/service/init/cache/setting"
 	"github.com/air-iot/service/init/mq"
+	"github.com/air-iot/service/init/redisdb"
 	"github.com/air-iot/service/util/formatx"
 	"github.com/air-iot/service/util/timex"
-	"github.com/go-redis/redis/v8"
-	"go.mongodb.org/mongo-driver/mongo"
-	"time"
-
-	"go.mongodb.org/mongo-driver/bson"
-
 )
 
 var eventAlarmLog = map[string]interface{}{"name": "报警事件触发"}
 
-func TriggerWarningRules(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client,mq mq.MQ, apiClient api.Client,projectName string,data entity.WarningMessage, actionType string) error {
+func TriggerWarningRules(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, data entity.WarningMessage, actionType string) error {
 	////logger.Debugf(eventAlarmLog, "开始执行计算事件触发器")
 	////logger.Debugf(eventAlarmLog, "传入参数为:%+v", data)
-	headerMap := map[string]string{ginx.XRequestProject:projectName}
+	headerMap := map[string]string{ginx.XRequestProject: projectName}
 	nodeID := data.NodeID
 	if nodeID == "" {
 		//logger.Errorf(eventAlarmLog, fmt.Sprintf("数据消息中nodeId字段不存在或类型错误"))
@@ -51,7 +51,7 @@ func TriggerWarningRules(ctx context.Context, redisClient *redis.Client, mongoCl
 	////logger.Debugf(eventAlarmLog, "开始获取当前模型的计算逻辑事件")
 	//获取当前模型的报警规则逻辑事件=============================================
 	eventInfoList := new([]entity.Event)
-	err := event.GetByType(ctx,redisClient,mongoClient,projectName,string(Alarm),eventInfoList)
+	err := event.GetByType(ctx, redisClient, mongoClient, projectName, string(Alarm), eventInfoList)
 	if err != nil {
 		//logger.Debugf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的报警事件失败:%s", modelID, err.Error()))
 		return fmt.Errorf("获取当前模型(%s)的报警事件失败:%s", modelID, err.Error())
@@ -59,14 +59,14 @@ func TriggerWarningRules(ctx context.Context, redisClient *redis.Client, mongoCl
 	////logger.Debugf(eventAlarmLog, "开始获取当前模型对应资产ID的资产")
 	//获取当前模型对应资产ID的资产
 	nodeInfo := map[string]interface{}{}
-	err = node.Get(ctx,redisClient,mongoClient,projectName,nodeID,&nodeInfo)
+	err = node.Get(ctx, redisClient, mongoClient, projectName, nodeID, &nodeInfo)
 	if err != nil {
 		//logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的资产(%s)失败:%s", modelID, nodeID, err.Error()))
 		return fmt.Errorf("获取当前模型(%s)的资产(%s)失败:%s", modelID, nodeID, err.Error())
 	}
 
 	modelInfo := map[string]interface{}{}
-	err = model.Get(ctx,redisClient,mongoClient,projectName,modelID,&modelInfo)
+	err = model.Get(ctx, redisClient, mongoClient, projectName, modelID, &modelInfo)
 	if err != nil {
 		//logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)详情失败:%s", modelID, err.Error()))
 		return fmt.Errorf("获取当前模型(%s)详情失败:%s", modelID, err.Error())
@@ -141,7 +141,7 @@ eventloop:
 								updateMap := bson.M{"settings.invalid": true}
 								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 								var r = make(map[string]interface{})
-								err := apiClient.UpdateEventById(headerMap,eventID, updateMap, &r)
+								err := apiClient.UpdateEventById(headerMap, eventID, updateMap, &r)
 								if err != nil {
 									//logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 									continue
@@ -210,7 +210,7 @@ eventloop:
 					}
 				case "department":
 					hasValidWarn = false
-					deptIDInDataList  := data.Department
+					deptIDInDataList := data.Department
 					if departmentList, ok := settings["department"].([]interface{}); ok {
 					deptLoop:
 						for _, dept := range departmentList {
@@ -346,12 +346,12 @@ eventloop:
 
 			deptInfoList := make([]map[string]interface{}, 0)
 			if len(departmentStringIDList) != 0 {
-				err := department.GetByList(ctx,redisClient,mongoClient,projectName,departmentStringIDList,&deptInfoList)
+				err := department.GetByList(ctx, redisClient, mongoClient, projectName, departmentStringIDList, &deptInfoList)
 				if err != nil {
 					return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
 				}
 			}
-			dataMappingType,err := setting.GetByWarnKindID(ctx,redisClient,mongoClient,projectName,data.Type)
+			dataMappingType, err := setting.GetByWarnKindID(ctx, redisClient, mongoClient, projectName, data.Type)
 			if err != nil {
 				//logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
 				continue
@@ -387,7 +387,7 @@ eventloop:
 			if err != nil {
 				continue
 			}
-			err = mq.Publish(ctx,[]string{"event",projectName,eventID}, b)
+			err = mq.Publish(ctx, []string{"event", projectName, eventID}, b)
 			if err != nil {
 				//logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
 			} else {
@@ -404,7 +404,7 @@ eventloop:
 				updateMap := bson.M{"settings.invalid": true}
 				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 				var r = make(map[string]interface{})
-				err := apiClient.UpdateEventById(headerMap,eventID, updateMap, &r)
+				err := apiClient.UpdateEventById(headerMap, eventID, updateMap, &r)
 				if err != nil {
 					//logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 					return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
@@ -417,10 +417,10 @@ eventloop:
 	return nil
 }
 
-func TriggerWarningDisableModelRules(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client,mq mq.MQ, apiClient api.Client,projectName string,data entity.WarningMessage, actionType string) error {
+func TriggerWarningDisableModelRules(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, data entity.WarningMessage, actionType string) error {
 	////logger.Debugf(eventAlarmLog, "开始执行计算事件触发器")
 	////logger.Debugf(eventAlarmLog, "传入参数为:%+v", data)
-	headerMap := map[string]string{ginx.XRequestProject:projectName}
+	headerMap := map[string]string{ginx.XRequestProject: projectName}
 	modelID := data.ModelID
 	if modelID == "" {
 		//logger.Errorf(eventAlarmLog, fmt.Sprintf("数据消息中modelId字段不存在或类型错误"))
@@ -437,7 +437,7 @@ func TriggerWarningDisableModelRules(ctx context.Context, redisClient *redis.Cli
 	////logger.Debugf(eventAlarmLog, "开始获取当前模型的计算逻辑事件")
 	//获取当前模型的报警规则逻辑事件=============================================
 	eventInfoList := new([]entity.Event)
-	err := event.GetByType(ctx,redisClient,mongoClient,projectName,string(Alarm),eventInfoList)
+	err := event.GetByType(ctx, redisClient, mongoClient, projectName, string(Alarm), eventInfoList)
 	if err != nil {
 		//logger.Debugf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的报警事件失败:%s", modelID, err.Error()))
 		return fmt.Errorf("获取当前模型(%s)的报警事件失败:%s", modelID, err.Error())
@@ -446,7 +446,7 @@ func TriggerWarningDisableModelRules(ctx context.Context, redisClient *redis.Cli
 	//获取当前模型对应资产ID的资产
 
 	modelInfo := map[string]interface{}{}
-	err = model.Get(ctx,redisClient,mongoClient,projectName,modelID,&modelInfo)
+	err = model.Get(ctx, redisClient, mongoClient, projectName, modelID, &modelInfo)
 	if err != nil {
 		//logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)详情失败:%s", modelID, err.Error()))
 		return fmt.Errorf("获取当前模型(%s)详情失败:%s", modelID, err.Error())
@@ -521,7 +521,7 @@ eventloop:
 								updateMap := bson.M{"settings.invalid": true}
 								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 								var r = make(map[string]interface{})
-								err := apiClient.UpdateEventById(headerMap,eventID, updateMap, &r)
+								err := apiClient.UpdateEventById(headerMap, eventID, updateMap, &r)
 								if err != nil {
 									//logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 									continue
@@ -723,7 +723,7 @@ eventloop:
 			}
 
 			//生成发送消息
-			dataMappingType,err := setting.GetByWarnKindID(ctx,redisClient,mongoClient,projectName,data.Type)
+			dataMappingType, err := setting.GetByWarnKindID(ctx, redisClient, mongoClient, projectName, data.Type)
 
 			if err != nil {
 				//logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的报警类型中文失败:%s", modelID, err.Error()))
@@ -760,7 +760,7 @@ eventloop:
 			if err != nil {
 				continue
 			}
-			err = mq.Publish(ctx,[]string{"event",projectName,eventID}, b)
+			err = mq.Publish(ctx, []string{"event", projectName, eventID}, b)
 			if err != nil {
 				//logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
 			} else {
@@ -777,7 +777,7 @@ eventloop:
 				updateMap := bson.M{"settings.invalid": true}
 				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap
 				var r = make(map[string]interface{})
-				err := apiClient.UpdateEventById(headerMap,eventID, updateMap, &r)
+				err := apiClient.UpdateEventById(headerMap, eventID, updateMap, &r)
 				if err != nil {
 					//logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 					return fmt.Errorf("失效事件(%s)失败:%s", eventID, err.Error())
@@ -790,10 +790,10 @@ eventloop:
 	return nil
 }
 
-func TriggerWarningDisableNodeRules(ctx context.Context, redisClient *redis.Client, mongoClient *mongo.Client,mq mq.MQ, apiClient api.Client,projectName string,data entity.WarningMessage, actionType string) error {
+func TriggerWarningDisableNodeRules(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, data entity.WarningMessage, actionType string) error {
 	////logger.Debugf(eventAlarmLog, "开始执行计算事件触发器")
 	////logger.Debugf(eventAlarmLog, "传入参数为:%+v", data)
-	headerMap := map[string]string{ginx.XRequestProject:projectName}
+	headerMap := map[string]string{ginx.XRequestProject: projectName}
 	nodeID := data.NodeID
 	if nodeID == "" {
 		//logger.Errorf(eventAlarmLog, fmt.Sprintf("数据消息中nodeId字段不存在或类型错误"))
@@ -816,7 +816,7 @@ func TriggerWarningDisableNodeRules(ctx context.Context, redisClient *redis.Clie
 	////logger.Debugf(eventAlarmLog, "开始获取当前模型的计算逻辑事件")
 	//获取当前模型的报警规则逻辑事件=============================================
 	eventInfoList := new([]entity.Event)
-	err := event.GetByType(ctx,redisClient,mongoClient,projectName,string(Alarm),eventInfoList)
+	err := event.GetByType(ctx, redisClient, mongoClient, projectName, string(Alarm), eventInfoList)
 	if err != nil {
 		//logger.Debugf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的报警事件失败:%s", modelID, err.Error()))
 		return fmt.Errorf("获取当前模型(%s)的报警事件失败:%s", modelID, err.Error())
@@ -824,14 +824,14 @@ func TriggerWarningDisableNodeRules(ctx context.Context, redisClient *redis.Clie
 	////logger.Debugf(eventAlarmLog, "开始获取当前模型对应资产ID的资产")
 	//获取当前模型对应资产ID的资产
 	nodeInfo := map[string]interface{}{}
-	err = node.Get(ctx,redisClient,mongoClient,projectName,nodeID,&nodeInfo)
+	err = node.Get(ctx, redisClient, mongoClient, projectName, nodeID, &nodeInfo)
 	if err != nil {
 		//logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的资产(%s)失败:%s", modelID, nodeID, err.Error()))
 		return fmt.Errorf("获取当前模型(%s)的资产(%s)失败:%s", modelID, nodeID, err.Error())
 	}
 
 	modelInfo := map[string]interface{}{}
-	err = model.Get(ctx,redisClient,mongoClient,projectName,modelID,&modelInfo)
+	err = model.Get(ctx, redisClient, mongoClient, projectName, modelID, &modelInfo)
 	if err != nil {
 		//logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)详情失败:%s", modelID, err.Error()))
 		return fmt.Errorf("获取当前模型(%s)详情失败:%s", modelID, err.Error())
@@ -906,7 +906,7 @@ eventloop:
 								updateMap := bson.M{"settings.invalid": true}
 								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 								var r = make(map[string]interface{})
-								err := apiClient.UpdateEventById(headerMap,eventID, updateMap, &r)
+								err := apiClient.UpdateEventById(headerMap, eventID, updateMap, &r)
 								if err != nil {
 									//logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 									continue
@@ -1107,13 +1107,13 @@ eventloop:
 
 			deptInfoList := make([]map[string]interface{}, 0)
 			if len(departmentStringIDList) != 0 {
-				err := department.GetByList(ctx,redisClient,mongoClient,projectName,departmentStringIDList,&deptInfoList)
+				err := department.GetByList(ctx, redisClient, mongoClient, projectName, departmentStringIDList, &deptInfoList)
 				if err != nil {
 					//logger.Errorf(eventAlarmLog, "获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
 					continue
 				}
 			}
-			dataMappingType,err := setting.GetByWarnKindID(ctx,redisClient,mongoClient,projectName,data.Type)
+			dataMappingType, err := setting.GetByWarnKindID(ctx, redisClient, mongoClient, projectName, data.Type)
 
 			if err != nil {
 				//logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
@@ -1150,7 +1150,7 @@ eventloop:
 			if err != nil {
 				continue
 			}
-			err = mq.Publish(ctx,[]string{"event",projectName,eventID}, b)
+			err = mq.Publish(ctx, []string{"event", projectName, eventID}, b)
 			if err != nil {
 				//logger.Warnf(eventAlarmLog, "发送事件(%s)错误:%s", eventID, err.Error())
 			} else {
@@ -1167,7 +1167,7 @@ eventloop:
 				updateMap := bson.M{"settings.invalid": true}
 				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 				var r = make(map[string]interface{})
-				err := apiClient.UpdateEventById(headerMap,eventID, updateMap, &r)
+				err := apiClient.UpdateEventById(headerMap, eventID, updateMap, &r)
 				if err != nil {
 					//logger.Errorf(eventAlarmLog, "失效事件(%s)失败:%s", eventID, err.Error())
 					continue

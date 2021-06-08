@@ -40,7 +40,7 @@ func (a *RedisClusterClient) HSet(ctx context.Context, key string, values ...int
 }
 
 func (a *RedisClusterClient) HMSet(ctx context.Context, key string, values ...interface{}) *redis.BoolCmd {
-	return a.Client.HMSet(ctx, key, values)
+	return a.Client.HMSet(ctx, key, values...)
 }
 
 func (a *RedisClusterClient) HSetNX(ctx context.Context, key, field string, value interface{}) *redis.BoolCmd {
@@ -55,6 +55,14 @@ func (a *RedisClusterClient) HGetAll(ctx context.Context, key string) *redis.Str
 	return a.Client.HGetAll(ctx, key)
 }
 
+func (a *RedisClusterClient) Exists(ctx context.Context, keys ...string) *redis.IntCmd {
+	return a.Client.Exists(ctx, keys...)
+}
+
 func (a *RedisClusterClient) TxPipeline() redis.Pipeliner {
 	return a.Client.TxPipeline()
+}
+
+func (a *RedisClusterClient) Pipeline() redis.Pipeliner {
+	return a.Client.Pipeline()
 }

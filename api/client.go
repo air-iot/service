@@ -11,14 +11,14 @@ import (
 
 	"github.com/air-iot/service/errors"
 	"github.com/air-iot/service/gin/ginx"
+	"github.com/air-iot/service/init/redisdb"
 	"github.com/air-iot/service/util/json"
-	"github.com/go-redis/redis/v8"
 	"github.com/go-resty/resty/v2"
 )
 
 type client struct {
 	sync.Mutex
-	cli     *redis.Client
+	cli     redisdb.Client
 	headers map[string]string
 	cfg     Config
 	tokens  map[string]*AuthToken
@@ -30,7 +30,7 @@ type Config struct {
 	Host   string
 }
 
-func NewClient(cli *redis.Client, cfg Config) Client {
+func NewClient(cli redisdb.Client, cfg Config) Client {
 	if cfg.Schema == "" {
 		cfg.Schema = "http"
 	}

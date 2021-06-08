@@ -28,7 +28,9 @@ type Client interface {
 	HSetNX(ctx context.Context, key, field string, value interface{}) *redis.BoolCmd
 	SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.BoolCmd
 	HGetAll(ctx context.Context, key string) *redis.StringStringMapCmd
+	Exists(ctx context.Context, keys ...string) *redis.IntCmd
 	TxPipeline() redis.Pipeliner
+	Pipeline() redis.Pipeliner
 }
 
 // InitRedisDB 初始化redis存储
