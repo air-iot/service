@@ -303,9 +303,8 @@ func TriggerUpdate(ctx context.Context, cli redisdb.Client, project, id string, 
 
 // TriggerDelete 删除redis资产数据
 func TriggerDelete(ctx context.Context, cli redisdb.Client, project, id string) error {
-	tx := cli.TxPipeline()
 
-	nodeStr, err := tx.HGet(ctx, fmt.Sprintf("%s/%s", project, entity.T_USER), id).Result()
+	nodeStr, err := cli.HGet(ctx, fmt.Sprintf("%s/%s", project, entity.T_USER), id).Result()
 	if err != nil {
 		return fmt.Errorf("查询数据错误, %v", err)
 	}
@@ -314,6 +313,7 @@ func TriggerDelete(ctx context.Context, cli redisdb.Client, project, id string) 
 	if err != nil {
 		return fmt.Errorf("解序列化错误, %v", err)
 	}
+	tx := cli.TxPipeline()
 	if _, err := tx.HDel(ctx, fmt.Sprintf("%s/%s/lock", project, entity.T_USER), id).Result(); err != nil {
 		return fmt.Errorf("删除缓存数据锁错误, %v", err)
 	}

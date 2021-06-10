@@ -179,14 +179,13 @@ func TriggerUpdate(ctx context.Context, cli redisdb.Client, project, id string, 
 
 // TriggerDelete 删除redis资产数据,并发送消息通知
 func TriggerDelete(ctx context.Context, cli redisdb.Client, project, id string) error {
-	tx := cli.TxPipeline()
-
-	eventStr, err := tx.HGet(ctx, fmt.Sprintf("%s/%s", project, entity.T_SYSTEMVARIABLE), id).Result()
+	eventStr, err := cli.HGet(ctx, fmt.Sprintf("%s/%s", project, entity.T_SYSTEMVARIABLE), id).Result()
 	if err != nil {
 		return fmt.Errorf("查询数据错误, %v", err)
 	}
 	systemVariableInfo := entity.SystemVariable{}
 	err = json.Unmarshal([]byte(eventStr), &systemVariableInfo)
+	tx := cli.TxPipeline()
 	if err != nil {
 		return fmt.Errorf("解序列化错误, %v", err)
 	}
