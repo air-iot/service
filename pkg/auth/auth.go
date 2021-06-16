@@ -2,12 +2,13 @@ package auth
 
 import (
 	"context"
-	"errors"
+
+	"github.com/air-iot/service/errors"
 )
 
 // 定义错误
 var (
-	ErrInvalidToken = errors.New("无效的令牌")
+	ErrInvalidToken = errors.New("无效令牌")
 )
 
 // TokenInfo 令牌信息
