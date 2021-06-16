@@ -7,7 +7,7 @@ import (
 
 // 定义错误
 var (
-	ErrInvalidToken = errors.New("invalid token")
+	ErrInvalidToken = errors.New("无效的令牌")
 )
 
 // TokenInfo 令牌信息
