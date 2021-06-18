@@ -30,6 +30,7 @@ const (
 	ConfigRoleCache           = "config_role_cache"
 	ConfigSystemVariableCache = "config_system_variable_cache"
 	ConfigOfflineCache        = "config_offline_cache"
+	ConfigTableCache          = "config_table_cache"
 )
 
 type CacheM struct {
@@ -52,6 +53,10 @@ type EventHandlerCache struct {
 
 type DeptCacheM struct {
 	Dept []map[string]interface{} `json:"dept"`
+}
+
+type TableCacheM struct {
+	Table []map[string]interface{} `json:"table"`
 }
 
 type UserCacheM struct {
@@ -105,6 +110,7 @@ func Init() {
 	SystemVariableLogic.systemVariableMapCache = &sync.Map{}
 	SystemVariableLogic.systemVariableNameValueMapCache = &sync.Map{}
 	OfflineStatusLogic.offlineStatusCache = &sync.Map{}
+	TableLogic.tableMapCache = &sync.Map{}
 
 	cache()
 	cacheEvent()
@@ -115,6 +121,7 @@ func Init() {
 	cacheRole()
 	cacheSystemVariable()
 	cacheOfflineStatus()
+	cacheTable()
 	if token := mqtt.Client.Subscribe(ConfigCacheChannel, 0, func(client MQTT.Client, message MQTT.Message) {
 		logrus.Debugf("更新缓存:%s", string(message.Payload()))
 		switch string(message.Payload()) {
@@ -179,6 +186,13 @@ func Init() {
 				err := cacheOfflineStatus()
 				if err != nil {
 					logrus.Errorf("更新掉线状态缓存错误:%s", err.Error())
+				}
+			}()
+		case ConfigTableCache:
+			go func() {
+				err := cacheTable()
+				if err != nil {
+					logrus.Errorf("更新工作表缓存错误:%s", err.Error())
 				}
 			}()
 		}
@@ -275,7 +289,7 @@ func cacheEvent() error {
 		for k, v := range *eventCacheMapType {
 			EventLogic.eventCache.Store(k, v)
 		}
-		if len(result.Event) == 0{
+		if len(result.Event) == 0 {
 			EventLogic.eventCacheWithEventID = &sync.Map{}
 		}
 		if len(*eventCacheMapRaw) == 0 && len(*eventCacheMapType) == 0 {
@@ -310,7 +324,7 @@ func cacheEventHandler() error {
 		for k, v := range *eventHandlerCacheMapRaw {
 			EventHandlerLogic.eventHandlerCache.Store(k, v)
 		}
-		if len(*eventHandlerCacheMapRaw) == 0{
+		if len(*eventHandlerCacheMapRaw) == 0 {
 			EventHandlerLogic.eventHandlerCache = &sync.Map{}
 		}
 	}
@@ -471,6 +485,28 @@ func cacheOfflineStatus() error {
 
 		for k, v := range result.OfflineStatus {
 			OfflineStatusLogic.offlineStatusCache.Store(k, v)
+		}
+	}
+	return nil
+}
+
+func cacheTable() error {
+	var cmd *redis.StringCmd
+	if iredis.ClusterBool {
+		cmd = iredis.ClusterClient.Get(context.Background(), ConfigTableCache)
+	} else {
+		cmd = iredis.Client.Get(context.Background(), ConfigTableCache)
+	}
+	if cmd.Err() == nil {
+		result := new(TableCacheM)
+		if err := json.Unmarshal([]byte(cmd.Val()), &result); err != nil {
+			return fmt.Errorf("解析错误:%s", err.Error())
+		}
+
+		for _, n := range result.Table {
+			if id, ok := n["id"]; ok {
+				TableLogic.tableMapCache.Store(id, n)
+			}
 		}
 	}
 	return nil
