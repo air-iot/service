@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/air-iot/service/util/numberx"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -110,6 +111,20 @@ func TriggerAddSchedule(ctx context.Context, redisClient redisdb.Client, mongoCl
 						if time.Now().Format("2006") != yearString {
 							//logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
 							return
+						}
+					}
+				}else {
+					if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
+						if year, ok := startTime["year"]; ok {
+							yearFloat, err := numberx.GetFloatNumber(year)
+							if err != nil {
+								//logger.Debugf(eventScheduleLog, "事件(%s)的年份转数字失败:%s", err.Error())
+								return
+							}
+							if time.Now().Year()%int(yearFloat) != 0 {
+								//logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
+								return
+							}
 						}
 					}
 				}
@@ -307,6 +322,20 @@ func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client
 							if time.Now().Format("2006") != yearString {
 								//logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
 								return
+							}
+						}
+					}else {
+						if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
+							if year, ok := startTime["year"]; ok {
+								yearFloat, err := numberx.GetFloatNumber(year)
+								if err != nil {
+									//logger.Debugf(eventScheduleLog, "事件(%s)的年份转数字失败:%s", err.Error())
+									return
+								}
+								if time.Now().Year()%int(yearFloat) != 0 {
+									//logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
+									return
+								}
 							}
 						}
 					}
