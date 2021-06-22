@@ -355,6 +355,20 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 								return
 							}
 						}
+					}else{
+						if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
+							if year, ok := startTime["year"]; ok {
+								yearFloat,err := tools.GetFloatNumber(year)
+								if err != nil {
+									logger.Debugf(eventScheduleLog, "事件(%s)的年份转数字失败:%s", err.Error())
+									return
+								}
+								if time.Now().Year() % int(yearFloat) != 0 {
+									logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
+									return
+								}
+							}
+						}
 					}
 				}
 				if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
