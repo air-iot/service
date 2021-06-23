@@ -113,17 +113,21 @@ func TriggerAddSchedule(ctx context.Context, redisClient redisdb.Client, mongoCl
 							return
 						}
 					}
-				}else {
+				} else {
 					if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
 						if year, ok := startTime["year"]; ok {
-							yearFloat, err := numberx.GetFloatNumber(year)
-							if err != nil {
-								//logger.Debugf(eventScheduleLog, "事件(%s)的年份转数字失败:%s", err.Error())
-								return
-							}
-							if time.Now().Year()%int(yearFloat) != 0 {
-								//logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
-								return
+							if year != nil {
+								yearFloat, err := numberx.GetFloatNumber(year)
+								if err != nil {
+									//logger.Debugf(eventScheduleLog, "事件(%s)的年份转数字失败:%s", err.Error())
+									return
+								}
+								if int(yearFloat) != 0 {
+									if time.Now().Year()%int(yearFloat) != 0 {
+										//logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
+										return
+									}
+								}
 							}
 						}
 					}
@@ -147,6 +151,8 @@ func TriggerAddSchedule(ctx context.Context, redisClient redisdb.Client, mongoCl
 			}
 		}
 		scheduleTypeMap := map[string]string{
+			"second":"每秒",
+			"minute":"每分钟",
 			"hour":  "每小时",
 			"day":   "每天",
 			"week":  "每周",
@@ -324,17 +330,21 @@ func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client
 								return
 							}
 						}
-					}else {
+					} else {
 						if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
 							if year, ok := startTime["year"]; ok {
-								yearFloat, err := numberx.GetFloatNumber(year)
-								if err != nil {
-									//logger.Debugf(eventScheduleLog, "事件(%s)的年份转数字失败:%s", err.Error())
-									return
-								}
-								if time.Now().Year()%int(yearFloat) != 0 {
-									//logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
-									return
+								if year != nil {
+									yearFloat, err := numberx.GetFloatNumber(year)
+									if err != nil {
+										//logger.Debugf(eventScheduleLog, "事件(%s)的年份转数字失败:%s", err.Error())
+										return
+									}
+									if int(yearFloat) != 0 {
+										if time.Now().Year()%int(yearFloat) != 0 {
+											//logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
+											return
+										}
+									}
 								}
 							}
 						}
@@ -359,6 +369,8 @@ func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client
 				}
 			}
 			scheduleTypeMap := map[string]string{
+				"second":"每秒",
+				"minute":"每分钟",
 				"hour":  "每小时",
 				"day":   "每天",
 				"week":  "每周",
