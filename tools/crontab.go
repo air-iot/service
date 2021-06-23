@@ -8,13 +8,13 @@ func GetCronExpression(scheduleType string, data map[string]interface{}) string 
 	case "second":
 		secondString := InterfaceTypeToString(data["second"])
 		if secondString == "" {
-			secondString = "0"
+			secondString = "1"
 		}
 		cronExpression = "0/" + secondString + " * * * * ?"
 	case "minute":
 		minuteString := InterfaceTypeToString(data["minute"])
-		if minuteString == "" {
-			minuteString = "0"
+		if minuteString == "" || minuteString == "0" {
+			minuteString = "1"
 		}
 		secondString := InterfaceTypeToString(data["second"])
 		if secondString == "" {
@@ -23,7 +23,7 @@ func GetCronExpression(scheduleType string, data map[string]interface{}) string 
 		cronExpression = secondString + " 0/" + minuteString + " * * * ?"
 	case "hour":
 		hourString := InterfaceTypeToString(data["hour"])
-		if hourString == "" {
+		if hourString == "" || hourString == "0" {
 			hourString = "1"
 		}
 		minuteString := InterfaceTypeToString(data["minute"])
@@ -37,7 +37,7 @@ func GetCronExpression(scheduleType string, data map[string]interface{}) string 
 		cronExpression = secondString + " " + minuteString + " 0/" + hourString + " * * ?"
 	case "day":
 		dayString := InterfaceTypeToString(data["day"])
-		if dayString == "" {
+		if dayString == "" || dayString == "0" {
 			dayString = "1"
 		}
 		minuteString := InterfaceTypeToString(data["minute"])
@@ -73,7 +73,7 @@ func GetCronExpression(scheduleType string, data map[string]interface{}) string 
 		cronExpression = secondString + " " + minuteString + " " + hourString + " ? * " + weekString
 	case "month":
 		monthString := InterfaceTypeToString(data["month"])
-		if monthString == "" {
+		if monthString == "" || monthString == "0" {
 			monthString = "1"
 		}
 		dayString := InterfaceTypeToString(data["day"])
