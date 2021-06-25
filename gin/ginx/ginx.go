@@ -33,7 +33,7 @@ func GetToken(c *gin.Context) string {
 	auth := c.GetHeader(XRequestHeaderAuthorization)
 	if auth == "" {
 		token = c.Query(XRequestQueryAuthorization)
-		return token
+		auth = token
 	}
 	prefix := "Bearer "
 	if auth != "" && strings.HasPrefix(auth, prefix) {
