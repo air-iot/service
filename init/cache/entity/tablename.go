@@ -14,4 +14,5 @@ const (
 	T_ROLE           = "role"
 	T_EVENT          = "event"
 	T_EVENTHANDLER   = "eventhandler"
+	T_TABLE          = "table"
 )
