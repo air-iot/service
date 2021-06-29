@@ -281,7 +281,7 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 				if recursionValString, ok := recursionVal.(string); ok {
 					if recursionValString == "dropBadValueEmptyArray" {
 						delete(*val, k)
-						return val
+						continue
 					}
 				}
 				if strings.HasSuffix(k, "Id") {
@@ -296,7 +296,9 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 	case bson.M:
 		for k, v := range val {
 			if k == "$in" {
+				fmt.Println("v:",v)
 				if v == nil {
+					fmt.Println("v2:",v)
 					return "dropBadValueEmptyArray"
 				} else if list, ok := v.([]interface{}); ok {
 					if len(list) == 0 {
@@ -312,7 +314,7 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 				if recursionValString, ok := recursionVal.(string); ok {
 					if recursionValString == "dropBadValueEmptyArray" {
 						delete(val, k)
-						return val
+						continue
 					}
 				}
 				if strings.HasSuffix(k, "Id") {
@@ -343,7 +345,7 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 				if recursionValString, ok := recursionVal.(string); ok {
 					if recursionValString == "dropBadValueEmptyArray" {
 						delete(*val, k)
-						return val
+						continue
 					}
 				}
 				if strings.HasSuffix(k, "Id") {
@@ -455,6 +457,7 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 		return data
 	}
 }
+
 
 // QueryOptionToPipeline 转换查询到pipeline
 func QueryOptionToPipeline(query QueryOption) (pipeLine *mongo.Pipeline, countPipeLine *mongo.Pipeline, err error) {
