@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -55,8 +56,10 @@ func (p *client) FindToken(project string) (*AuthToken, error) {
 		}
 	}
 	tokenStr, err := p.cli.HGet(context.Background(), "authToken", project).Result()
-	if err != nil {
+	if err != nil && err != redis.Nil {
 		return nil, fmt.Errorf("token查询错误: %s", err.Error())
+	} else if err == redis.Nil {
+		return nil, err
 	}
 	auth := new(AuthToken)
 	err = json.Unmarshal([]byte(tokenStr), auth)
@@ -1067,8 +1070,10 @@ func (p *client) FindProjectQuery(headers map[string]string, timeout time.Durati
 	v.Set("query", string(b))
 	u.RawQuery = v.Encode()
 	token, err := p.FindToken("baseToken")
-	if err != nil {
+	if err != nil && err != redis.Nil {
 		return http.StatusBadRequest, err
+	} else if err == redis.Nil {
+		return http.StatusOK, nil
 	}
 	headers[ginx.XRequestHeaderAuthorization] = fmt.Sprintf("%s %s", token.TokenType, token.AccessToken)
 	resp, err := resty.New().SetTimeout(timeout).R().
