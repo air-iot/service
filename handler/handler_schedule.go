@@ -81,6 +81,8 @@ func TriggerAddSchedule(ctx context.Context, redisClient redisdb.Client, mongoCl
 		return fmt.Errorf("事件(%s)的定时表达式解析失败", eventID)
 	}
 	_, _ = c.AddFunc(cronExpression, func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30)*time.Second)
+		defer cancel()
 		scheduleType := ""
 		isOnce := false
 		if settings, ok := data["settings"].(map[string]interface{}); ok {
@@ -302,6 +304,8 @@ func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client
 		eventInfoCron := eventInfo
 		eventIDCron := eventID
 		_, _ = c.AddFunc(cronExpression, func() {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30)*time.Second)
+			defer cancel()
 			scheduleType := ""
 			isOnce := false
 			settings := eventInfoCron.Settings
