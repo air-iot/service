@@ -253,7 +253,10 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 						return val
 					}
 				}
-				if strings.HasSuffix(k, "Id") {
+				if k == "id" {
+					delete(val, k)
+					k = "_id"
+				}else if strings.HasSuffix(k, "Id") {
 					delete(val, k)
 					k = k[:len(k)-2]
 					k = k + "._id"
@@ -284,7 +287,10 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 						continue
 					}
 				}
-				if strings.HasSuffix(k, "Id") {
+				if k == "id" {
+					delete(*val, k)
+					k = "_id"
+				}else if strings.HasSuffix(k, "Id") {
 					delete(*val, k)
 					k = k[:len(k)-2]
 					k = k + "._id"
@@ -317,7 +323,10 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 						continue
 					}
 				}
-				if strings.HasSuffix(k, "Id") {
+				if k == "id" {
+					delete(val, k)
+					k = "_id"
+				}else if strings.HasSuffix(k, "Id") {
 					delete(val, k)
 					k = k[:len(k)-2]
 					k = k + "._id"
@@ -348,7 +357,10 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 						continue
 					}
 				}
-				if strings.HasSuffix(k, "Id") {
+				if k == "id" {
+					delete(*val, k)
+					k = "_id"
+				}else if strings.HasSuffix(k, "Id") {
 					delete(*val, k)
 					k = k[:len(k)-2]
 					k = k + "._id"
