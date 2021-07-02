@@ -430,12 +430,30 @@ func FormatObjectToIDListMap(doc *map[string]interface{}, key string, formatKey 
 				stringID = ele.Hex()
 			} else if ele, ok := interfaceObject.(string); ok {
 				stringID = ele
-			} else if _, ok := interfaceObject.(map[string]interface{})[formatKey]; !ok {
-				return fmt.Errorf("%s需要格式化的Key:%s，不存在", key, formatKey)
-			} else if ele, ok := interfaceObject.(map[string]interface{})[formatKey].(string); ok {
-				stringID = ele
-			} else if ele, ok := interfaceObject.(map[string]interface{})[formatKey].(primitive.ObjectID); ok {
-				stringID = ele.Hex()
+			} else if interfaceMap, ok := interfaceObject.(map[string]interface{}); ok {
+				if interfaceVal, ok := interfaceMap[formatKey]; !ok {
+					return fmt.Errorf("%s需要格式化的Key:%s，不存在", key, formatKey)
+				} else {
+					if ele, ok := interfaceVal.(string); ok {
+						stringID = ele
+					} else if ele, ok := interfaceVal.(primitive.ObjectID); ok {
+						stringID = ele.Hex()
+					} else {
+						return fmt.Errorf("%s需要格式化的Key:%s，数值格式错误", key, formatKey)
+					}
+				}
+			} else if interfaceMap, ok := interfaceObject.(primitive.M); ok {
+				if interfaceVal, ok := interfaceMap[formatKey]; !ok {
+					return fmt.Errorf("%s需要格式化的Key:%s，不存在", key, formatKey)
+				} else {
+					if ele, ok := interfaceVal.(string); ok {
+						stringID = ele
+					} else if ele, ok := interfaceVal.(primitive.ObjectID); ok {
+						stringID = ele.Hex()
+					} else {
+						return fmt.Errorf("%s需要格式化的Key:%s，数值格式错误", key, formatKey)
+					}
+				}
 			} else {
 				return fmt.Errorf("%s需要格式化的Key:%s，数值格式错误", key, formatKey)
 			}
@@ -452,12 +470,30 @@ func FormatObjectToIDListMap(doc *map[string]interface{}, key string, formatKey 
 				stringList = append(stringList, ele.Hex())
 			} else if ele, ok := v.(string); ok {
 				stringList = append(stringList, ele)
-			} else if _, ok := v.(map[string]interface{})[formatKey]; !ok {
-				return fmt.Errorf("%s需要格式化的Key:%s，不存在", key, formatKey)
-			} else if ele, ok := v.(map[string]interface{})[formatKey].(string); ok {
-				stringList = append(stringList, ele)
-			} else if ele, ok := v.(map[string]interface{})[formatKey].(primitive.ObjectID); ok {
-				stringList = append(stringList, ele.Hex())
+			} else if interfaceMap, ok := v.(map[string]interface{}); ok {
+				if interfaceVal, ok := interfaceMap[formatKey]; !ok {
+					return fmt.Errorf("%s需要格式化的Key:%s，不存在", key, formatKey)
+				} else {
+					if ele, ok := interfaceVal.(string); ok {
+						stringList = append(stringList, ele)
+					} else if ele, ok := interfaceVal.(primitive.ObjectID); ok {
+						stringList = append(stringList, ele.Hex())
+					} else {
+						return fmt.Errorf("%s需要格式化的Key:%s，数值格式错误", key, formatKey)
+					}
+				}
+			} else if interfaceMap, ok := v.(primitive.M); ok {
+				if interfaceVal, ok := interfaceMap[formatKey]; !ok {
+					return fmt.Errorf("%s需要格式化的Key:%s，不存在", key, formatKey)
+				} else {
+					if ele, ok := interfaceVal.(string); ok {
+						stringList = append(stringList, ele)
+					} else if ele, ok := interfaceVal.(primitive.ObjectID); ok {
+						stringList = append(stringList, ele.Hex())
+					} else {
+						return fmt.Errorf("%s需要格式化的Key:%s，数值格式错误", key, formatKey)
+					}
+				}
 			} else {
 				return fmt.Errorf("需要格式化的Key:%s，数值格式错误", formatKey)
 			}
