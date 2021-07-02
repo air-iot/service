@@ -73,6 +73,9 @@ type Rule struct {
 	DeadZone          float64                `json:"deadZone"`
 	Once              bool                   `json:"once"`
 	OnceBeforeRecover bool                   `json:"onceBeforeRecover"`
+	ListType          string                 `json:"listType"`
+	BlackList         []ExtraTagForRule      `json:"blackList"`
+	WhiteList         []ExtraTagForRule      `json:"whiteList"`
 }
 
 type WarningMongo struct {
@@ -96,6 +99,9 @@ type RuleMongo struct {
 	DeadZone          interface{}            `json:"deadZone" bson:"deadZone"`
 	Once              bool                   `json:"once" bson:"once"`
 	OnceBeforeRecover bool                   `json:"onceBeforeRecover" bson:"onceBeforeRecover"`
+	ListType          string                 `json:"listType" bson:"listType"`
+	BlackList         []ExtraTagForRuleMongo `json:"blackList" bson:"blackList"`
+	WhiteList         []ExtraTagForRuleMongo `json:"whiteList" bson:"whiteList"`
 }
 
 type ComputedMongo struct {

@@ -101,3 +101,8 @@ type RuleInTags struct {
 	Logic       map[string]float64 `json:"logic"`
 	Interval    float64            `json:"interval"`
 }
+
+type GeneralIDName struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
