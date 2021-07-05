@@ -35,6 +35,12 @@ func TriggerAddSchedule(ctx context.Context, redisClient redisdb.Client, mongoCl
 	}
 	cronExpression := ""
 	if settings, ok := data["settings"].(map[string]interface{}); ok {
+		//判断是否已经禁用
+		if disable, ok := settings["disable"].(bool); ok {
+			if disable {
+				return fmt.Errorf("事件(%s)已经禁用", eventID)
+			}
+		}
 		//判断是否已经失效
 		if invalid, ok := settings["invalid"].(bool); ok {
 			if invalid {
@@ -254,6 +260,12 @@ func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client
 		if settings == nil || len(settings) == 0 {
 			//logger.Errorf(eventScheduleLog, "事件的配置不存在")
 			continue
+		}
+		//判断是否已经禁用
+		if disable, ok := settings["disable"].(bool); ok {
+			if disable {
+				continue
+			}
 		}
 		//判断是否已经失效
 		if invalid, ok := settings["invalid"].(bool); ok {
