@@ -41,6 +41,13 @@ func TriggerAddSchedule(data map[string]interface{}, c *cron.Cron) error {
 	}
 	cronExpression := ""
 	if settings, ok := data["settings"].(map[string]interface{}); ok {
+		//判断是否已经禁用
+		if disable, ok := settings["disable"].(bool); ok {
+			if disable {
+				logger.Warnln(eventLog, "事件(%s)已经禁用", eventID)
+				return fmt.Errorf("事件(%s)已经禁用", eventID)
+			}
+		}
 		//判断是否已经失效
 		if invalid, ok := settings["invalid"].(bool); ok {
 			if invalid {
@@ -286,6 +293,13 @@ func TriggerEditOrDeleteSchedule(data map[string]interface{}, c *cron.Cron) erro
 		if settings == nil || len(settings) == 0 {
 			logger.Errorf(eventScheduleLog, "事件的配置不存在")
 			continue
+		}
+		//判断是否已经禁用
+		if disable, ok := settings["disable"].(bool); ok {
+			if disable {
+				logger.Warnln(eventLog, "事件(%s)已经禁用", eventID)
+				continue
+			}
 		}
 		//判断是否已经失效
 		if invalid, ok := settings["invalid"].(bool); ok {
