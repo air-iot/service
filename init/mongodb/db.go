@@ -250,13 +250,24 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 				if recursionValString, ok := recursionVal.(string); ok {
 					if recursionValString == "dropBadValueEmptyArray" {
 						delete(val, k)
-						return val
+						continue
+					}
+				}
+				if list, ok := recursionVal.([]interface{}); ok {
+					if len(list) == 0 {
+						delete(val, k)
+						continue
+					}
+				} else if list, ok := recursionVal.([]string); ok {
+					if len(list) == 0 {
+						delete(val, k)
+						continue
 					}
 				}
 				if k == "id" {
 					delete(val, k)
 					k = "_id"
-				}else if strings.HasSuffix(k, "Id") {
+				} else if strings.HasSuffix(k, "Id") {
 					delete(val, k)
 					k = k[:len(k)-2]
 					k = k + "._id"
@@ -287,10 +298,21 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 						continue
 					}
 				}
+				if list, ok := recursionVal.([]interface{}); ok {
+					if len(list) == 0 {
+						delete(*val, k)
+						continue
+					}
+				} else if list, ok := recursionVal.([]string); ok {
+					if len(list) == 0 {
+						delete(*val, k)
+						continue
+					}
+				}
 				if k == "id" {
 					delete(*val, k)
 					k = "_id"
-				}else if strings.HasSuffix(k, "Id") {
+				} else if strings.HasSuffix(k, "Id") {
 					delete(*val, k)
 					k = k[:len(k)-2]
 					k = k + "._id"
@@ -302,9 +324,7 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 	case bson.M:
 		for k, v := range val {
 			if k == "$in" {
-				fmt.Println("v:",v)
 				if v == nil {
-					fmt.Println("v2:",v)
 					return "dropBadValueEmptyArray"
 				} else if list, ok := v.([]interface{}); ok {
 					if len(list) == 0 {
@@ -323,10 +343,21 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 						continue
 					}
 				}
+				if list, ok := recursionVal.([]interface{}); ok {
+					if len(list) == 0 {
+						delete(val, k)
+						continue
+					}
+				} else if list, ok := recursionVal.([]string); ok {
+					if len(list) == 0 {
+						delete(val, k)
+						continue
+					}
+				}
 				if k == "id" {
 					delete(val, k)
 					k = "_id"
-				}else if strings.HasSuffix(k, "Id") {
+				} else if strings.HasSuffix(k, "Id") {
 					delete(val, k)
 					k = k[:len(k)-2]
 					k = k + "._id"
@@ -357,10 +388,21 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 						continue
 					}
 				}
+				if list, ok := recursionVal.([]interface{}); ok {
+					if len(list) == 0 {
+						delete(*val, k)
+						continue
+					}
+				} else if list, ok := recursionVal.([]string); ok {
+					if len(list) == 0 {
+						delete(*val, k)
+						continue
+					}
+				}
 				if k == "id" {
 					delete(*val, k)
 					k = "_id"
-				}else if strings.HasSuffix(k, "Id") {
+				} else if strings.HasSuffix(k, "Id") {
 					delete(*val, k)
 					k = k[:len(k)-2]
 					k = k + "._id"
