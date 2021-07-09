@@ -19,6 +19,7 @@ import (
 const (
 	TableNotExistMsg        = "Table does not exist" // 表不存在
 	InvalidColumnNameMsg    = "invalid column"
+	InvalidColumnTagNameMsg = "invalid column/tag name"
 	DatabaseNotAvailableMsg = "Database not specified or available"
 )
 
@@ -124,7 +125,7 @@ func (a *Taos) insert(ctx context.Context, database string, row Row) (err error)
 			if err != nil {
 				return fmt.Errorf("创建表后插入 [%s]数据错误: %s", insertSql, err.Error())
 			}
-		} else if strings.Contains(err.Error(), InvalidColumnNameMsg) {
+		} else if strings.Contains(err.Error(), InvalidColumnNameMsg) || strings.Contains(err.Error(), InvalidColumnTagNameMsg) {
 			logger.Debugf(err.Error())
 			colMap := make(map[string]string)
 			res, err := db.QueryContext(ctx, querySql)
