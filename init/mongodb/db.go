@@ -254,12 +254,12 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 					}
 				}
 				if list, ok := recursionVal.([]interface{}); ok {
-					if len(list) == 0 {
+					if len(list) == 0 && strings.HasPrefix(k,"$") {
 						delete(val, k)
 						continue
 					}
 				} else if list, ok := recursionVal.([]string); ok {
-					if len(list) == 0 {
+					if len(list) == 0 && strings.HasPrefix(k,"$") {
 						delete(val, k)
 						continue
 					}
@@ -299,12 +299,12 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 					}
 				}
 				if list, ok := recursionVal.([]interface{}); ok {
-					if len(list) == 0 {
+					if len(list) == 0 && strings.HasPrefix(k,"$") {
 						delete(*val, k)
 						continue
 					}
 				} else if list, ok := recursionVal.([]string); ok {
-					if len(list) == 0 {
+					if len(list) == 0 && strings.HasPrefix(k,"$") {
 						delete(*val, k)
 						continue
 					}
@@ -344,12 +344,12 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 					}
 				}
 				if list, ok := recursionVal.([]interface{}); ok {
-					if len(list) == 0 {
+					if len(list) == 0 && strings.HasPrefix(k,"$") {
 						delete(val, k)
 						continue
 					}
 				} else if list, ok := recursionVal.([]string); ok {
-					if len(list) == 0 {
+					if len(list) == 0 && strings.HasPrefix(k,"$") {
 						delete(val, k)
 						continue
 					}
@@ -389,12 +389,12 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 					}
 				}
 				if list, ok := recursionVal.([]interface{}); ok {
-					if len(list) == 0 {
+					if len(list) == 0 && strings.HasPrefix(k,"$") {
 						delete(*val, k)
 						continue
 					}
 				} else if list, ok := recursionVal.([]string); ok {
-					if len(list) == 0 {
+					if len(list) == 0 && strings.HasPrefix(k,"$") {
 						delete(*val, k)
 						continue
 					}
