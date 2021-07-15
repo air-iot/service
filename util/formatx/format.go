@@ -794,8 +794,8 @@ func GetJsonLogicVarListNode(data primitive.M, varList *[]string) {
 		case string:
 			if k == "var" || k == "varrate" {
 				if strings.HasPrefix(val, "node.") {
-					splitList := strings.Split(val, ".")
-					*varList = AddNonRepByLoop(*varList, splitList[1])
+					nodeKey := val[5:]
+					*varList = AddNonRepByLoop(*varList, nodeKey)
 				}
 			}
 		case map[string]interface{}:
@@ -818,8 +818,8 @@ func convertJsonLogicMapNode(varList *[]string, key string, value primitive.M) {
 		case string:
 			if k == "var" || k == "varrate" {
 				if strings.HasPrefix(val, "node.") {
-					splitList := strings.Split(val, ".")
-					*varList = AddNonRepByLoop(*varList, splitList[1])
+					nodeKey := val[5:]
+					*varList = AddNonRepByLoop(*varList, nodeKey)
 				}
 			}
 		case map[string]interface{}:
@@ -842,8 +842,8 @@ func convertJsonLogicANode(varList *[]string, key string, val primitive.A) {
 		case string:
 			if key == "var" || key == "varrate" {
 				if strings.HasPrefix(val, "node.") {
-					splitList := strings.Split(val, ".")
-					*varList = AddNonRepByLoop(*varList, splitList[1])
+					nodeKey := val[5:]
+					*varList = AddNonRepByLoop(*varList, nodeKey)
 				}
 			}
 		case map[string]interface{}:
