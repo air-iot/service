@@ -162,7 +162,7 @@ func getByDBAndEvent(ctx context.Context, redisClient redisdb.Client, mongoClien
 }
 
 // TriggerUpdate 更新redis资产数据
-func TriggerUpdate(ctx context.Context, cli *redis.Client, project, id string, handler interface{}) error {
+func TriggerUpdate(ctx context.Context, cli redisdb.Client, project, id string, handler interface{}) error {
 	dataBytes, err := json.Marshal(handler)
 	if err != nil {
 		return fmt.Errorf("序列化数据错误, %v", err)
@@ -205,7 +205,7 @@ func TriggerUpdate(ctx context.Context, cli *redis.Client, project, id string, h
 }
 
 // TriggerDelete 删除redis资产数据
-func TriggerDelete(ctx context.Context, cli *redis.Client, project, id string) error {
+func TriggerDelete(ctx context.Context, cli redisdb.Client, project, id string) error {
 	eventStr, err := cli.HGet(ctx, fmt.Sprintf("%s/%s", project, entity.T_EVENTHANDLER), id).Result()
 	if err != nil {
 		return fmt.Errorf("查询数据错误, %v", err)
