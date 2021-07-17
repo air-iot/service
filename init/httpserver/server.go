@@ -15,11 +15,11 @@ import (
 func InitHTTPServer(ctx context.Context, cfg config.HTTP, handler http.Handler) func() {
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 	srv := &http.Server{
-		Addr:         addr,
-		Handler:      handler,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  15 * time.Second,
+		Addr:    addr,
+		Handler: handler,
+		//ReadTimeout:  5 * time.Second,
+		//WriteTimeout: 10 * time.Second,
+		//IdleTimeout:  15 * time.Second,
 	}
 
 	go func() {
