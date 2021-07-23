@@ -90,16 +90,13 @@ func Trigger(eventType EventType, data map[string]interface{}) error {
 					if rangeDefine != "once" {
 						//判断有效期
 						if startTime, ok := settings["startTime"].(string); ok {
-							formatStartTime, err := tools.ConvertStringToTime("2006-01-02 15:04:05", startTime, time.Local)
+							formatLayout := tools.FormatTimeFormat(startTime)
+							formatStartTime, err := tools.ConvertStringToTime(formatLayout, startTime, time.Local)
 							if err != nil {
-								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
-								formatStartTime, err = tools.ConvertStringToTime("2006-01-02T15:04:05+08:00", startTime, time.Local)
-								if err != nil {
-									logger.Errorf(eventLog, "时间范围字段值格式错误:%s", err.Error())
-									continue
-								}
-								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+								logger.Errorf(eventLoginLog, "开始时间范围字段值格式错误:%s", err.Error())
+								continue
 							}
+
 							if tools.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
 								logger.Debugf(eventLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
 								continue
@@ -107,15 +104,11 @@ func Trigger(eventType EventType, data map[string]interface{}) error {
 						}
 
 						if endTime, ok := settings["endTime"].(string); ok {
-							formatEndTime, err := tools.ConvertStringToTime("2006-01-02 15:04:05", endTime, time.Local)
+							formatLayout := tools.FormatTimeFormat(endTime)
+							formatEndTime, err := tools.ConvertStringToTime(formatLayout, endTime, time.Local)
 							if err != nil {
-								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
-								formatEndTime, err = tools.ConvertStringToTime("2006-01-02T15:04:05+08:00", endTime, time.Local)
-								if err != nil {
-									logger.Errorf(eventLog, "时间范围字段值格式错误:%s", err.Error())
-									continue
-								}
-								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+								logger.Errorf(eventLoginLog, "时间范围字段值格式错误:%s", err.Error())
+								continue
 							}
 							if tools.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
 								logger.Debugf(eventLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
