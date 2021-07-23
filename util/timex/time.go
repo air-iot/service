@@ -3,6 +3,7 @@ package timex
 import (
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -179,4 +180,35 @@ func IsSameDay(referTime, endTime *time.Time) bool {
 		return true
 	}
 	return false
+}
+
+func FormatTimeFormat(data string) string {
+	formatLayout := "2006-01-02T15:04:05"
+	if !strings.Contains(data,"T"){
+		formatLayout = "2006-01-02 15:04:05"
+	}
+	if strings.Contains(data, "Z") {
+		switch len(data) {
+		case 20:
+			formatLayout = formatLayout + "Z"
+		case 21:
+			formatLayout = formatLayout + ".0Z"
+		case 22:
+			formatLayout = formatLayout + ".00Z"
+		case 23:
+			formatLayout = formatLayout + ".000Z"
+		}
+	} else {
+		switch len(data) {
+		case 25:
+			formatLayout = formatLayout + data[len(data)-6:]
+		case 27:
+			formatLayout = formatLayout + ".0" + data[len(data)-6:]
+		case 28:
+			formatLayout = formatLayout + ".00" + data[len(data)-6:]
+		case 29:
+			formatLayout = formatLayout + ".000" + data[len(data)-6:]
+		}
+	}
+	return formatLayout
 }
