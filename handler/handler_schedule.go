@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/air-iot/service/logger"
 	"github.com/air-iot/service/util/numberx"
 	"time"
 
@@ -51,14 +52,11 @@ func TriggerAddSchedule(ctx context.Context, redisClient redisdb.Client, mongoCl
 		if scheduleType, ok := settings["type"].(string); ok {
 			if scheduleType == "once" {
 				if startTime, ok := settings["startTime"].(string); ok {
-					formatStartTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", startTime, time.Local)
+					formatLayout := timex.FormatTimeFormat(startTime)
+					formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
 					if err != nil {
-						////logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
-						formatStartTime, err = timex.ConvertStringToTime("2006-01-02T15:04:05+08:00", startTime, time.Local)
-						if err != nil {
-							return fmt.Errorf("时间范围字段值格式错误:%s", err.Error())
-						}
-						//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+						logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
+						return fmt.Errorf("时间范围字段值格式错误:%s", err.Error())
 					}
 					cronExpression = formatx.GetCronExpressionOnce(scheduleType, formatStartTime)
 				}
@@ -105,16 +103,13 @@ func TriggerAddSchedule(ctx context.Context, redisClient redisdb.Client, mongoCl
 							}
 						}
 					} else if startTime, ok := settings["startTime"].(string); ok {
-						formatStartTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", startTime, time.Local)
+						formatLayout := timex.FormatTimeFormat(startTime)
+						formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
 						if err != nil {
-							////logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
-							formatStartTime, err = timex.ConvertStringToTime("2006-01-02T15:04:05+08:00", startTime, time.Local)
-							if err != nil {
-								//logger.Errorf(eventScheduleLog, "时间范围字段值格式错误:%s", err.Error())
-								return
-							}
-							//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+							logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
+							return
 						}
+
 						yearString := formatx.InterfaceTypeToString(formatStartTime.Year())
 						if time.Now().Format("2006") != yearString {
 							//logger.Debugf(eventScheduleLog, "事件(%s)的定时任务开始时间未到或已经超过，不执行", eventID)

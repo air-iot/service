@@ -97,15 +97,11 @@ func Trigger(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo
 					if rangeDefine != "once" {
 						//判断有效期
 						if startTime, ok := settings["startTime"].(string); ok {
-							formatStartTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", startTime, time.Local)
+							formatLayout := timex.FormatTimeFormat(startTime)
+							formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
 							if err != nil {
-								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
-								formatStartTime, err = timex.ConvertStringToTime("2006-01-02T15:04:05+08:00", startTime, time.Local)
-								if err != nil {
-									//logger.Errorf(eventLog, "时间范围字段值格式错误:%s", err.Error())
-									continue
-								}
-								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+								logger.Errorf( "开始时间范围字段值格式错误:%s", err.Error())
+								continue
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
 								//logger.Debugf(eventLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
@@ -114,15 +110,11 @@ func Trigger(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo
 						}
 
 						if endTime, ok := settings["endTime"].(string); ok {
-							formatEndTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", endTime, time.Local)
+							formatLayout := timex.FormatTimeFormat(endTime)
+							formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
 							if err != nil {
-								//logger.Errorf(logFieldsMap, "时间范围字段值格式错误:%s", err.Error())
-								formatEndTime, err = timex.ConvertStringToTime("2006-01-02T15:04:05+08:00", endTime, time.Local)
-								if err != nil {
-									//logger.Errorf(eventLog, "时间范围字段值格式错误:%s", err.Error())
-									continue
-								}
-								//return restfulapi.NewHTTPError(http.StatusBadRequest, "startTime", fmt.Sprintf("时间范围字段格式错误:%s", err.Error()))
+								logger.Errorf( "时间范围字段值格式错误:%s", err.Error())
+								continue
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
 								//logger.Debugf(eventLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
