@@ -2,6 +2,7 @@ package tools
 
 import (
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -84,7 +85,7 @@ func GetLastServeralHoursFromZero(i int) time.Time {
 
 //循环中获取前几分钟时间
 func GetLastServeralMinuteFromZero(i int) time.Time {
-	currentMinute  := time.Now().Minute()
+	currentMinute := time.Now().Minute()
 	oldMinute := currentMinute - i
 	t := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), time.Now().Hour(), oldMinute, 0, 0, time.Local)
 	return t
@@ -142,4 +143,35 @@ func GetUnixToOldYearQuarterTime(i, month int) time.Time {
 	oldYear := currentYear - i
 	t := time.Date(oldYear, time.Month(month), 1, 0, 0, 0, 0, time.Local)
 	return t
+}
+
+func FormatTimeFormat(data string) string {
+	formatLayout := "2006-01-02T15:04:05"
+	if !strings.Contains(data,"T"){
+		formatLayout = "2006-01-02 15:04:05"
+	}
+	if strings.Contains(data, "Z") {
+		switch len(data) {
+		case 20:
+			formatLayout = formatLayout + "Z"
+		case 21:
+			formatLayout = formatLayout + ".0Z"
+		case 22:
+			formatLayout = formatLayout + ".00Z"
+		case 23:
+			formatLayout = formatLayout + ".000Z"
+		}
+	} else {
+		switch len(data) {
+		case 25:
+			formatLayout = formatLayout + data[len(data)-6:]
+		case 27:
+			formatLayout = formatLayout + ".0" + data[len(data)-6:]
+		case 28:
+			formatLayout = formatLayout + ".00" + data[len(data)-6:]
+		case 29:
+			formatLayout = formatLayout + ".000" + data[len(data)-6:]
+		}
+	}
+	return formatLayout
 }
