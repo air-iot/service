@@ -63,7 +63,7 @@ func GetByDB(ctx context.Context, cli redisdb.Client, mongoClient *mongo.Client,
 		if err != nil {
 			return "", err
 		}
-		err = Set(ctx, cli, tableName, project, id, modelBytes)
+		err = Set(ctx, cli, project,tableName, id, modelBytes)
 		if err != nil {
 			return "", fmt.Errorf("更新缓存数据错误, %v", err)
 		}
@@ -94,7 +94,7 @@ func GetByDBAll(ctx context.Context, cli redisdb.Client, mongoClient *mongo.Clie
 				if err != nil {
 					return "", err
 				}
-				err = Set(ctx, cli, tableName, project, id, eleBytes)
+				err = Set(ctx, cli, project,tableName, id, eleBytes)
 				if err != nil {
 					return "", fmt.Errorf("更新缓存数据错误, %v", err)
 				}
@@ -146,7 +146,7 @@ func GetByDBAllToOne(ctx context.Context, cli redisdb.Client, mongoClient *mongo
 				if err != nil {
 					return "", err
 				}
-				err = Set(ctx, cli, tableName, project, id, eleBytes)
+				err = Set(ctx, cli, project,tableName, id, eleBytes)
 				if err != nil {
 					return "", fmt.Errorf("更新缓存数据错误, %v", err)
 				}

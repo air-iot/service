@@ -41,7 +41,7 @@ func GetByDB(ctx context.Context, cli redisdb.Client, mongoClient *mongo.Client,
 		if err != nil {
 			return nil, err
 		}
-		err = Set(ctx, cli, tableName, project, id, modelTmp)
+		err = Set(ctx, cli, project,tableName, id, modelTmp)
 		if err != nil {
 			return nil, fmt.Errorf("更新缓存数据错误, %v", err)
 		}

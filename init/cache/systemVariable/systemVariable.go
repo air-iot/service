@@ -41,7 +41,7 @@ func GetByDB(ctx context.Context, cli redisdb.Client, mongoClient *mongo.Client,
 		if err != nil {
 			return nil, err
 		}
-		err = Set(ctx, cli, tableName, project, id, modelTmp)
+		err = Set(ctx, cli, project,tableName, id, modelTmp)
 		if err != nil {
 			return nil, fmt.Errorf("更新缓存数据错误, %v", err)
 		}
@@ -124,7 +124,7 @@ func getByDBAndUid(ctx context.Context, cli redisdb.Client, mongoClient *mongo.C
 		if !ok {
 			return nil, fmt.Errorf("id格式错误")
 		}
-		err = Set(ctx, cli, entity.T_SYSTEMVARIABLE, project, idTmp, modelTmp)
+		err = Set(ctx, cli, project, entity.T_SYSTEMVARIABLE, idTmp, modelTmp)
 		if err != nil {
 			return nil, fmt.Errorf("更新缓存数据错误, %v", err)
 		}
