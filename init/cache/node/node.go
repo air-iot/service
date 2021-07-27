@@ -33,7 +33,7 @@ func GetByDB(ctx context.Context, cli redisdb.Client, mongoClient *mongo.Client,
 		col := mongoClient.Database(project).Collection(tableName)
 		modelTmp := make(map[string]interface{})
 		err := mongodb.FindByID(ctx, col, &modelTmp, id)
-		if err != nil {
+		if err != nil && err != mongo.ErrNoDocuments {
 			return nil, err
 		}
 		modelBytes, err := json.Marshal(&modelTmp)

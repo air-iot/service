@@ -56,14 +56,14 @@ func GetByDB(ctx context.Context, cli redisdb.Client, mongoClient *mongo.Client,
 		col := mongoClient.Database(project).Collection(tableName)
 		modelTmp := make(map[string]interface{})
 		err := mongodb.FindByID(ctx, col, &modelTmp, id)
-		if err != nil {
+		if err != nil && err != mongo.ErrNoDocuments {
 			return "", err
 		}
 		modelBytes, err := json.Marshal(&modelTmp)
 		if err != nil {
 			return "", err
 		}
-		err = Set(ctx, cli, project,tableName, id, modelBytes)
+		err = Update(ctx, cli, project,tableName, id, modelTmp)
 		if err != nil {
 			return "", fmt.Errorf("更新缓存数据错误, %v", err)
 		}
