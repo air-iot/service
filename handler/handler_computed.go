@@ -37,7 +37,7 @@ func TriggerComputed(ctx context.Context, redisClient redisdb.Client, mongoClien
 	}
 
 	modelID := data.ModelID
-	if nodeID == "" {
+	if modelID == "" {
 		return fmt.Errorf("数据消息中modelId字段不存在或类型错误")
 	}
 
@@ -73,7 +73,7 @@ func TriggerComputed(ctx context.Context, redisClient redisdb.Client, mongoClien
 		return fmt.Errorf("获取当前模型(%s)的资产(%s)失败:%s", modelID, nodeID, err.Error())
 	}
 
-	data.Uid = nodeInfo.ID
+	data.Uid = nodeID
 	nodeUIDInData := data.Uid
 	if nodeUIDInData == "" {
 		return fmt.Errorf("数据消息中uid字段不存在或类型错误")
