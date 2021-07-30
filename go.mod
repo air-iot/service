@@ -3,6 +3,7 @@ module github.com/air-iot/service
 go 1.16
 
 require (
+	github.com/camunda-cloud/zeebe/clients/go v1.1.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/eclipse/paho.mqtt.golang v1.3.3
 	github.com/gin-contrib/cors v1.3.1

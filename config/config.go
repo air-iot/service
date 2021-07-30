@@ -77,6 +77,7 @@ type Config struct {
 	MQTT        MQTT
 	RabbitMQ    RabbitMQ
 	ApiGateway  ApiGateway
+	Zeebe       Zeebe
 }
 
 // IsDebugMode 是否是debug模式
@@ -344,4 +345,9 @@ type ApiGateway struct {
 	Port      int
 	AppKey    string
 	AppSecret string
+}
+
+type Zeebe struct {
+	GatewayAddress         string
+	UsePlaintextConnection bool
 }
