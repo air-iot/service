@@ -2,4 +2,4 @@ package flow
 
 import "regexp"
 
-var Reg, _ = regexp.Compile("^\\$\\{.+\\}$")
+var Reg, _ = regexp.Compile("\\${(.+?)}")
