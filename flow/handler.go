@@ -1,8 +1,9 @@
-package handler
+package flow
 
 import (
 	"context"
-	"encoding/json"
+	"github.com/air-iot/service/init/cache/flow"
+	"github.com/air-iot/service/util/flowx"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -11,11 +12,11 @@ import (
 	"github.com/air-iot/service/api"
 	"github.com/air-iot/service/gin/ginx"
 	"github.com/air-iot/service/init/cache/entity"
-	"github.com/air-iot/service/init/cache/event"
 	"github.com/air-iot/service/init/mq"
 	"github.com/air-iot/service/init/redisdb"
 	"github.com/air-iot/service/logger"
 	"github.com/air-iot/service/util/timex"
+	"github.com/camunda-cloud/zeebe/clients/go/pkg/zbc"
 )
 
 type EventType string
@@ -52,31 +53,27 @@ const (
 	HandlerSystemCmd EventHandlerType = ""
 )
 
-var eventLog = map[string]interface{}{"name": "通用事件触发"}
+var flowLog = map[string]interface{}{"name": "通用流程触发"}
 
-// Trigger 事件触发
-func Trigger(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, eventType EventType, data map[string]interface{}) error {
+// TriggerFlow 流程触发
+func TriggerFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, zbClient zbc.Client, projectName string, flowType EventType, data map[string]interface{}) error {
 	headerMap := map[string]string{ginx.XRequestProject: projectName}
-	result := new([]entity.Event)
-	err := event.GetByType(ctx, redisClient, mongoClient, projectName, string(eventType), result)
+	result := new([]entity.Flow)
+	err := flow.GetByType(ctx, redisClient, mongoClient, projectName, string(flowType), result)
 	if err != nil {
-		//logger.Errorf(eventLog, "查询数据库错误:%s", err.Error())
+		//logger.Errorf(flowLog, "查询数据库错误:%s", err.Error())
 		return err
 	}
 
 	for _, flowInfo := range *result {
-		if flowInfo.Handlers == nil || len(flowInfo.Handlers) == 0 {
-			//logger.Warnln(eventAlarmLog, "handlers字段数组长度为0")
-			continue
-		}
-		//logger.Debugf(eventAlarmLog, "开始分析事件")
-		eventID := flowInfo.ID
+		//logger.Debugf(flowAlarmLog, "开始分析流程")
+		flowID := flowInfo.ID
 		settings := flowInfo.Settings
 
 		//判断是否已经失效
 		if invalid, ok := settings["invalid"].(bool); ok {
 			if invalid {
-				logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
+				logger.Warnln("流程(%s)已经失效", flowID)
 				continue
 			}
 		}
@@ -84,7 +81,7 @@ func Trigger(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo
 		//判断禁用
 		if disable, ok := settings["disable"].(bool); ok {
 			if disable {
-				logger.Warnln(eventLog, "事件(%s)已经被禁用", eventID)
+				logger.Warnln("流程(%s)已经被禁用", flowID)
 				continue
 			}
 		}
@@ -104,7 +101,7 @@ func Trigger(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo
 								continue
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
-								//logger.Debugf(eventLog, "事件(%s)的定时任务开始时间未到，不执行", eventID)
+								//logger.Debugf(flowLog, "流程(%s)的定时任务开始时间未到，不执行", flowID)
 								continue
 							}
 						}
@@ -117,14 +114,14 @@ func Trigger(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo
 								continue
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
-								//logger.Debugf(eventLog, "事件(%s)的定时任务结束时间已到，不执行", eventID)
-								//修改事件为失效
+								//logger.Debugf(flowLog, "流程(%s)的定时任务结束时间已到，不执行", flowID)
+								//修改流程为失效
 								updateMap := bson.M{"settings.invalid": true}
-								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), flowID, updateMap)
 								var r = make(map[string]interface{})
-								err := apiClient.UpdateEventById(headerMap, eventID, updateMap, &r)
+								err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
 								if err != nil {
-									//logger.Errorf(eventLog, "失效事件(%s)失败:%s", eventID, err.Error())
+									//logger.Errorf(flowLog, "失效流程(%s)失败:%s", flowID, err.Error())
 									continue
 								}
 								continue
@@ -134,34 +131,28 @@ func Trigger(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo
 				}
 			}
 		}
-		//判断事件是否已经触发
+		//判断流程是否已经触发
 		hasExecute := false
 
-		sendMap := data
-		b, err := json.Marshal(sendMap)
+		err = flowx.StartFlow(zbClient,flowInfo.FlowXml,projectName,data)
 		if err != nil {
+			logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID,err.Error())
 			continue
-		}
-		err = mq.Publish(ctx, []string{"event", projectName, eventID}, b)
-		if err != nil {
-			//logger.Warnf(eventLog, "发送事件(%s)错误:%s", eventID, err.Error())
-		} else {
-			//logger.Debugf(eventLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
 		}
 
 		hasExecute = true
 
-		//对只能执行一次的事件进行失效
+		//对只能执行一次的流程进行失效
 		if validTime == "timeLimit" {
 			if rangeDefine == "once" && hasExecute {
-				logger.Warnln(eventLog, "事件(%s)为只执行一次的事件", eventID)
-				//修改事件为失效
+				logger.Warnln("流程(%s)为只执行一次的流程", flowID)
+				//修改流程为失效
 				updateMap := bson.M{"settings.invalid": true}
-				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), flowID, updateMap)
 				var r = make(map[string]interface{})
-				err := apiClient.UpdateEventById(headerMap, eventID, updateMap, &r)
+				err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
 				if err != nil {
-					//logger.Errorf(eventLog, "失效事件(%s)失败:%s", eventID, err.Error())
+					//logger.Errorf(flowLog, "失效流程(%s)失败:%s", eventID, err.Error())
 					continue
 				}
 			}

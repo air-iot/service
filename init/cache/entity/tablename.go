@@ -15,4 +15,5 @@ const (
 	T_EVENT          = "event"
 	T_EVENTHANDLER   = "eventhandler"
 	T_TABLE          = "table"
+	T_FLOW           = "flow"
 )
