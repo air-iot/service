@@ -112,4 +112,11 @@ type Client interface {
 	ReplaceLogById(headers map[string]string, id string, data, result interface{}) error
 
 	FindProjectQuery(headers map[string]string, timeout time.Duration, query, result interface{}) (int, error)
+
+	FindFlowQuery(headers map[string]string, query, result interface{}) error
+	FindFlowById(headers map[string]string, id string, result interface{}) error
+	SaveFlow(headers map[string]string, data, result interface{}) error
+	DelFlowById(headers map[string]string, id string, result interface{}) error
+	UpdateFlowById(headers map[string]string, id string, data, result interface{}) error
+	ReplaceFlowById(headers map[string]string, id string, data, result interface{}) error
 }

@@ -1101,3 +1101,64 @@ func (p *client) CheckDriver(headers map[string]string, licenseName string, sign
 	return p.Get(u, headers, signature)
 
 }
+
+func (p *client) FindFlowQuery(headers map[string]string, query, result interface{}) error {
+	b, err := json.Marshal(query)
+	if err != nil {
+		return err
+	}
+	host := p.cfg.Host
+	if host == "" {
+		host = "flow:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "flow/flow"}
+	v := url.Values{}
+	v.Set("query", string(b))
+	u.RawQuery = v.Encode()
+	return p.Get(u, headers, result)
+}
+
+func (p *client) FindFlowById(headers map[string]string, id string, result interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "flow:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("flow/flow/%s", id)}
+	return p.Get(u, headers, result)
+}
+
+func (p *client) SaveFlow(headers map[string]string, data, result interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "flow:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "flow/flow"}
+	return p.Post(u, headers, data, result)
+}
+
+func (p *client) DelFlowById(headers map[string]string, id string, result interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "flow:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("flow/flow/%s", id)}
+	return p.Delete(u, headers, result)
+}
+
+func (p *client) UpdateFlowById(headers map[string]string, id string, data, result interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "flow:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("flow/flow/%s", id)}
+	return p.Patch(u, headers, data, result)
+}
+
+func (p *client) ReplaceFlowById(headers map[string]string, id string, data, result interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "flow:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("flow/flow/%s", id)}
+	return p.Put(u, headers, data, result)
+}
