@@ -155,27 +155,27 @@ func TriggerAddScheduleFlow(ctx context.Context, redisClient redisdb.Client, mon
 			}
 		}
 		scheduleTypeMap := map[string]string{
-			"second":"每秒",
-			"minute":"每分钟",
-			"hour":  "每小时",
-			"day":   "每天",
-			"week":  "每周",
-			"month": "每月",
-			"year":  "每年",
-			"once":  "仅一次",
+			"second": "每秒",
+			"minute": "每分钟",
+			"hour":   "每小时",
+			"day":    "每天",
+			"week":   "每周",
+			"month":  "每月",
+			"year":   "每年",
+			"once":   "仅一次",
 		}
 		sendMap := map[string]interface{}{
-			"time":      timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
-			"interval":  scheduleTypeMap[scheduleType],
+			"time":     timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+			"interval": scheduleTypeMap[scheduleType],
 			"flowName": flowName,
 		}
-		if flowXml,ok := data["flowXml"].(string);ok{
-			err := flowx.StartFlow(zbClient,flowXml,projectName,sendMap)
+		if flowXml, ok := data["flowXml"].(string); ok {
+			err := flowx.StartFlow(zbClient, flowXml, projectName, sendMap)
 			if err != nil {
-				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID,err.Error())
+				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 				return
 			}
-		}else{
+		} else {
 			logger.Errorf("流程(%s)的xml不存在或类型错误", flowID)
 			return
 		}
@@ -364,26 +364,25 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 				}
 			}
 			scheduleTypeMap := map[string]string{
-				"second":"每秒",
-				"minute":"每分钟",
-				"hour":  "每小时",
-				"day":   "每天",
-				"week":  "每周",
-				"month": "每月",
-				"year":  "每年",
-				"once":  "仅一次",
+				"second": "每秒",
+				"minute": "每分钟",
+				"hour":   "每小时",
+				"day":    "每天",
+				"week":   "每周",
+				"month":  "每月",
+				"year":   "每年",
+				"once":   "仅一次",
 			}
 			sendMap := map[string]interface{}{
-				"time":      timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
-				"interval":  scheduleTypeMap[scheduleType],
+				"time":     timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+				"interval": scheduleTypeMap[scheduleType],
 				"flowName": flowName,
 			}
-			err = flowx.StartFlow(zbClient,flowInfo.FlowXml,projectName,sendMap)
+			err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
 			if err != nil {
-				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowIDCron,err.Error())
+				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowIDCron, err.Error())
 				return
 			}
-
 
 			if isOnce {
 				//logger.Warnln(eventAlarmLog, "流程(%s)为只执行一次的流程", eventID)

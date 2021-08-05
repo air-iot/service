@@ -85,7 +85,7 @@ func TriggerDeviceModifyFlow(ctx context.Context, redisClient redisdb.Client, mo
 
 	query := map[string]interface{}{
 		"filter": map[string]interface{}{
-			"type":                DeviceModify,
+			"type":               DeviceModify,
 			"settings.flowType":  modifyTypeAfterMapping,
 			"settings.flowRange": "node",
 		},
@@ -234,17 +234,41 @@ flowloop:
 											case "编辑资产画面", "删除资产画面":
 												dashboardInfo, ok := data["dashboard"].(map[string]interface{})
 												if !ok {
+													if dashboardInfoID, ok := data["dashboard"].(string); ok {
+														data["$#dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
+													} else {
+														continue
+													}
 													//logger.Errorf(eventDeviceModifyLog, "数据消息中dashboard字段不存在或类型错误")
+												} else {
+													data["dashboardName"] = formatx.FormatKeyInfo(dashboardInfo, "name")
+													if dashboardInfoID, ok := dashboardInfo["id"].(string); ok {
+														data["$#dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
+													}
+												}
+											}
+
+											deptMap := bson.M{}
+											for _, id := range departmentStringIDList {
+												deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
+											}
+											data["$#department"] = deptMap
+											data["$#model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
+											data["$#node"] = bson.M{nodeID: bson.M{"id": nodeID, "_tableName": "node"}}
+											if loginTimeRaw, ok := data["time"].(string); ok {
+												loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
+												if err != nil {
 													continue
 												}
-												data["dashboardName"] = formatx.FormatKeyInfo(dashboardInfo, "name")
+												data["time"] = loginTime.UnixNano() / 1e6
 											}
-											if flowXml,ok := flowInfo["flowXml"].(string);ok{
-												err = flowx.StartFlow(zbClient,flowXml,projectName,data)
+
+											if flowXml, ok := flowInfo["flowXml"].(string); ok {
+												err = flowx.StartFlow(zbClient, flowXml, projectName, data)
 												if err != nil {
 													logger.Errorf("流程推进到下一阶段失败:%s", err.Error())
 												}
-											}else{
+											} else {
 												logger.Errorf("流程(%s)的xml不存在或类型错误", flowID)
 											}
 
@@ -359,19 +383,42 @@ flowloop:
 					case "编辑资产画面", "删除资产画面":
 						dashboardInfo, ok := data["dashboard"].(map[string]interface{})
 						if !ok {
+							if dashboardInfoID, ok := data["dashboard"].(string); ok {
+								data["$#dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
+							} else {
+								continue
+							}
 							//logger.Errorf(eventDeviceModifyLog, "数据消息中dashboard字段不存在或类型错误")
-							continue
+						} else {
+							data["dashboardName"] = formatx.FormatKeyInfo(dashboardInfo, "name")
+							if dashboardInfoID, ok := dashboardInfo["id"].(string); ok {
+								data["$#dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
+							}
 						}
-						data["dashboardName"] = formatx.FormatKeyInfo(dashboardInfo, "name")
 					}
 
-					if flowXml,ok := flowInfo["flowXml"].(string);ok{
-						err = flowx.StartFlow(zbClient,flowXml,projectName,data)
+					deptMap := bson.M{}
+					for _, id := range departmentStringIDList {
+						deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
+					}
+					data["$#department"] = deptMap
+					data["$#model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
+					data["$#node"] = bson.M{nodeID: bson.M{"id": nodeID, "_tableName": "node"}}
+					if loginTimeRaw, ok := data["time"].(string); ok {
+						loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
+						if err != nil {
+							continue
+						}
+						data["time"] = loginTime.UnixNano() / 1e6
+					}
+
+					if flowXml, ok := flowInfo["flowXml"].(string); ok {
+						err = flowx.StartFlow(zbClient, flowXml, projectName, data)
 						if err != nil {
 							logger.Errorf("流程推进到下一阶段失败:%s", err.Error())
 							continue
 						}
-					}else{
+					} else {
 						logger.Errorf("流程(%s)的xml不存在或类型错误", flowID)
 						continue
 					}
@@ -511,7 +558,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 
 	query := map[string]interface{}{
 		"filter": map[string]interface{}{
-			"type":                DeviceModify,
+			"type":               DeviceModify,
 			"settings.flowType":  modifyTypeAfterMapping,
 			"settings.flowRange": "model",
 		},
@@ -525,7 +572,6 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 
 	////logger.Debugf(eventDeviceModifyLog, "开始遍历流程列表")
 	for _, flowInfo := range flowInfoList {
-
 
 		//fmt.Println("data:", data)
 		//break
@@ -649,21 +695,46 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 					data["time"] = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
 					data["content"] = content
+
 					switch modifyTypeAfterMapping {
 					case "编辑模型画面", "新增模型画面", "删除模型画面":
 						dashboardInfo, ok := data["dashboard"].(map[string]interface{})
 						if !ok {
-							fmt.Errorf("数据消息中dashboard字段不存在或类型错误")
+							if dashboardInfoID, ok := data["dashboard"].(string); ok {
+								data["$#dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
+							} else {
+								continue
+							}
+							//logger.Errorf(eventDeviceModifyLog, "数据消息中dashboard字段不存在或类型错误")
+						} else {
+							data["dashboardName"] = formatx.FormatKeyInfo(dashboardInfo, "name")
+							if dashboardInfoID, ok := dashboardInfo["id"].(string); ok {
+								data["$#dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
+							}
 						}
-						data["dashboardName"] = formatx.FormatKeyInfo(dashboardInfo, "name")
 					}
-					if flowXml,ok := flowInfo["flowXml"].(string);ok{
-						err = flowx.StartFlow(zbClient,flowXml,projectName,data)
+
+					deptMap := bson.M{}
+					for _, id := range departmentStringIDList {
+						deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
+					}
+					data["$#department"] = deptMap
+					data["$#model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
+					if loginTimeRaw, ok := data["time"].(string); ok {
+						loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
+						if err != nil {
+							continue
+						}
+						data["time"] = loginTime.UnixNano() / 1e6
+					}
+
+					if flowXml, ok := flowInfo["flowXml"].(string); ok {
+						err = flowx.StartFlow(zbClient, flowXml, projectName, data)
 						if err != nil {
 							logger.Errorf("流程推进到下一阶段失败:%s", err.Error())
 							continue
 						}
-					}else{
+					} else {
 						logger.Errorf("流程(%s)的xml不存在或类型错误", flowID)
 						continue
 					}

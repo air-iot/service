@@ -45,18 +45,6 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 
 	inputMap := data.InputMap
 
-	timeInData := data.Time
-	nowTimeString := ""
-	if timeInData == 0 {
-		nowTimeString = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
-	} else {
-		if timeInData > 1e10 {
-			nowTimeString = timex.GetLocalTimeNow(time.Unix(timeInData/1e3, 0)).Format("2006-01-02 15:04:05")
-		} else {
-			nowTimeString = timex.GetLocalTimeNow(time.Unix(timeInData, 0)).Format("2006-01-02 15:04:05")
-		}
-	}
-
 	fieldsMap := data.Fields
 	if len(fieldsMap) == 0 {
 		return fmt.Errorf("数据消息中fields字段不存在或类型错误")
@@ -300,10 +288,15 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 										deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
 									}
 									dataMapInLoop = map[string]interface{}{
-										"time":         timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
-										"$#model":      bson.M{"id": modelID, "_tableName": "model"},
-										"$#department": deptMap,
-										"$#node":       bson.M{"id": nodeID, "_tableName": "node"},
+										"time":           timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+										"$#model":        bson.M{"id": modelID, "_tableName": "model"},
+										"$#department":   deptMap,
+										"$#node":         bson.M{"id": nodeID, "_tableName": "node"},
+										"modelId":        nodeUIDModelMap[uidInMap],
+										"nodeId":         nodeUIDNodeMap[uidInMap],
+										"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
+										"modelName":      formatx.FormatKeyInfo(modelInfoMap, "name"),
+										"nodeName":       formatx.FormatKeyInfo(nodeInfoMap, "name"),
 									}
 									for k, v := range computeFieldsMap {
 										tagCache, err := tag.FindLocalCache(ctx, redisClient, mongoClient, projectName, modelID, nodeID, k)
@@ -319,6 +312,7 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 											"name":  tagCache.Name,
 											"value": v,
 										}
+										dataMapInLoop["tagInfo"] = formatx.FormatDataInfoList(fields)
 									}
 									dataMap[nodeUIDNodeMap[uidInMap]] = dataMapInLoop
 								}
@@ -380,7 +374,7 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 							}
 						}
 						if hasField {
-							computeFields := make([]map[string]interface{}, 0)
+							dataMap := map[string]interface{}{}
 						ruleloop:
 							for uidInMap, tagIDList := range nodeUIDFieldsMap {
 								computeFieldsMap := map[string]interface{}{}
@@ -493,8 +487,24 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 								}
 
 								fields := make([]map[string]interface{}, 0)
+								dataMapInLoop := map[string]interface{}{}
+								deptMap := bson.M{}
+								for _, id := range departmentStringIDList {
+									deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
+								}
+								dataMapInLoop = map[string]interface{}{
+									"time":           timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+									"$#model":        bson.M{"id": modelID, "_tableName": "model"},
+									"$#department":   deptMap,
+									"$#node":         bson.M{"id": nodeID, "_tableName": "node"},
+									"modelId":        nodeUIDModelMap[uidInMap],
+									"nodeId":         nodeUIDNodeMap[uidInMap],
+									"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
+									"modelName":      formatx.FormatKeyInfo(modelInfoMap, "name"),
+									"nodeName":       formatx.FormatKeyInfo(nodeInfoMap, "name"),
+								}
 								for k, v := range computeFieldsMap {
-									tagCache, err := tag.FindLocalCache(ctx, redisClient, mongoClient, projectName, modelIDInMap, nodeID, k)
+									tagCache, err := tag.FindLocalCache(ctx, redisClient, mongoClient, projectName, modelID, nodeID, k)
 									if err != nil {
 										continue
 									}
@@ -503,28 +513,16 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 										"name":  tagCache.Name,
 										"value": v,
 									})
+									dataMapInLoop[k] = map[string]interface{}{
+										"name":  tagCache.Name,
+										"value": v,
+									}
+									dataMapInLoop["tagInfo"] = formatx.FormatDataInfoList(fields)
 								}
-
-								dataMap := map[string]interface{}{
-									"time": nowTimeString,
-									//"status": "未处理",
-									"modelId":        nodeUIDModelMap[uidInMap],
-									"nodeId":         nodeUIDNodeMap[uidInMap],
-									"uid":            uidInMap,
-									"fields":         computeFieldsMap,
-									"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
-									"modelName":      formatx.FormatKeyInfo(modelInfoMap, "name"),
-									"nodeName":       formatx.FormatKeyInfo(nodeInfoMap, "name"),
-									"nodeUid":        formatx.FormatKeyInfo(nodeInfoMap, "uid"),
-									"tagInfo":        formatx.FormatDataInfoList(fields),
-								}
-								//for k, v := range computeFieldsMap {
-								//	dataMap[k] = v
-								//}
-								computeFields = append(computeFields, dataMap)
+								dataMap[nodeUIDNodeMap[uidInMap]] = dataMapInLoop
 							}
 
-							err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, computeFields)
+							err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, dataMap)
 							if err != nil {
 								logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 								continue

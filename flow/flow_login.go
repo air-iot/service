@@ -26,7 +26,6 @@ import (
 
 var flowLoginLog = map[string]interface{}{"name": "用户登录流程触发"}
 
-
 func TriggerLoginFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, zbClient zbc.Client, projectName string, data map[string]interface{}) error {
 	////logger.Debugf(eventLoginLog, "开始执行计算流程触发器")
 	////logger.Debugf(eventLoginLog, "传入参数为:%+v", data)
@@ -88,7 +87,7 @@ func TriggerLoginFlow(ctx context.Context, redisClient redisdb.Client, mongoClie
 							formatLayout := timex.FormatTimeFormat(startTime)
 							formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
 							if err != nil {
-								logger.Errorf( "开始时间范围字段值格式错误:%s", err.Error())
+								logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
 								continue
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
@@ -101,7 +100,7 @@ func TriggerLoginFlow(ctx context.Context, redisClient redisdb.Client, mongoClie
 							formatLayout := timex.FormatTimeFormat(endTime)
 							formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
 							if err != nil {
-								logger.Errorf( "时间范围字段值格式错误:%s", err.Error())
+								logger.Errorf("时间范围字段值格式错误:%s", err.Error())
 								continue
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
@@ -268,7 +267,26 @@ func TriggerLoginFlow(ctx context.Context, redisClient redisdb.Client, mongoClie
 			data["roleName"] = formatx.FormatKeyInfoListMap(roleInfoList, "name")
 		}
 
-		err = flowx.StartFlow(zbClient,flowInfo.FlowXml,projectName,data)
+		deptMap := bson.M{}
+		for _, id := range departmentStringIDList {
+			deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
+		}
+		roleMap := bson.M{}
+		for _, id := range roleIDs {
+			roleMap[id] = bson.M{"id": id, "_tableName": "role"}
+		}
+		data["$#department"] = deptMap
+		data["$#role"] = roleMap
+		data["$#user"] = bson.M{userID: bson.M{"id": userID, "_tableName": "user"}}
+		if loginTimeRaw, ok := data["time"].(string); ok {
+			loginTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(loginTimeRaw), loginTimeRaw, time.Local)
+			if err != nil {
+				continue
+			}
+			data["time"] = loginTime.UnixNano() / 1e6
+		}
+
+		err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, data)
 		if err != nil {
 			return fmt.Errorf("流程推进到下一阶段失败:%s", err.Error())
 		}

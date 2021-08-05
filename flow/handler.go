@@ -134,6 +134,14 @@ func TriggerFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *m
 		//判断流程是否已经触发
 		hasExecute := false
 
+		if loginTimeRaw, ok := data["time"].(string); ok {
+			loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
+			if err != nil {
+				continue
+			}
+			data["time"] = loginTime.UnixNano() / 1e6
+		}
+
 		err = flowx.StartFlow(zbClient,flowInfo.FlowXml,projectName,data)
 		if err != nil {
 			logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID,err.Error())

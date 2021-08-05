@@ -27,7 +27,6 @@ import (
 
 var eventAlarmLog = map[string]interface{}{"name": "报警流程触发"}
 
-
 func TriggerWarningRulesFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, zbClient zbc.Client, projectName string, data entity.WarningMessage, actionType string) error {
 	////logger.Debugf(eventAlarmLog, "开始执行计算流程触发器")
 	////logger.Debugf(eventAlarmLog, "传入参数为:%+v", data)
@@ -44,13 +43,8 @@ func TriggerWarningRulesFlow(ctx context.Context, redisClient redisdb.Client, mo
 		return fmt.Errorf("数据消息中modelId字段不存在或类型错误")
 	}
 
-	nowTimeString := timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
+	//nowTimeString := timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
-	//fieldsMap := data.Fields
-	//if len(fieldsMap) == 0 {
-	//	//logger.Errorf(eventAlarmLog, fmt.Sprintf("数据消息中fields字段不存在或类型错误"))
-	//	return fmt.Errorf("数据消息中fields字段不存在或类型错误")
-	//}
 	////logger.Debugf(eventAlarmLog, "开始获取当前模型的计算逻辑流程")
 	//获取当前模型的报警规则逻辑流程=============================================
 	flowInfoList := new([]entity.Flow)
@@ -109,7 +103,7 @@ flowloop:
 							formatLayout := timex.FormatTimeFormat(startTime)
 							formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
 							if err != nil {
-								logger.Errorf( "开始时间范围字段值格式错误:%s", err.Error())
+								logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
 								continue
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
@@ -122,7 +116,7 @@ flowloop:
 							formatLayout := timex.FormatTimeFormat(endTime)
 							formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
 							if err != nil {
-								logger.Errorf( "时间范围字段值格式错误:%s", err.Error())
+								logger.Errorf("时间范围字段值格式错误:%s", err.Error())
 								continue
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
@@ -346,9 +340,17 @@ flowloop:
 				//logger.Errorf(flowAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
 				continue
 			}
+
+			deptMap := bson.M{}
+			for _, id := range departmentStringIDList {
+				deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
+			}
 			//生成报警对象并发送
-			sendMap := bson.M{
-				"time":           nowTimeString,
+			sendMapInner := bson.M{
+				"time":           timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+				"$#model":        bson.M{"id": modelID, "_tableName": "model"},
+				"$#department":   deptMap,
+				"$#node":         bson.M{"id": nodeID, "_tableName": "node"},
 				"type":           dataMappingType,
 				"status":         data.Status,
 				"processed":      data.Processed,
@@ -357,26 +359,26 @@ flowloop:
 				"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
 				"modelName":      formatx.FormatKeyInfo(modelInfo, "name"),
 				"nodeName":       formatx.FormatKeyInfo(nodeInfo, "name"),
-				"nodeUid":        formatx.FormatKeyInfo(nodeInfo, "uid"),
 				"tagInfo":        formatx.FormatDataInfoList(data.Fields),
 				//"fields":         fieldsMap,
 				"userName":  data.HandleUserName,
 				"action":    actionType,
 				"isWarning": true,
 			}
-			fieldsInSendMap := map[string]interface{}{}
 			for _, fieldsMap := range data.Fields {
-				for k, v := range fieldsMap {
-					//sendMap[k] = v
-					fieldsInSendMap[k] = v
+				if id, ok := fieldsMap["id"].(string); ok {
+					sendMapInner[id] = map[string]interface{}{
+						"name":  fieldsMap["name"],
+						"value": fieldsMap["value"],
+					}
 				}
 			}
-			sendMap["fields"] = fieldsInSendMap
 
+			sendMap := bson.M{nodeID: sendMapInner}
 
-			err = flowx.StartFlow(zbClient,flowInfo.FlowXml,projectName,sendMap)
+			err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
 			if err != nil {
-				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID,err.Error())
+				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 				continue
 			}
 			hasExecute = true
@@ -413,13 +415,8 @@ func TriggerWarningDisableModelRulesFlow(ctx context.Context, redisClient redisd
 		return fmt.Errorf("数据消息中modelId字段不存在或类型错误")
 	}
 
-	nowTimeString := timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
+	//nowTimeString := timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
-	//fieldsMap := data.Fields
-	//if len(fieldsMap) == 0 {
-	//	//logger.Errorf(eventAlarmLog, fmt.Sprintf("数据消息中fields字段不存在或类型错误"))
-	//	return fmt.Errorf("数据消息中fields字段不存在或类型错误")
-	//}
 	////logger.Debugf(eventAlarmLog, "开始获取当前模型的计算逻辑流程")
 	//获取当前模型的报警规则逻辑流程=============================================
 	flowInfoList := new([]entity.Flow)
@@ -473,7 +470,7 @@ flowloop:
 							formatLayout := timex.FormatTimeFormat(startTime)
 							formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
 							if err != nil {
-								logger.Errorf( "开始时间范围字段值格式错误:%s", err.Error())
+								logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
 								continue
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
@@ -486,7 +483,7 @@ flowloop:
 							formatLayout := timex.FormatTimeFormat(endTime)
 							formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
 							if err != nil {
-								logger.Errorf( "时间范围字段值格式错误:%s", err.Error())
+								logger.Errorf("时间范围字段值格式错误:%s", err.Error())
 								continue
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
@@ -704,9 +701,10 @@ flowloop:
 				continue
 			}
 			//生成报警对象并发送
-			sendMap := bson.M{
-				"time": nowTimeString,
-				"type": dataMappingType,
+			sendMapInner := bson.M{
+				"time":    timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+				"$#model": bson.M{"id": modelID, "_tableName": "model"},
+				"type":    dataMappingType,
 				//"status":         data.Status,
 				//"processed":      data.Processed,
 				"desc":  data.Desc,
@@ -715,15 +713,11 @@ flowloop:
 				"modelName": formatx.FormatKeyInfo(modelInfo, "name"),
 				"userName":  data.HandleUserName,
 				"action":    actionType,
-				//"nodeName":       formatx.FormatKeyInfo(nodeInfo, "name"),
-				//"nodeUid":        formatx.FormatKeyInfo(nodeInfo, "uid"),
-				//"tagInfo":        formatx.FormatDataInfoList(data.Fields),
-				//"fields":         fieldsMap,
-				//"isWarning": true,
 			}
-			err = flowx.StartFlow(zbClient,flowInfo.FlowXml,projectName,sendMap)
+
+			err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMapInner)
 			if err != nil {
-				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID,err.Error())
+				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 				continue
 			}
 			hasExecute = true
@@ -766,13 +760,8 @@ func TriggerWarningDisableNodeRulesFlow(ctx context.Context, redisClient redisdb
 		return fmt.Errorf("数据消息中modelId字段不存在或类型错误")
 	}
 
-	nowTimeString := timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
+	//nowTimeString := timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
-	//fieldsMap := data.Fields
-	//if len(fieldsMap) == 0 {
-	//	//logger.Errorf(eventAlarmLog, fmt.Sprintf("数据消息中fields字段不存在或类型错误"))
-	//	return fmt.Errorf("数据消息中fields字段不存在或类型错误")
-	//}
 	////logger.Debugf(eventAlarmLog, "开始获取当前模型的计算逻辑流程")
 	//获取当前模型的报警规则逻辑流程=============================================
 	flowInfoList := new([]entity.Flow)
@@ -831,7 +820,7 @@ flowloop:
 							formatLayout := timex.FormatTimeFormat(startTime)
 							formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
 							if err != nil {
-								logger.Errorf( "开始时间范围字段值格式错误:%s", err.Error())
+								logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
 								continue
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
@@ -844,7 +833,7 @@ flowloop:
 							formatLayout := timex.FormatTimeFormat(endTime)
 							formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
 							if err != nil {
-								logger.Errorf( "时间范围字段值格式错误:%s", err.Error())
+								logger.Errorf("时间范围字段值格式错误:%s", err.Error())
 								continue
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
@@ -1067,8 +1056,16 @@ flowloop:
 				continue
 			}
 			//生成报警对象并发送
-			sendMap := bson.M{
-				"time": nowTimeString,
+			deptMap := bson.M{}
+			for _, id := range departmentStringIDList {
+				deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
+			}
+			//生成报警对象并发送
+			sendMapInner := bson.M{
+				"time":           timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+				"$#model":        bson.M{"id": modelID, "_tableName": "model"},
+				"$#department":   deptMap,
+				"$#node":         bson.M{"id": nodeID, "_tableName": "node"},
 				"type": dataMappingType,
 				//"status":         data.Status,
 				//"processed":      data.Processed,
@@ -1077,16 +1074,19 @@ flowloop:
 				"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
 				"modelName":      formatx.FormatKeyInfo(modelInfo, "name"),
 				"nodeName":       formatx.FormatKeyInfo(nodeInfo, "name"),
-				"nodeUid":        formatx.FormatKeyInfo(nodeInfo, "uid"),
 				"userName":       data.HandleUserName,
 				"action":         actionType,
 				//"tagInfo":        formatx.FormatDataInfoList(data.Fields),
 				////"fields":         fieldsMap,
 				//"isWarning": true,
 			}
-			err = flowx.StartFlow(zbClient,flowInfo.FlowXml,projectName,sendMap)
+
+			sendMap := bson.M{nodeID: sendMapInner}
+
+
+			err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
 			if err != nil {
-				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID,err.Error())
+				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 				continue
 			}
 			hasExecute = true
