@@ -113,7 +113,7 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 							formatLayout := timex.FormatTimeFormat(startTime)
 							formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
 							if err != nil {
-								logger.Errorf( "开始时间范围字段值格式错误:%s", err.Error())
+								logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
 								continue
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
@@ -125,7 +125,7 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 							formatLayout := timex.FormatTimeFormat(endTime)
 							formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
 							if err != nil {
-								logger.Errorf( "时间范围字段值格式错误:%s", err.Error())
+								logger.Errorf("时间范围字段值格式错误:%s", err.Error())
 								continue
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
@@ -186,7 +186,7 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 								}
 							}
 							if hasField {
-								computeFields := make([]map[string]interface{}, 0)
+								dataMap := map[string]interface{}{}
 							ruleloopModel:
 								for uidInMap, tagIDList := range nodeUIDFieldsMap {
 									computeFieldsMap := map[string]interface{}{}
@@ -248,14 +248,14 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 												}
 											}
 											redisData := map[string]interface{}{}
-											err = json.Unmarshal([]byte(cmdList[resultIndex].Val()),&redisData)
-											if err != nil{
-												logger.Errorf( "Redis批量查询中查询条件为%+v的查询结果解序列化失败:%s", cmdList[resultIndex].Args(), err.Error())
+											err = json.Unmarshal([]byte(cmdList[resultIndex].Val()), &redisData)
+											if err != nil {
+												logger.Errorf("Redis批量查询中查询条件为%+v的查询结果解序列化失败:%s", cmdList[resultIndex].Args(), err.Error())
 												continue ruleloopModel
 											}
-											resVal,err := numberx.GetFloat64NumberFromMongoDB(redisData,"value")
+											resVal, err := numberx.GetFloat64NumberFromMongoDB(redisData, "value")
 											if err != nil {
-												logger.Errorf( "Redis批量查询中查询条件为%+v的查询结果不是数字:%s", cmdList[resultIndex].Args(), err.Error())
+												logger.Errorf("Redis批量查询中查询条件为%+v的查询结果不是数字:%s", cmdList[resultIndex].Args(), err.Error())
 												continue ruleloopModel
 											}
 											computeFieldsMap[tagIDInList] = resVal
@@ -294,6 +294,17 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 									}
 
 									fields := make([]map[string]interface{}, 0)
+									dataMapInLoop := map[string]interface{}{}
+									deptMap := bson.M{}
+									for _, id := range departmentStringIDList {
+										deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
+									}
+									dataMapInLoop = map[string]interface{}{
+										"time":         timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+										"$#model":      bson.M{"id": modelID, "_tableName": "model"},
+										"$#department": deptMap,
+										"$#node":       bson.M{"id": nodeID, "_tableName": "node"},
+									}
 									for k, v := range computeFieldsMap {
 										tagCache, err := tag.FindLocalCache(ctx, redisClient, mongoClient, projectName, modelID, nodeID, k)
 										if err != nil {
@@ -304,30 +315,14 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 											"name":  tagCache.Name,
 											"value": v,
 										})
+										dataMapInLoop[k] = v
 									}
-
-									dataMap := map[string]interface{}{
-										"time": nowTimeString,
-										//"status": "未处理",
-										"modelId":        nodeUIDModelMap[uidInMap],
-										"nodeId":         nodeUIDNodeMap[uidInMap],
-										"uid":            uidInMap,
-										"fields":         computeFieldsMap,
-										"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
-										"modelName":      formatx.FormatKeyInfo(modelInfoMap, "name"),
-										"nodeName":       formatx.FormatKeyInfo(nodeInfoMap, "name"),
-										"nodeUid":        formatx.FormatKeyInfo(nodeInfoMap, "uid"),
-										"tagInfo":        formatx.FormatDataInfoList(fields),
-									}
-									//for k, v := range computeFieldsMap {
-									//	dataMap[k] = v
-									//}
-									computeFields = append(computeFields, dataMap)
+									dataMap[nodeUIDNodeMap[uidInMap]] = dataMapInLoop
 								}
 
-								err = flowx.StartFlow(zbClient,flowInfo.FlowXml,projectName,computeFields)
+								err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, dataMap)
 								if err != nil {
-									logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID,err.Error())
+									logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 									continue
 								}
 								hasExecute = true
@@ -444,14 +439,14 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 											}
 										}
 										redisData := map[string]interface{}{}
-										err = json.Unmarshal([]byte(cmdList[resultIndex].Val()),&redisData)
-										if err != nil{
-											logger.Errorf( "Redis批量查询中查询条件为%+v的查询结果解序列化失败:%s", cmdList[resultIndex].Args(), err.Error())
+										err = json.Unmarshal([]byte(cmdList[resultIndex].Val()), &redisData)
+										if err != nil {
+											logger.Errorf("Redis批量查询中查询条件为%+v的查询结果解序列化失败:%s", cmdList[resultIndex].Args(), err.Error())
 											continue ruleloop
 										}
-										resVal,err := numberx.GetFloat64NumberFromMongoDB(redisData,"value")
+										resVal, err := numberx.GetFloat64NumberFromMongoDB(redisData, "value")
 										if err != nil {
-											logger.Errorf( "Redis批量查询中查询条件为%+v的查询结果不是数字:%s", cmdList[resultIndex].Args(), err.Error())
+											logger.Errorf("Redis批量查询中查询条件为%+v的查询结果不是数字:%s", cmdList[resultIndex].Args(), err.Error())
 											continue ruleloop
 										}
 										computeFieldsMap[tagIDInList] = resVal
@@ -465,7 +460,6 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 								if err != nil {
 									continue
 								}
-
 
 								modelIDInMap, ok := nodeInfoMap["model"].(string)
 								if !ok {
@@ -527,9 +521,9 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 								computeFields = append(computeFields, dataMap)
 							}
 
-							err = flowx.StartFlow(zbClient,flowInfo.FlowXml,projectName,computeFields)
+							err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, computeFields)
 							if err != nil {
-								logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID,err.Error())
+								logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 								continue
 							}
 							hasExecute = true

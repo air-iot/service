@@ -23,7 +23,6 @@ import (
 	"github.com/air-iot/service/util/timex"
 )
 
-
 func TriggerExecCmdFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, zbClient zbc.Client, projectName string,
 	data map[string]interface{}) error {
 
@@ -120,7 +119,7 @@ func TriggerExecCmdFlow(ctx context.Context, redisClient redisdb.Client, mongoCl
 							formatLayout := timex.FormatTimeFormat(startTime)
 							formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
 							if err != nil {
-								logger.Errorf( "开始时间范围字段值格式错误:%s", err.Error())
+								logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
 								continue
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
@@ -133,7 +132,7 @@ func TriggerExecCmdFlow(ctx context.Context, redisClient redisdb.Client, mongoCl
 							formatLayout := timex.FormatTimeFormat(endTime)
 							formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
 							if err != nil {
-								logger.Errorf( "时间范围字段值格式错误:%s", err.Error())
+								logger.Errorf("时间范围字段值格式错误:%s", err.Error())
 								continue
 							}
 							if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
@@ -194,26 +193,19 @@ func TriggerExecCmdFlow(ctx context.Context, redisClient redisdb.Client, mongoCl
 				if command, ok := commandRaw.(map[string]interface{}); ok {
 					if name, ok := command["name"].(string); ok {
 						if commandName == name {
-							sendMap := bson.M{
-								"time": timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
-								//"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
-								"departmentName": departmentStringIDList,
-								"modelName":      formatx.FormatKeyInfo(modelInfo, "name"),
-								"nodeName":       formatx.FormatKeyInfo(nodeInfo, "name"),
-								"nodeUid":        formatx.FormatKeyInfo(nodeInfo, "uid"),
-								"commandName":    commandName,
+							deptMap := bson.M{}
+							for _, id := range departmentStringIDList {
+								deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
 							}
-							sendMap := bson.M{
-								"time": timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
-								//"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
-								"departmentName": departmentStringIDList,
-								"modelName":      formatx.FormatKeyInfo(modelInfo, "name"),
-								"nodeName":       formatx.FormatKeyInfo(nodeInfo, "name"),
-								"nodeUid":        formatx.FormatKeyInfo(nodeInfo, "uid"),
-								"commandName":    commandName,
-							}
+							sendMap := bson.M{nodeID: bson.M{
+								"time":         timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+								"$#model":      bson.M{"id": modelID, "_tableName": "model"},
+								"$#department": deptMap,
+								"$#node":       bson.M{"id": nodeID, "_tableName": "node"},
+								"commandName":  commandName,
+							}}
 
-							err = flowx.StartFlow(zbClient,flowInfo.FlowXml,projectName,sendMap)
+							err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
 							if err != nil {
 								logger.Errorf("流程推进到下一阶段失败:%s", err.Error())
 								break
