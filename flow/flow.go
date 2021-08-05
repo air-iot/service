@@ -3,6 +3,7 @@ package flow
 import (
 	"context"
 	"fmt"
+	"github.com/air-iot/service/util/json"
 	"regexp"
 	"strings"
 
@@ -19,39 +20,33 @@ func TrimSymbol(s string) string {
 	return strings.TrimRight(strings.TrimLeft(s, "${"), "}")
 }
 
-func FindExtra(ctx context.Context, apiClient api.Client, paramArr []string, variables []byte) (val map[string]interface{}, err error) {
+func FindExtra(ctx context.Context, apiClient api.Client, param string, variables []byte) (*gjson.Result, error) {
+	paramArr := strings.Split(param, ".")
 	var index int
-
 	for i, paramTmp := range paramArr {
 		if strings.HasPrefix(paramTmp, ExtraSymbol) {
 			index = i
 			break
 		}
 	}
-	pathArr := make([]string, 0)
-
-	for i := 0; i <= index; i++ {
-		pathArr = append(pathArr, paramArr[i])
+	if index+1 == len(paramArr) {
+		return nil, fmt.Errorf("config格式不正确")
 	}
-
-	pathID := append(append(make([]string, 0), pathArr...), "id")
-	pathTableName := append(append(make([]string, 0), pathArr...), "_tableName")
-
+	pathID := append(append(make([]string, 0), paramArr[:index+1]...), "id")
+	pathTableName := append(append(make([]string, 0), paramArr[:index+1]...), "_tableName")
 	id := gjson.GetBytes(variables, strings.Join(pathID, ".")).String()
 	if id == "" {
 		return nil, fmt.Errorf("ID变量为空")
 	}
-
 	tableName := gjson.GetBytes(variables, strings.Join(pathTableName, ".")).String()
 	if tableName == "" {
 		return nil, fmt.Errorf("表名变量为空")
 	}
-
 	projectID := gjson.GetBytes(variables, "#project").String()
 	if projectID == "" {
 		return nil, fmt.Errorf("项目ID变量为空")
 	}
-	val = make(map[string]interface{})
+	val := make(map[string]interface{})
 	switch tableName {
 	case "node":
 		if err := apiClient.FindNodeById(map[string]string{ginx.XRequestProject: projectID}, id, &val); err != nil {
@@ -63,5 +58,13 @@ func FindExtra(ctx context.Context, apiClient api.Client, paramArr []string, var
 		}
 	}
 
-	return
+	dataBytes, err := json.Marshal(val)
+	if err != nil {
+		return nil, fmt.Errorf("数据库数据转字节错误: %v", err)
+	}
+	result := gjson.GetBytes(dataBytes, strings.Join(paramArr[index+1:], "."))
+	if !result.Exists() {
+		return nil, fmt.Errorf("变量不存在")
+	}
+	return &result, nil
 }
