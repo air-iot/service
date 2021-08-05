@@ -19,8 +19,7 @@ func TrimSymbol(s string) string {
 	return strings.TrimRight(strings.TrimLeft(s, "${"), "}")
 }
 
-func FindExtra(ctx context.Context, apiClient api.Client, param string, variables []byte) (val map[string]interface{}, err error) {
-	paramArr := strings.Split(param, ".")
+func FindExtra(ctx context.Context, apiClient api.Client, paramArr []string, variables []byte) (val map[string]interface{}, err error) {
 	var index int
 
 	for i, paramTmp := range paramArr {
