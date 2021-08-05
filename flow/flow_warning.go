@@ -148,7 +148,7 @@ flowloop:
 		hasExecute := false
 		hasValidAction := false
 
-		if rangeTypeRawList, ok := settings["flowRange"].([]interface{}); ok {
+		if rangeTypeRawList, ok := settings["eventRange"].([]interface{}); ok {
 			rangeTypeList := formatx.InterfaceListToStringList(rangeTypeRawList)
 			if actionList, ok := settings["action"].([]interface{}); ok {
 				actionStringList := formatx.InterfaceListToStringList(actionList)
@@ -512,7 +512,7 @@ flowloop:
 		hasExecute := false
 		hasValidAction := false
 
-		if rangeTypeRawList, ok := settings["flowRange"].([]interface{}); ok {
+		if rangeTypeRawList, ok := settings["eventRange"].([]interface{}); ok {
 			rangeTypeList := formatx.InterfaceListToStringList(rangeTypeRawList)
 			if actionList, ok := settings["action"].([]interface{}); ok {
 				actionStringList := formatx.InterfaceListToStringList(actionList)
@@ -870,7 +870,7 @@ flowloop:
 		hasExecute := false
 		hasValidAction := false
 
-		if rangeTypeRawList, ok := settings["flowRange"].([]interface{}); ok {
+		if rangeTypeRawList, ok := settings["eventRange"].([]interface{}); ok {
 			rangeTypeList := formatx.InterfaceListToStringList(rangeTypeRawList)
 			if actionList, ok := settings["action"].([]interface{}); ok {
 				actionStringList := formatx.InterfaceListToStringList(actionList)

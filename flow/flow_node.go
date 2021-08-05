@@ -597,7 +597,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 				//modelConditionList := make([]string, 0)
 
 				isValid := false
-				if rangType, ok := settings["flowRange"].(string); ok {
+				if rangType, ok := settings["eventRange"].(string); ok {
 					switch rangType {
 					case "model":
 						modelListInSettings := make([]string, 0)

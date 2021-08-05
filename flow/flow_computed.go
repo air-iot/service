@@ -315,7 +315,10 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 											"name":  tagCache.Name,
 											"value": v,
 										})
-										dataMapInLoop[k] = v
+										dataMapInLoop[k] = map[string]interface{}{
+											"name":  tagCache.Name,
+											"value": v,
+										}
 									}
 									dataMap[nodeUIDNodeMap[uidInMap]] = dataMapInLoop
 								}
