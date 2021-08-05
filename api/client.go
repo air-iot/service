@@ -582,7 +582,7 @@ func (p *client) FindNodeById(headers map[string]string, id string, result inter
 	if host == "" {
 		host = "core:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/node/%s", id)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/node/_id/%s", id)}
 	return p.Get(u, headers, result)
 }
 
