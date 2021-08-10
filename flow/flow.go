@@ -3,13 +3,13 @@ package flow
 import (
 	"context"
 	"fmt"
-	"github.com/air-iot/service/util/formatx"
-	"github.com/air-iot/service/util/json"
 	"regexp"
 	"strings"
 
 	"github.com/air-iot/service/api"
 	"github.com/air-iot/service/gin/ginx"
+	"github.com/air-iot/service/util/formatx"
+	"github.com/air-iot/service/util/json"
 	"github.com/tidwall/gjson"
 )
 
@@ -71,7 +71,7 @@ func FindExtra(ctx context.Context, apiClient api.Client, param string, variable
 }
 
 // TemplateVariableMappingFlow 流程模板变量映射
-func TemplateVariableMappingFlow(ctx context.Context,apiClient api.Client,templateModelString string, mapping string) (string,error) {
+func TemplateVariableMappingFlow(ctx context.Context, apiClient api.Client, templateModelString string, mapping string) (string, error) {
 	//识别变量,两边带${}
 	testRegExp, _ := regexp.Compile("\\${(.*?)}")
 	//匹配出变量数组
@@ -83,18 +83,18 @@ func TemplateVariableMappingFlow(ctx context.Context,apiClient api.Client,templa
 		//映射为具体值
 		mappingDataResult := gjson.Get(mapping, formatVariable)
 		var mappingData interface{}
-		if !mappingDataResult.Exists(){
+		if !mappingDataResult.Exists() {
 			//未匹配到变量，需要查询数据库
-			jsonResult,err := FindExtra(ctx,apiClient,formatVariable,[]byte(mapping))
-			if err != nil{
-				return "",err
+			jsonResult, err := FindExtra(ctx, apiClient, formatVariable, []byte(mapping))
+			if err != nil {
+				return "", err
 			}
 			mappingData = jsonResult.Value()
-		}else{
+		} else {
 			mappingData = mappingDataResult.Value()
 		}
 		//变量为替换为具体值
 		templateModelString = strings.ReplaceAll(templateModelString, v, formatx.InterfaceTypeToString(mappingData))
 	}
-	return templateModelString,nil
+	return templateModelString, nil
 }
