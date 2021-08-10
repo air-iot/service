@@ -86,8 +86,8 @@ func TriggerDeviceModifyFlow(ctx context.Context, redisClient redisdb.Client, mo
 	query := map[string]interface{}{
 		"filter": map[string]interface{}{
 			"type":               DeviceModify,
-			"settings.flowType":  modifyTypeAfterMapping,
-			"settings.flowRange": "node",
+			"settings.eventType":  modifyTypeAfterMapping,
+			"settings.eventRange": "node",
 		},
 	}
 	err := apiClient.FindFlowQuery(headerMap, query, &flowInfoList)
@@ -559,8 +559,8 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 	query := map[string]interface{}{
 		"filter": map[string]interface{}{
 			"type":               DeviceModify,
-			"settings.flowType":  modifyTypeAfterMapping,
-			"settings.flowRange": "model",
+			"settings.eventType":  modifyTypeAfterMapping,
+			"settings.eventRange": "model",
 		},
 	}
 
