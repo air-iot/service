@@ -32,8 +32,8 @@ func NewZeebe(cfg config.Zeebe) (zbc.Client, func(), error) {
 	return zbClient, cleanFunc, nil
 }
 
-func FailJob(ctx context.Context, client worker.JobClient, job entities.Job) error {
-	_, err := client.NewFailJobCommand().JobKey(job.GetKey()).Retries(job.Retries - 1).Send(ctx)
+func FailJob(ctx context.Context, client worker.JobClient, job entities.Job, format string, a ...interface{}) error {
+	_, err := client.NewFailJobCommand().JobKey(job.GetKey()).Retries(job.Retries - 1).ErrorMessage(fmt.Sprintf(format, a...)).Send(ctx)
 	if err != nil {
 		return fmt.Errorf("fail job %d: %s", job.GetKey(), err.Error())
 	}
