@@ -334,7 +334,7 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 					for _, tag := range tags {
 						if tagMap, ok := tag.(map[string]interface{}); ok {
 							if nodeInfoInMap, ok := tagMap["node"].(map[string]interface{}); ok {
-								if nodeUID, ok := nodeInfoInMap["uid"].(string); ok {
+								if nodeUID, ok := nodeInfoInMap["id"].(string); ok {
 									//if fields, ok := tagMap["fields"].([]interface{}); ok {
 									//	fieldsList := formatx.InterfaceListToStringList(fields)
 									//	nodeUIDFieldsMap[nodeUID] = fieldsList
