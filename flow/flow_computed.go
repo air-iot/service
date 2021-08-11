@@ -282,21 +282,24 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 									}
 
 									fields := make([]map[string]interface{}, 0)
-									dataMapInLoop := map[string]interface{}{}
 									deptMap := bson.M{}
 									for _, id := range departmentStringIDList {
 										deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
 									}
-									dataMapInLoop = map[string]interface{}{
-										"time":           timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
-										"$#model":        bson.M{"id": modelID, "_tableName": "model"},
-										"$#department":   deptMap,
-										"$#node":         bson.M{"id": nodeID, "_tableName": "node"},
-										"modelId":        nodeUIDModelMap[uidInMap],
-										"nodeId":         nodeUIDNodeMap[uidInMap],
-										"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
-										"modelName":      formatx.FormatKeyInfo(modelInfoMap, "name"),
-										"nodeName":       formatx.FormatKeyInfo(nodeInfoMap, "name"),
+									sendTime := data.Time
+									if sendTime == 0 {
+										sendTime = timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6
+									}
+									dataMap = map[string]interface{}{
+										"time":         sendTime,
+										"$#model":      bson.M{"id": modelID, "_tableName": "model"},
+										"$#department": deptMap,
+										"$#node":       bson.M{"id": nodeID, "_tableName": "node"},
+										//"modelId":        nodeUIDModelMap[uidInMap],
+										//"nodeId":         nodeUIDNodeMap[uidInMap],
+										//"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
+										//"modelName":      formatx.FormatKeyInfo(modelInfoMap, "name"),
+										//"nodeName":       formatx.FormatKeyInfo(nodeInfoMap, "name"),
 									}
 									for k, v := range computeFieldsMap {
 										tagCache, err := tag.FindLocalCache(ctx, redisClient, mongoClient, projectName, modelID, nodeID, k)
@@ -308,13 +311,9 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 											"name":  tagCache.Name,
 											"value": v,
 										})
-										dataMapInLoop[k] = map[string]interface{}{
-											"name":  tagCache.Name,
-											"value": v,
-										}
-										dataMapInLoop["tagInfo"] = formatx.FormatDataInfoList(fields)
+										dataMap[k] = v
+										//dataMap["tagInfo"] = formatx.FormatDataInfoList(fields)
 									}
-									dataMap[nodeUIDNodeMap[uidInMap]] = dataMapInLoop
 								}
 
 								err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, dataMap)
@@ -487,21 +486,24 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 								}
 
 								fields := make([]map[string]interface{}, 0)
-								dataMapInLoop := map[string]interface{}{}
 								deptMap := bson.M{}
 								for _, id := range departmentStringIDList {
 									deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
 								}
-								dataMapInLoop = map[string]interface{}{
-									"time":           timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
-									"$#model":        bson.M{"id": modelID, "_tableName": "model"},
-									"$#department":   deptMap,
-									"$#node":         bson.M{"id": nodeID, "_tableName": "node"},
-									"modelId":        nodeUIDModelMap[uidInMap],
-									"nodeId":         nodeUIDNodeMap[uidInMap],
-									"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
-									"modelName":      formatx.FormatKeyInfo(modelInfoMap, "name"),
-									"nodeName":       formatx.FormatKeyInfo(nodeInfoMap, "name"),
+								sendTime := data.Time
+								if sendTime == 0 {
+									sendTime = timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6
+								}
+								dataMap = map[string]interface{}{
+									"time":         sendTime,
+									"$#model":      bson.M{"id": modelID, "_tableName": "model"},
+									"$#department": deptMap,
+									"$#node":       bson.M{"id": nodeID, "_tableName": "node"},
+									//"modelId":        nodeUIDModelMap[uidInMap],
+									//"nodeId":         nodeUIDNodeMap[uidInMap],
+									//"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
+									//"modelName":      formatx.FormatKeyInfo(modelInfoMap, "name"),
+									//"nodeName":       formatx.FormatKeyInfo(nodeInfoMap, "name"),
 								}
 								for k, v := range computeFieldsMap {
 									tagCache, err := tag.FindLocalCache(ctx, redisClient, mongoClient, projectName, modelID, nodeID, k)
@@ -513,13 +515,9 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 										"name":  tagCache.Name,
 										"value": v,
 									})
-									dataMapInLoop[k] = map[string]interface{}{
-										"name":  tagCache.Name,
-										"value": v,
-									}
-									dataMapInLoop["tagInfo"] = formatx.FormatDataInfoList(fields)
+									dataMap[k] = v
+									//dataMap["tagInfo"] = formatx.FormatDataInfoList(fields)
 								}
-								dataMap[nodeUIDNodeMap[uidInMap]] = dataMapInLoop
 							}
 
 							err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, dataMap)
