@@ -40,7 +40,7 @@ func GetByDB(ctx context.Context, cli redisdb.Client, mongoClient *mongo.Client,
 		if err != nil {
 			return nil, err
 		}
-		err = Set(ctx, cli, project,tableName, id, modelTmp)
+		err = Set(ctx, cli, project, tableName, id, modelTmp)
 		if err != nil {
 			return nil, fmt.Errorf("更新缓存数据错误, %v", err)
 		}
@@ -105,17 +105,18 @@ func GetByType(ctx context.Context, redisClient redisdb.Client, mongoClient *mon
 }
 
 func getByDBAndType(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, project, flowType string) ([]map[string]interface{}, error) {
-	locked, err := redisClient.SetNX(ctx, fmt.Sprintf("%s/%s/alllock", project, flowType), 0, 0).Result()
-	if err != nil {
-		return nil, fmt.Errorf("增加缓存类型锁错误, %v", err)
-	}
 	flowTmp := make([]map[string]interface{}, 0)
-	if locked {
+	flowMaps, err := redisClient.HGetAll(ctx, fmt.Sprintf("%s/%s", project, flowType)).Result()
+	if err != nil && redis.Nil != err {
+		return nil, fmt.Errorf("查询缓存数据错误, %v", err)
+	} else if err == redis.Nil || len(flowTmp) == 0 {
+
 		col := mongoClient.Database(project).Collection(entity.T_FLOW)
 		_, err = mongodb.FindFilter(ctx, col, &flowTmp, mongodb.QueryOption{Filter: map[string]interface{}{
 			"type": flowType,
 		}})
 		if err != nil {
+
 			return nil, err
 		}
 
@@ -128,12 +129,7 @@ func getByDBAndType(ctx context.Context, redisClient redisdb.Client, mongoClient
 				return nil, fmt.Errorf("更新缓存数据错误, %s", err.Error())
 			}
 		}
-
 	} else {
-		flowMaps, err := redisClient.HGetAll(ctx, fmt.Sprintf("%s/%s", project, flowType)).Result()
-		if err != nil {
-			return nil, fmt.Errorf("查询缓存数据错误, %v", err)
-		}
 		for _, e := range flowMaps {
 			flowMap := make(map[string]interface{})
 			if err := json.Unmarshal([]byte(e), &flowMap); err != nil {
