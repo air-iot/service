@@ -27,13 +27,17 @@ type client struct {
 
 // Config 接口配置
 type Config struct {
-	Schema string
-	Host   string
+	Schema  string
+	Host    string
+	Timeout int
 }
 
 func NewClient(cli redisdb.Client, cfg Config) Client {
 	if cfg.Schema == "" {
 		cfg.Schema = "http"
+	}
+	if cfg.Timeout == 0 {
+		cfg.Timeout = 60
 	}
 	return &client{
 		cfg: cfg,
@@ -88,7 +92,7 @@ func (p *client) Get(url url.URL, headers map[string]string, result interface{})
 		}
 	}
 	headers[ginx.XRequestHeaderAuthorization] = fmt.Sprintf("%s %s", token.TokenType, token.AccessToken)
-	resp, err := resty.New().SetTimeout(time.Minute * 1).R().
+	resp, err := resty.New().SetTimeout(time.Second * time.Duration(p.cfg.Timeout)).R().
 		SetHeaders(headers).
 		SetResult(result).
 		Get(url.String())
@@ -119,7 +123,7 @@ func (p *client) Post(url url.URL, headers map[string]string, data, result inter
 			headers[k] = v
 		}
 	}
-	resp, err := resty.New().SetTimeout(time.Minute * 1).R().
+	resp, err := resty.New().SetTimeout(time.Second * time.Duration(p.cfg.Timeout)).R().
 		SetHeaders(headers).
 		SetResult(result).
 		SetBody(data).
@@ -152,7 +156,7 @@ func (p *client) Delete(url url.URL, headers map[string]string, result interface
 			headers[k] = v
 		}
 	}
-	resp, err := resty.New().SetTimeout(time.Minute * 1).R().
+	resp, err := resty.New().SetTimeout(time.Second * time.Duration(p.cfg.Timeout)).R().
 		SetHeaders(headers).
 		SetResult(result).
 		Delete(url.String())
@@ -183,7 +187,7 @@ func (p *client) Put(url url.URL, headers map[string]string, data, result interf
 			headers[k] = v
 		}
 	}
-	resp, err := resty.New().SetTimeout(time.Minute * 1).R().
+	resp, err := resty.New().SetTimeout(time.Second * time.Duration(p.cfg.Timeout)).R().
 		SetHeaders(headers).
 		SetResult(result).
 		SetBody(data).
@@ -214,7 +218,7 @@ func (p *client) Patch(url url.URL, headers map[string]string, data, result inte
 			headers[k] = v
 		}
 	}
-	resp, err := resty.New().SetTimeout(time.Minute * 1).R().
+	resp, err := resty.New().SetTimeout(time.Second * time.Duration(p.cfg.Timeout)).R().
 		SetHeaders(headers).
 		SetResult(result).
 		SetBody(data).
@@ -911,7 +915,7 @@ func (p *client) DriverConfig(headers map[string]string, driverId, serviceId str
 		host = "driver:9000"
 	}
 	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("driver/driver/%s/%s/config", driverId, serviceId)}
-	resp, err := resty.New().SetTimeout(time.Minute * 1).R().
+	resp, err := resty.New().SetTimeout(time.Second * time.Duration(p.cfg.Timeout)).R().
 		SetHeaders(p.headers).
 		Get(u.String())
 
