@@ -16,6 +16,7 @@ import (
 	"github.com/air-iot/service/util/numberx"
 	"github.com/camunda-cloud/zeebe/clients/go/pkg/zbc"
 	"github.com/go-redis/redis/v8"
+	"github.com/tidwall/gjson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"time"
 
@@ -49,10 +50,15 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 	if len(fieldsMap) == 0 {
 		return fmt.Errorf("数据消息中fields字段不存在或类型错误")
 	}
+
+	dataByte, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("序列化当前模型(%s)的数据失败:%s", modelID, err.Error())
+	}
 	//logger.Debugf(eventComputeLogicLog, "开始获取当前模型的数据流程")
 	//获取当前模型的数据流程=============================================
 	flowInfoList := new([]entity.Flow)
-	err := flow.GetByType(ctx, redisClient, mongoClient, projectName, string(ComputeLogic), flowInfoList)
+	err = flow.GetByType(ctx, redisClient, mongoClient, projectName, string(ComputeLogic), flowInfoList)
 	if err != nil {
 		return fmt.Errorf("获取当前模型(%s)的数据流程失败:%s", modelID, err.Error())
 	}
@@ -144,21 +150,22 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 					nodeUIDModelMap := map[string]string{}
 					nodeUIDNodeMap := map[string]string{}
 					nodeUIDNodeMap[nodeUIDInData] = nodeID
+					if modelInfoInMap, ok := settings["model"].(map[string]interface{}); ok {
+						if modelIDInInfo, ok := modelInfoInMap["id"].(string); ok {
+							nodeUIDModelMap[nodeUIDInData] = modelIDInInfo
+						}
+					}
 					for _, tag := range tags {
 						//if tagMap, ok := settings["tags"].(map[string]interface{}); ok {
 						if tagMap, ok := tag.(map[string]interface{}); ok {
-							//if fields, ok := tagMap["fields"].([]interface{}); ok {
-							//	fieldsList := formatx.InterfaceListToStringList(fields)
-							//	nodeUIDFieldsMap[nodeUIDInData] = fieldsList
-							//}
 							if tagIDInMap, ok := tagMap["id"].(string); ok {
 								formatx.MergeDataMap(nodeUIDInData, tagIDInMap, &nodeUIDFieldsMap)
 							}
-							if modelInfoInMap, ok := tagMap["model"].(map[string]interface{}); ok {
-								if modelIDInInfo, ok := modelInfoInMap["id"].(string); ok {
-									nodeUIDModelMap[nodeUIDInData] = modelIDInInfo
-								}
-							}
+							//if modelInfoInMap, ok := tagMap["model"].(map[string]interface{}); ok {
+							//	if modelIDInInfo, ok := modelInfoInMap["id"].(string); ok {
+							//		nodeUIDModelMap[nodeUIDInData] = modelIDInInfo
+							//	}
+							//}
 						}
 					}
 					if modelID == nodeUIDModelMap[nodeUIDInData] {
@@ -331,6 +338,7 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 					nodeUIDFieldsMap := map[string][]string{}
 					nodeUIDModelMap := map[string]string{}
 					nodeUIDNodeMap := map[string]string{}
+					nodeCustomFieldsMap := map[string]map[string]interface{}{}
 					for _, tag := range tags {
 						if tagMap, ok := tag.(map[string]interface{}); ok {
 							if nodeInfoInMap, ok := tagMap["node"].(map[string]interface{}); ok {
@@ -339,8 +347,22 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 									//	fieldsList := formatx.InterfaceListToStringList(fields)
 									//	nodeUIDFieldsMap[nodeUID] = fieldsList
 									//}
-									if tagIDInMap, ok := tagMap["id"].(string); ok {
-										formatx.MergeDataMap(nodeUID, tagIDInMap, &nodeUIDFieldsMap)
+									if dataType, ok := tagMap["dataType"].(string); ok {
+										switch dataType {
+										case "custom":
+											if tagIDInMap, ok := tagMap["id"].(string); ok {
+												customVal := gjson.Get(string(dataByte), "custom."+tagIDInMap)
+												formatx.MergeDataInterfaceMap(nodeUID, tagIDInMap, customVal.Value(), &nodeCustomFieldsMap)
+											}
+										default:
+											if tagIDInMap, ok := tagMap["id"].(string); ok {
+												formatx.MergeDataMap(nodeUID, tagIDInMap, &nodeUIDFieldsMap)
+											}
+										}
+									} else {
+										if tagIDInMap, ok := tagMap["id"].(string); ok {
+											formatx.MergeDataMap(nodeUID, tagIDInMap, &nodeUIDFieldsMap)
+										}
 									}
 									if nodeIDInInfo, ok := nodeInfoInMap["id"].(string); ok {
 										nodeUIDNodeMap[nodeUID] = nodeIDInInfo
@@ -518,6 +540,14 @@ func TriggerComputedFlow(ctx context.Context, redisClient redisdb.Client, mongoC
 									dataMap[k] = v
 									//dataMap["tagInfo"] = formatx.FormatDataInfoList(fields)
 								}
+							}
+
+							if customMap, ok := nodeCustomFieldsMap[data.Uid]; ok {
+								customDataMap := map[string]interface{}{}
+								for k, v := range customMap {
+									customDataMap[k] = v
+								}
+								dataMap["custom"] = customDataMap
 							}
 
 							err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, dataMap)

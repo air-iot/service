@@ -19,6 +19,7 @@ type (
 		Uid      string                 `json:"uid"`
 		Time     int64                  `json:"time"`
 		InputMap map[string]interface{} `json:"inputMap"`
+		Custom   map[string]interface{} `json:"custom"`
 	}
 
 	DataMessageCustom struct {

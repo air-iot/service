@@ -354,7 +354,7 @@ func TriggerComputed(ctx context.Context, redisClient redisdb.Client, mongoClien
 					for _, tag := range tags {
 						if tagMap, ok := tag.(map[string]interface{}); ok {
 							if nodeInfoInMap, ok := tagMap["node"].(map[string]interface{}); ok {
-								if nodeUID, ok := nodeInfoInMap["uid"].(string); ok {
+								if nodeUID, ok := nodeInfoInMap["id"].(string); ok {
 									//if fields, ok := tagMap["fields"].([]interface{}); ok {
 									//	fieldsList := formatx.InterfaceListToStringList(fields)
 									//	nodeUIDFieldsMap[nodeUID] = fieldsList
