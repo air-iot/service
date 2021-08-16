@@ -138,7 +138,7 @@ flowloop:
 		//=================
 		switch settings.EventType {
 		case "新增记录时":
-			fmt.Println("新增记录时 projectName ;",projectName,"data:",data)
+			fmt.Println("新增记录时 projectName ;", projectName, "data:", data)
 			counter := 0
 		logicLoop:
 			for _, logic := range settings.Logic {
@@ -902,21 +902,43 @@ flowloop:
 							}
 							startVal := int64(0)
 							endVal := int64(0)
-							if compare.StartTime != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.StartTime), compare.StartTime, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop
+							if compare.StartTime.ID != "" {
+								if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop
+									}
+									startVal = eleTime.Unix()
 								}
-								startVal = eleTime.Unix()
+							} else if compare.StartTime.Value != "" {
+								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop
+									}
+									startVal = eleTime.Unix()
+								}
 							}
-							if compare.EndTime != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.EndTime), compare.EndTime, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop
+							if compare.EndTime.ID != "" {
+								if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop
+									}
+									startVal = eleTime.Unix()
 								}
-								endVal = eleTime.Unix()
+							} else if compare.EndTime.Value != "" {
+								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop
+									}
+									endVal = eleTime.Unix()
+								}
 							}
 							if logicVal < startVal || logicVal > endVal {
 								counter++
@@ -942,21 +964,43 @@ flowloop:
 							}
 							startVal := int64(0)
 							endVal := int64(0)
-							if compare.StartTime != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.StartTime), compare.StartTime, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop
+							if compare.StartTime.ID != "" {
+								if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop
+									}
+									startVal = eleTime.Unix()
 								}
-								startVal = eleTime.Unix()
+							} else if compare.StartTime.Value != "" {
+								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop
+									}
+									startVal = eleTime.Unix()
+								}
 							}
-							if compare.EndTime != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.EndTime), compare.EndTime, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop
+							if compare.EndTime.ID != "" {
+								if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop
+									}
+									startVal = eleTime.Unix()
 								}
-								endVal = eleTime.Unix()
+							} else if compare.EndTime.Value != "" {
+								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop
+									}
+									endVal = eleTime.Unix()
+								}
 							}
 							if logicVal < startVal || logicVal > endVal {
 								counter++
@@ -1254,7 +1298,7 @@ flowloop:
 				continue flowloop
 			}
 		case "更新记录时":
-			fmt.Println("更新记录时 projectName ;",projectName,"data:",data)
+			fmt.Println("更新记录时 projectName ;", projectName, "data:", data)
 			if _, ok := data[settings.UpdateField.ID]; !ok {
 				continue
 			}
@@ -1921,21 +1965,43 @@ flowloop:
 							}
 							startVal := int64(0)
 							endVal := int64(0)
-							if compare.StartTime != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.StartTime), compare.StartTime, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop1
+							if compare.StartTime.ID != "" {
+								if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop1
+									}
+									startVal = eleTime.Unix()
 								}
-								startVal = eleTime.Unix()
+							} else if compare.StartTime.Value != "" {
+								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop1
+									}
+									startVal = eleTime.Unix()
+								}
 							}
-							if compare.EndTime != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.EndTime), compare.EndTime, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop1
+							if compare.EndTime.ID != "" {
+								if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop1
+									}
+									startVal = eleTime.Unix()
 								}
-								endVal = eleTime.Unix()
+							} else if compare.EndTime.Value != "" {
+								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop1
+									}
+									endVal = eleTime.Unix()
+								}
 							}
 							if logicVal < startVal || logicVal > endVal {
 								counter++
@@ -1961,21 +2027,43 @@ flowloop:
 							}
 							startVal := int64(0)
 							endVal := int64(0)
-							if compare.StartTime != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.StartTime), compare.StartTime, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop1
+							if compare.StartTime.ID != "" {
+								if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop1
+									}
+									startVal = eleTime.Unix()
 								}
-								startVal = eleTime.Unix()
+							} else if compare.StartTime.Value != "" {
+								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop1
+									}
+									startVal = eleTime.Unix()
+								}
 							}
-							if compare.EndTime != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.EndTime), compare.EndTime, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop1
+							if compare.EndTime.ID != "" {
+								if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop1
+									}
+									startVal = eleTime.Unix()
 								}
-								endVal = eleTime.Unix()
+							} else if compare.EndTime.Value != "" {
+								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop1
+									}
+									endVal = eleTime.Unix()
+								}
 							}
 							if logicVal < startVal || logicVal > endVal {
 								counter++
@@ -2273,7 +2361,7 @@ flowloop:
 				continue flowloop
 			}
 		case "删除记录时":
-			fmt.Println("删除记录时 projectName ;",projectName,"data:",data)
+			fmt.Println("删除记录时 projectName ;", projectName, "data:", data)
 			counter := 0
 			switch settings.SelectTyp {
 			case "记录选择":
@@ -3056,21 +3144,43 @@ flowloop:
 									}
 									startVal := int64(0)
 									endVal := int64(0)
-									if compare.StartTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.StartTime), compare.StartTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
+									if compare.StartTime.ID != "" {
+										if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+											if err != nil {
+												counter++
+												continue logicLoop2
+											}
+											startVal = eleTime.Unix()
 										}
-										startVal = eleTime.Unix()
+									} else if compare.StartTime.Value != "" {
+										if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+											if err != nil {
+												counter++
+												continue logicLoop2
+											}
+											startVal = eleTime.Unix()
+										}
 									}
-									if compare.EndTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.EndTime), compare.EndTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
+									if compare.EndTime.ID != "" {
+										if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+											if err != nil {
+												counter++
+												continue logicLoop2
+											}
+											startVal = eleTime.Unix()
 										}
-										endVal = eleTime.Unix()
+									} else if compare.EndTime.Value != "" {
+										if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+											if err != nil {
+												counter++
+												continue logicLoop2
+											}
+											endVal = eleTime.Unix()
+										}
 									}
 									if logicVal < startVal || logicVal > endVal {
 										counter++
@@ -3096,21 +3206,43 @@ flowloop:
 									}
 									startVal := int64(0)
 									endVal := int64(0)
-									if compare.StartTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.StartTime), compare.StartTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
+									if compare.StartTime.ID != "" {
+										if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+											if err != nil {
+												counter++
+												continue logicLoop2
+											}
+											startVal = eleTime.Unix()
 										}
-										startVal = eleTime.Unix()
+									} else if compare.StartTime.Value != "" {
+										if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+											if err != nil {
+												counter++
+												continue logicLoop2
+											}
+											startVal = eleTime.Unix()
+										}
 									}
-									if compare.EndTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.EndTime), compare.EndTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
+									if compare.EndTime.ID != "" {
+										if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+											if err != nil {
+												counter++
+												continue logicLoop2
+											}
+											startVal = eleTime.Unix()
 										}
-										endVal = eleTime.Unix()
+									} else if compare.EndTime.Value != "" {
+										if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+											if err != nil {
+												counter++
+												continue logicLoop2
+											}
+											endVal = eleTime.Unix()
+										}
 									}
 									if logicVal < startVal || logicVal > endVal {
 										counter++
@@ -4904,21 +5036,43 @@ flowloop:
 									}
 									startVal := int64(0)
 									endVal := int64(0)
-									if compare.StartTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.StartTime), compare.StartTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop4
+									if compare.StartTime.ID != "" {
+										if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+											if err != nil {
+												counter++
+												continue logicLoop4
+											}
+											startVal = eleTime.Unix()
 										}
-										startVal = eleTime.Unix()
+									} else if compare.StartTime.Value != "" {
+										if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+											if err != nil {
+												counter++
+												continue logicLoop4
+											}
+											startVal = eleTime.Unix()
+										}
 									}
-									if compare.EndTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.EndTime), compare.EndTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop4
+									if compare.EndTime.ID != "" {
+										if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+											if err != nil {
+												counter++
+												continue logicLoop4
+											}
+											startVal = eleTime.Unix()
 										}
-										endVal = eleTime.Unix()
+									} else if compare.EndTime.Value != "" {
+										if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+											if err != nil {
+												counter++
+												continue logicLoop4
+											}
+											endVal = eleTime.Unix()
+										}
 									}
 									if logicVal < startVal || logicVal > endVal {
 										counter++
@@ -4944,21 +5098,43 @@ flowloop:
 									}
 									startVal := int64(0)
 									endVal := int64(0)
-									if compare.StartTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.StartTime), compare.StartTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop4
+									if compare.StartTime.ID != "" {
+										if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+											if err != nil {
+												counter++
+												continue logicLoop4
+											}
+											startVal = eleTime.Unix()
 										}
-										startVal = eleTime.Unix()
+									} else if compare.StartTime.Value != "" {
+										if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+											if err != nil {
+												counter++
+												continue logicLoop4
+											}
+											startVal = eleTime.Unix()
+										}
 									}
-									if compare.EndTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.EndTime), compare.EndTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop4
+									if compare.EndTime.ID != "" {
+										if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+											if err != nil {
+												counter++
+												continue logicLoop4
+											}
+											startVal = eleTime.Unix()
 										}
-										endVal = eleTime.Unix()
+									} else if compare.EndTime.Value != "" {
+										if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+											if err != nil {
+												counter++
+												continue logicLoop4
+											}
+											endVal = eleTime.Unix()
+										}
 									}
 									if logicVal < startVal || logicVal > endVal {
 										counter++
@@ -4984,8 +5160,8 @@ flowloop:
 				}
 			}
 		case "新增或更新记录时":
-			fmt.Println("新增或更新记录时 projectName ;",projectName,"data:",data)
-			if settings.UpdateField.ID != ""{
+			fmt.Println("新增或更新记录时 projectName ;", projectName, "data:", data)
+			if settings.UpdateField.ID != "" {
 				if _, ok := data[settings.UpdateField.ID]; !ok {
 					continue
 				}
@@ -5653,21 +5829,43 @@ flowloop:
 							}
 							startVal := int64(0)
 							endVal := int64(0)
-							if compare.StartTime != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.StartTime), compare.StartTime, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop5
+							if compare.StartTime.ID != "" {
+								if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop5
+									}
+									startVal = eleTime.Unix()
 								}
-								startVal = eleTime.Unix()
+							} else if compare.StartTime.Value != "" {
+								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop5
+									}
+									startVal = eleTime.Unix()
+								}
 							}
-							if compare.EndTime != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.EndTime), compare.EndTime, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop5
+							if compare.EndTime.ID != "" {
+								if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop5
+									}
+									startVal = eleTime.Unix()
 								}
-								endVal = eleTime.Unix()
+							} else if compare.EndTime.Value != "" {
+								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop5
+									}
+									endVal = eleTime.Unix()
+								}
 							}
 							if logicVal < startVal || logicVal > endVal {
 								counter++
@@ -5693,21 +5891,43 @@ flowloop:
 							}
 							startVal := int64(0)
 							endVal := int64(0)
-							if compare.StartTime != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.StartTime), compare.StartTime, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop5
+							if compare.StartTime.ID != "" {
+								if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop5
+									}
+									startVal = eleTime.Unix()
 								}
-								startVal = eleTime.Unix()
+							} else if compare.StartTime.Value != "" {
+								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop5
+									}
+									startVal = eleTime.Unix()
+								}
 							}
-							if compare.EndTime != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.EndTime), compare.EndTime, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop5
+							if compare.EndTime.ID != "" {
+								if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop5
+									}
+									startVal = eleTime.Unix()
 								}
-								endVal = eleTime.Unix()
+							} else if compare.EndTime.Value != "" {
+								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop5
+									}
+									endVal = eleTime.Unix()
+								}
 							}
 							if logicVal < startVal || logicVal > endVal {
 								counter++
@@ -6026,7 +6246,7 @@ flowloop:
 				}
 				data["time"] = loginTime.UnixNano() / 1e6
 			}
-            fmt.Println("projectName ;",projectName,"data:",data)
+			fmt.Println("projectName ;", projectName, "data:", data)
 			err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, data)
 			if err != nil {
 				logger.Errorf("流程推进到下一阶段失败:%s", err.Error())

@@ -119,8 +119,8 @@ type GeneralExtCompare struct {
 	Value        interface{}        `json:"value"`
 	TimeType     string             `json:"timeType"`
 	SpecificTime string             `json:"specificTime"`
-	StartTime    string             `json:"startTime"`
-	EndTime      string             `json:"endTime"`
+	StartTime    GeneralIDNameValue `json:"startTime"`
+	EndTime      GeneralIDNameValue `json:"endTime"`
 	StartValue   GeneralIDNameValue `json:"startValue"`
 	EndValue     GeneralIDNameValue `json:"endValue"`
 }
