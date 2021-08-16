@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/air-iot/service/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+
 
 	"github.com/air-iot/service/api"
 	"github.com/air-iot/service/gin/ginx"
@@ -19,6 +21,7 @@ import (
 	"github.com/air-iot/service/init/redisdb"
 	"github.com/air-iot/service/util/formatx"
 	"github.com/air-iot/service/util/timex"
+	mongoOps "github.com/air-iot/service/init/mongodb"
 )
 
 var eventDeviceModifyLog = map[string]interface{}{"name": "模型资产事件触发"}
@@ -101,18 +104,45 @@ func TriggerDeviceModify(ctx context.Context, redisClient redisdb.Client, mongoC
 	if err != nil {
 		return fmt.Errorf("获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
 	}
+	pipeline := mongo.Pipeline{}
+	paramMatch := bson.D{bson.E{Key: "$match", Value: bson.M{"type": DeviceModify,
+		"settings.eventType":modifyTypeAfterMapping,
+		"settings.eventRange": "node",
+	}}}
+	paramLookup := bson.D{
+		bson.E{
+			Key: "$lookup",
+			Value: bson.M{
+				"from":         "eventhandler",
+				"localField":   "_id",
+				"foreignField": "event",
+				"as":           "handlers",
+			},
+		},
+	}
+	pipeline = append(pipeline, paramMatch, paramLookup)
+	err = mongoOps.FindPipeline(ctx, mongoClient.Database(projectName).Collection("event"), &eventInfoList, pipeline)
+	if err != nil {
+		return fmt.Errorf("获取所有计划事件失败:%s", err.Error())
+	}
+	//err := event.GetByType(ctx, redisClient, mongoClient, projectName, string(DeviceModify), &eventInfoList)
+	//if err != nil {
+	//	//logger.Debugf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的资产修改事件失败:%s", modelID, err.Error()))
+	//	return fmt.Errorf("获取当前模型(%s)的资产修改事件失败:%s", modelID, err.Error())
+	//}
 
 	////logger.Debugf(eventDeviceModifyLog, "开始遍历事件列表")
+	fmt.Println("eventInfoList:",len(eventInfoList))
 eventloop:
 	for _, eventInfo := range eventInfoList {
-		//logger.Debugf(eventDeviceModifyLog, "事件信息为:%+v", eventInfo)
+		fmt.Println("事件信息为:%+v", eventInfo)
 		handlers, ok := eventInfo["handlers"].(primitive.A)
 		if !ok {
-			//logger.Warnln(eventDeviceModifyLog, "handlers字段不存在或类型错误")
+			logger.Warnln(eventDeviceModifyLog, "handlers字段不存在或类型错误")
 			continue
 		}
 		if len(handlers) == 0 {
-			//logger.Warnln(eventDeviceModifyLog, "handlers字段数组长度为0")
+			logger.Warnln(eventDeviceModifyLog, "handlers字段数组长度为0")
 			continue
 		}
 
@@ -123,7 +153,7 @@ eventloop:
 				//判断是否已经失效
 				if invalid, ok := settings["invalid"].(bool); ok {
 					if invalid {
-						//logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
+						logger.Warnln(eventLog, "事件(%s)已经失效", eventID)
 						continue
 					}
 				}
@@ -131,7 +161,7 @@ eventloop:
 				//判断禁用
 				if disable, ok := settings["disable"].(bool); ok {
 					if disable {
-						//logger.Warnln(eventDeviceModifyLog, "事件(%s)已经被禁用", eventID)
+						logger.Warnln(eventDeviceModifyLog, "事件(%s)已经被禁用", eventID)
 						continue
 					}
 				}
@@ -194,11 +224,12 @@ eventloop:
 				}
 				//departmentConditionList := make([]string, 0)
 				//modelConditionList := make([]string, 0)
-
+				fmt.Println("begin")
 				isValid := false
 				if rangType, ok := settings["eventRange"].(string); ok {
 					switch rangType {
 					case "node":
+						fmt.Println("node")
 						departmentListInSettings := make([]string, 0)
 						modelListInSettings := make([]string, 0)
 						//判断该事件是否指定了特定资产
@@ -335,6 +366,7 @@ eventloop:
 					}
 				}
 				if isValid {
+					fmt.Println("isValid")
 					nodeInfo := bson.M{}
 					if initNode, ok := data["initNode"].(map[string]interface{}); ok {
 						nodeInfo = initNode
@@ -393,6 +425,7 @@ eventloop:
 					if err != nil {
 						//logger.Warnf(eventDeviceModifyLog, "发送事件(%s)错误:%s", eventID, err.Error())
 					} else {
+						fmt.Println("发送事件成功:%s,数据为:%+v", eventID, sendMap)
 						//logger.Debugf(eventDeviceModifyLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
 					}
 

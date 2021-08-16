@@ -4,27 +4,26 @@ import (
 	"context"
 	"fmt"
 	"github.com/camunda-cloud/zeebe/clients/go/pkg/zbc"
-	"github.com/clbanning/mxj"
 )
 
-func StartFlow(zbClient zbc.Client, flowXml,project string, data interface{}) error {
+func StartFlow(zbClient zbc.Client, flowXml, project string, data interface{}) error {
 	if flowXml == "" {
-		return fmt.Errorf("流程XML字符串为空")
+		return fmt.Errorf("流程配置为空")
 	}
-	mv, err := mxj.NewMapJson([]byte(flowXml))
-	if err != nil {
-		return fmt.Errorf("流程XML字符串转map失败:%s", err.Error())
-	}
-
-	xmlValue, err := mv.Xml()
-	if err != nil {
-		return fmt.Errorf("流程XML字符串转XML失败:%s", err.Error())
-	}
-	xmlValueFormat := `<?xml version="1.0" encoding="UTF-8"?>` + string(xmlValue)
+	//mv, err := mxj.NewMapJson([]byte(flowXml))
+	//if err != nil {
+	//	return fmt.Errorf("流程XML字符串转map失败:%s", err.Error())
+	//}
+	//
+	//xmlValue, err := mv.Xml()
+	//if err != nil {
+	//	return fmt.Errorf("流程XML字符串转XML失败:%s", err.Error())
+	//}
+	//xmlValueFormat := `<?xml version="1.0" encoding="UTF-8"?>` + string(xmlValue)
 
 	// deploy workflow
 	ctx := context.Background()
-	response, err := zbClient.NewDeployProcessCommand().AddResource([]byte(xmlValueFormat), "myProcess.bpmn").Send(ctx)
+	response, err := zbClient.NewDeployProcessCommand().AddResource([]byte(flowXml), project).Send(ctx)
 	//response, err := zbClient.NewDeployWorkflowCommand().AddResourceFile("test.bpmn").Send(ctx)
 	if err != nil {
 		return fmt.Errorf("流程部署失败:%s", err.Error())
