@@ -73,13 +73,13 @@ func FindExtra(ctx context.Context, apiClient api.Client, param string, variable
 // TemplateVariableMappingFlow 流程模板变量映射
 func TemplateVariableMappingFlow(ctx context.Context, apiClient api.Client, templateModelString string, mapping string) (string, error) {
 	//识别变量,两边带${}
-	testRegExp, _ := regexp.Compile("\\${(.*?)}")
 	//匹配出变量数组
-	templateMatchString := testRegExp.FindAllString(templateModelString, -1)
+	templateMatchString := Reg.FindAllString(templateModelString, -1)
 	for _, v := range templateMatchString {
 		//去除花括号,${和}
-		replaceBrace, _ := regexp.Compile("(\\${|})")
-		formatVariable := replaceBrace.ReplaceAllString(v, "")
+		//replaceBrace, _ := regexp.Compile("(\\${|})")
+		//formatVariable := replaceBrace.ReplaceAllString(v, "")
+		formatVariable := TrimSymbol(v)
 		//映射为具体值
 		mappingDataResult := gjson.Get(mapping, formatVariable)
 		var mappingData interface{}
