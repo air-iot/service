@@ -106,3 +106,21 @@ type GeneralIDName struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
+
+type GeneralIDNameValue struct {
+	ID    string      `json:"id"`
+	Name  string      `json:"name"`
+	Value interface{} `json:"value"`
+}
+
+type GeneralExtCompare struct {
+	ID           string             `json:"id"`
+	Name         string             `json:"name"`
+	Value        interface{}        `json:"value"`
+	TimeType     string             `json:"timeType"`
+	SpecificTime string             `json:"specificTime"`
+	StartTime    GeneralIDNameValue `json:"startTime"`
+	EndTime      GeneralIDNameValue `json:"endTime"`
+	StartValue   GeneralIDNameValue `json:"startValue"`
+	EndValue     GeneralIDNameValue `json:"endValue"`
+}

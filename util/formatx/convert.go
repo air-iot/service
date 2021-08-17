@@ -59,6 +59,21 @@ func MergeDataMap(key, value string, dataMap *map[string][]string) {
 	}
 }
 
+// MergeDataMap 融合映射Map
+func MergeDataInterfaceMap(key, innerKey string,value interface{}, dataMap *map[string]map[string]interface{}) {
+	if key == "" {
+		return
+	}
+	if dataVal, ok := (*dataMap)[key]; ok {
+		dataVal[innerKey] = value
+	} else {
+		dataVal := map[string]interface{}{}
+		dataVal[innerKey] = value
+		(*dataMap)[key] = dataVal
+	}
+}
+
+
 func UnmarshalListAndMap(data []byte, eventType string) (*[]map[string]interface{}, error) {
 	dataMapList := make([]map[string]interface{}, 0)
 	switch eventType {
