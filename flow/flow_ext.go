@@ -32,9 +32,9 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 	//defer cancel()
 	headerMap := map[string]string{ginx.XRequestProject: projectName}
 
-	modifyType, ok := data["type"].(string)
+	modifyType, ok := data["extFlowType"].(string)
 	if !ok {
-		return fmt.Errorf("数据消息中command对象中name字段不存在或类型错误")
+		return nil
 	}
 
 	modifyTypeMapping := map[string]string{
