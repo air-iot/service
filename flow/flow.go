@@ -8,7 +8,6 @@ import (
 
 	"github.com/air-iot/service/api"
 	"github.com/air-iot/service/gin/ginx"
-	"github.com/air-iot/service/util/formatx"
 	"github.com/air-iot/service/util/json"
 	"github.com/tidwall/gjson"
 )
@@ -82,19 +81,20 @@ func TemplateVariableMappingFlow(ctx context.Context, apiClient api.Client, temp
 
 		//映射为具体值
 		mappingDataResult := gjson.Get(mapping, formatVariable)
-		var mappingData interface{}
+		var mappingData string
 		if !mappingDataResult.Exists() {
 			//未匹配到变量，需要查询数据库
 			jsonResult, err := FindExtra(ctx, apiClient, formatVariable, []byte(mapping))
 			if err != nil {
 				return "", err
 			}
-			mappingData = jsonResult.Value()
+			mappingData = jsonResult.String()
 		} else {
-			mappingData = mappingDataResult.Value()
+			mappingData = mappingDataResult.String()
 		}
 		//变量为替换为具体值
-		templateModelString = strings.ReplaceAll(templateModelString, v, formatx.InterfaceTypeToString(mappingData))
+		templateModelString = strings.ReplaceAll(templateModelString, v, mappingData)
+		//templateModelString = strings.ReplaceAll(templateModelString, v, formatx.InterfaceTypeToString(mappingData))
 	}
 	return templateModelString, nil
 }
