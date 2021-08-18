@@ -1218,6 +1218,10 @@ func FindFilterOld(ctx context.Context, col *mongo.Collection, result *[]bson.M,
 	if sort, ok := query["sort"]; ok {
 		if s, ok := sort.(bson.M); ok {
 			if len(s) > 0 {
+				if sID,ok := s["id"];ok{
+					s["_id"] = sID
+					delete(s,"id")
+				}
 				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
 			}
 		}
@@ -1659,6 +1663,10 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 	if sort, ok := query["sort"]; ok {
 		if s, ok := sort.(bson.M); ok {
 			if len(s) > 0 {
+				if sID,ok := s["id"];ok{
+					s["_id"] = sID
+					delete(s,"id")
+				}
 				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
 			}
 		}
