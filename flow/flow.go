@@ -77,9 +77,9 @@ func TemplateVariableMappingFlow(ctx context.Context, apiClient api.Client, temp
 	templateMatchString := Reg.FindAllString(templateModelString, -1)
 	for _, v := range templateMatchString {
 		//去除花括号,${和}
-		//replaceBrace, _ := regexp.Compile("(\\${|})")
-		//formatVariable := replaceBrace.ReplaceAllString(v, "")
-		formatVariable := TrimSymbol(v)
+		replaceBrace, _ := regexp.Compile("(\\${|})")
+		formatVariable := replaceBrace.ReplaceAllString(v, "")
+
 		//映射为具体值
 		mappingDataResult := gjson.Get(mapping, formatVariable)
 		var mappingData interface{}
