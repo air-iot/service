@@ -1166,3 +1166,19 @@ func (p *client) ReplaceFlowById(headers map[string]string, id string, data, res
 	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("flow/flow/%s", id)}
 	return p.Put(u, headers, data, result)
 }
+
+func (p *client) FindSystemVariableQuery(headers map[string]string, query, result interface{}) error {
+	b, err := json.Marshal(query)
+	if err != nil {
+		return err
+	}
+	host := p.cfg.Host
+	if host == "" {
+		host = "core:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "core/systemVariable"}
+	v := url.Values{}
+	v.Set("query", string(b))
+	u.RawQuery = v.Encode()
+	return p.Get(u, headers, result)
+}

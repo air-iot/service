@@ -119,4 +119,6 @@ type Client interface {
 	DelFlowById(headers map[string]string, id string, result interface{}) error
 	UpdateFlowById(headers map[string]string, id string, data, result interface{}) error
 	ReplaceFlowById(headers map[string]string, id string, data, result interface{}) error
+
+	FindSystemVariableQuery(headers map[string]string, query, result interface{}) error
 }
