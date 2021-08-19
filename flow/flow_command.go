@@ -197,15 +197,15 @@ func TriggerExecCmdFlow(ctx context.Context, redisClient redisdb.Client, mongoCl
 							for _, id := range departmentStringIDList {
 								deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
 							}
-							sendMap := bson.M{nodeID: bson.M{
+							sendMap := bson.M{nodeID: bson.M	{
 								"time":         timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
 								"$#model":      bson.M{"id": modelID, "_tableName": "model"},
 								"$#department": deptMap,
 								"$#node":       bson.M{"id": nodeID, "_tableName": "node"},
-								"commandName":  commandName,
-								"departmentName": departmentStringIDList,
-								"modelName":      formatx.FormatKeyInfo(modelInfo, "name"),
-								"nodeName":       formatx.FormatKeyInfo(nodeInfo, "name"),
+								"cmdName":  commandName,
+								//"departmentName": departmentStringIDList,
+								//"modelName":      formatx.FormatKeyInfo(modelInfo, "name"),
+								//"nodeName":       formatx.FormatKeyInfo(nodeInfo, "name"),
 							}}
 
 							err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)

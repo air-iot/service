@@ -32,7 +32,7 @@ const (
 	Log          EventType = "日志事件"
 	ExecCmd      EventType = "执行指令"
 	DeviceModify EventType = "资产修改"
-	ExtModify EventType = "工作表记录修改"
+	ExtModify EventType = "工作表事件"
 
 	//HandlerEmail     EventHandlerType = "email"
 	//HandlerWechat    EventHandlerType = "wechat"
