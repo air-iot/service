@@ -70,7 +70,8 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 	}
 	err := apiClient.FindFlowQuery(headerMap, query, &flowInfoList)
 	if err != nil {
-		return fmt.Errorf("获取工作表流程失败:%s", err.Error())
+		logger.Warnf("获取工作表流程失败:%s", err.Error())
+		return nil
 	}
 
 	//fmt.Println("flowInfoList:", len(flowInfoList))
