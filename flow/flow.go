@@ -130,3 +130,37 @@ func TemplateVariableMappingFlow(ctx context.Context, apiClient api.Client, temp
 	}
 	return templateModelString, nil
 }
+
+// TemplateVariableFlow 流程模板变量映射
+func TemplateVariableFlow(ctx context.Context, apiClient api.Client, templateModelString string, variables map[string]interface{}) (string, error) {
+	variablesBytes, err := json.Marshal(variables)
+	if err != nil {
+		return "", err
+	}
+	//识别变量,两边带${}
+	//匹配出变量数组
+	templateMatchString := Reg.FindAllString(templateModelString, -1)
+	for _, v := range templateMatchString {
+		//去除花括号,${和}
+		replaceBrace, _ := regexp.Compile("(\\${|})")
+		formatVariable := replaceBrace.ReplaceAllString(v, "")
+
+		//映射为具体值
+		mappingDataResult := gjson.GetBytes(variablesBytes, formatVariable)
+		var mappingData string
+		if !mappingDataResult.Exists() {
+			//未匹配到变量，需要查询数据库
+			jsonResult, err := FindExtra(ctx, apiClient, formatVariable, variablesBytes)
+			if err != nil {
+				return "", err
+			}
+			mappingData = jsonResult.String()
+		} else {
+			mappingData = mappingDataResult.String()
+		}
+		//变量为替换为具体值
+		templateModelString = strings.ReplaceAll(templateModelString, v, mappingData)
+		//templateModelString = strings.ReplaceAll(templateModelString, v, formatx.InterfaceTypeToString(mappingData))
+	}
+	return templateModelString, nil
+}
