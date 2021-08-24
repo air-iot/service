@@ -35,7 +35,7 @@ func GetBytes(key interface{}) ([]byte, error) {
 		return v, nil
 	case string:
 		return []byte(v), nil
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool:
 		return []byte(fmt.Sprintf("%v", key)), nil
 	default:
 		return json.Marshal(key)
