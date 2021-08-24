@@ -132,35 +132,57 @@ func TemplateVariableMappingFlow(ctx context.Context, apiClient api.Client, temp
 }
 
 // TemplateVariableFlow 流程模板变量映射
-func TemplateVariableFlow(ctx context.Context, apiClient api.Client, templateModelString string, variables map[string]interface{}) (string, error) {
+func TemplateVariableFlow(ctx context.Context, apiClient api.Client, templateModelString string, variables map[string]interface{}) (interface{}, error) {
 	variablesBytes, err := json.Marshal(variables)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	//识别变量,两边带${}
 	//匹配出变量数组
-	templateMatchString := Reg.FindAllString(templateModelString, -1)
-	for _, v := range templateMatchString {
-		//去除花括号,${和}
-		replaceBrace, _ := regexp.Compile("(\\${|})")
-		formatVariable := replaceBrace.ReplaceAllString(v, "")
+	params := Reg.FindAllString(templateModelString, -1)
 
-		//映射为具体值
-		mappingDataResult := gjson.GetBytes(variablesBytes, formatVariable)
-		var mappingData string
-		if !mappingDataResult.Exists() {
-			//未匹配到变量，需要查询数据库
-			jsonResult, err := FindExtra(ctx, apiClient, formatVariable, variablesBytes)
-			if err != nil {
-				return "", err
+	if len(params) == 1 {
+		paramTmp := TrimSymbol(params[0])
+		result := gjson.GetBytes(variablesBytes, paramTmp)
+		if !result.Exists() {
+			if strings.Contains(paramTmp, ExtraSymbol) {
+				val, err := FindExtra(ctx, apiClient, paramTmp, variablesBytes)
+				if err != nil {
+					return nil, fmt.Errorf("查询数据库数据错误: %s", err.Error())
+				}
+				result = *val
+			} else {
+				return nil, fmt.Errorf("执行运算的变量不存在")
 			}
-			mappingData = jsonResult.String()
-		} else {
-			mappingData = mappingDataResult.String()
 		}
-		//变量为替换为具体值
-		templateModelString = strings.ReplaceAll(templateModelString, v, mappingData)
-		//templateModelString = strings.ReplaceAll(templateModelString, v, formatx.InterfaceTypeToString(mappingData))
+		if templateModelString == params[0] {
+			return result.Value(), nil
+		} else {
+			return strings.ReplaceAll(templateModelString, params[0], result.String()), nil
+		}
+	} else if len(params) > 1 {
+		for _, v := range params {
+			//去除花括号,${和}
+			replaceBrace, _ := regexp.Compile("(\\${|})")
+			formatVariable := replaceBrace.ReplaceAllString(v, "")
+
+			//映射为具体值
+			mappingDataResult := gjson.GetBytes(variablesBytes, formatVariable)
+			var mappingData string
+			if !mappingDataResult.Exists() {
+				//未匹配到变量，需要查询数据库
+				jsonResult, err := FindExtra(ctx, apiClient, formatVariable, variablesBytes)
+				if err != nil {
+					return nil, err
+				}
+				mappingData = jsonResult.String()
+			} else {
+				mappingData = mappingDataResult.String()
+			}
+			//变量为替换为具体值
+			templateModelString = strings.ReplaceAll(templateModelString, v, mappingData)
+			//templateModelString = strings.ReplaceAll(templateModelString, v, formatx.InterfaceTypeToString(mappingData))
+		}
 	}
 	return templateModelString, nil
 }
