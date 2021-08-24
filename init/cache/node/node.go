@@ -40,7 +40,7 @@ func GetByDB(ctx context.Context, cli redisdb.Client, mongoClient *mongo.Client,
 		if err != nil {
 			return nil, err
 		}
-		err = Set(ctx, cli, project,tableName, id, modelTmp)
+		err = Set(ctx, cli, project, tableName, id, modelTmp)
 		if err != nil {
 			return nil, fmt.Errorf("更新缓存数据错误, %v", err)
 		}
@@ -161,7 +161,7 @@ func getByDBAndModel(ctx context.Context, redisClient redisdb.Client, mongoClien
 			}
 		}
 	} else {
-		nodeMaps, err := redisClient.HGetAll(ctx, fmt.Sprintf("%s/%s", project, modelID)).Result()
+		nodeMaps, err := redisClient.HGetAll(ctx, fmt.Sprintf("%s/%s/model", project, modelID)).Result()
 		if err != nil {
 			return nil, fmt.Errorf("查询缓存数据错误, %v", err)
 		}
