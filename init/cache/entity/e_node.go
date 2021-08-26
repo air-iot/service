@@ -151,6 +151,7 @@ type TagMongo struct {
 	Interval      interface{} `json:"interval" bson:"interval"`
 	StartTime     primitive.M `json:"startTime" bson:"startTime"`
 	StatsVal      interface{} `json:"statsVal" bson:"statsVal"`
+	EndTime       primitive.M `json:"endTime" bson:"endTime"`
 }
 
 type NodeIDUidForRedis struct {

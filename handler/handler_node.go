@@ -84,26 +84,6 @@ func TriggerDeviceModify(ctx context.Context, redisClient redisdb.Client, mongoC
 	eventInfoList := make([]bson.M, 0)
 	//err = restfulapi.FindPipeline(ctx, idb.Database.Collection("event"), &eventInfoList, pipeline, nil)
 
-	query := map[string]interface{}{
-		"filter": map[string]interface{}{
-			"type":                DeviceModify,
-			"settings.eventType":  modifyTypeAfterMapping,
-			"settings.eventRange": "node",
-			"$lookups": []map[string]interface{}{
-				{
-					"from":         "eventhandler",
-					"localField":   "_id",
-					"foreignField": "event",
-					"as":           "handlers",
-				},
-			},
-		},
-	}
-	err := apiClient.FindEventQuery(headerMap, query, &eventInfoList)
-
-	if err != nil {
-		return fmt.Errorf("获取当前资产修改内容类型(%s)的资产修改逻辑事件失败:%s", modelID, err.Error())
-	}
 	pipeline := mongo.Pipeline{}
 	paramMatch := bson.D{bson.E{Key: "$match", Value: bson.M{"type": DeviceModify,
 		"settings.eventType":modifyTypeAfterMapping,
@@ -121,7 +101,7 @@ func TriggerDeviceModify(ctx context.Context, redisClient redisdb.Client, mongoC
 		},
 	}
 	pipeline = append(pipeline, paramMatch, paramLookup)
-	err = mongoOps.FindPipeline(ctx, mongoClient.Database(projectName).Collection("event"), &eventInfoList, pipeline)
+	err := mongoOps.FindPipeline(ctx, mongoClient.Database(projectName).Collection("event"), &eventInfoList, pipeline)
 	if err != nil {
 		return fmt.Errorf("获取所有计划事件失败:%s", err.Error())
 	}
@@ -373,6 +353,7 @@ eventloop:
 					} else {
 						err = node.Get(ctx, redisClient, mongoClient, projectName, nodeID, &nodeInfo)
 						if err != nil {
+							fmt.Println("事件的资产缓存查询失败", eventID, nodeID)
 							//logger.Errorf(eventDeviceModifyLog, "事件(%s)的资产缓存(%+v)查询失败", eventID, nodeID)
 							nodeInfo = bson.M{}
 							continue
@@ -392,6 +373,7 @@ eventloop:
 					modelEle := bson.M{}
 					err = model.Get(ctx, redisClient, mongoClient, projectName, modelID, &modelEle)
 					if err != nil {
+						fmt.Println("事件的模型缓存查询失败", eventID, modelID)
 						//logger.Errorf(eventDeviceModifyLog, "事件(%s)的模型缓存(%+v)查询失败", eventID, departmentStringIDList)
 						continue
 					}
@@ -410,6 +392,7 @@ eventloop:
 					case "编辑资产画面", "删除资产画面":
 						dashboardInfo, ok := data["dashboard"].(map[string]interface{})
 						if !ok {
+							fmt.Println("数据消息中dashboard字段不存在或类型错误", eventID, modelID)
 							//logger.Errorf(eventDeviceModifyLog, "数据消息中dashboard字段不存在或类型错误")
 							continue
 						}
@@ -423,9 +406,10 @@ eventloop:
 					}
 					err = mq.Publish(ctx, []string{"event", projectName, eventID}, b)
 					if err != nil {
+						fmt.Println("发送事件失败,数据为:", eventID, err.Error())
 						//logger.Warnf(eventDeviceModifyLog, "发送事件(%s)错误:%s", eventID, err.Error())
 					} else {
-						fmt.Println("发送事件成功:%s,数据为:%+v", eventID, sendMap)
+						fmt.Println("发送事件成功,数据为:",eventID, sendMap)
 						//logger.Debugf(eventDeviceModifyLog, "发送事件成功:%s,数据为:%+v", eventID, sendMap)
 					}
 

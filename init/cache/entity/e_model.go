@@ -84,6 +84,7 @@ type Tag struct {
 	Interval      interface{}            `json:"interval"`
 	StartTime     map[string]interface{} `json:"startTime"`
 	StatsVal      interface{}            `json:"statsVal"`
+	EndTime       map[string]interface{} `json:"endTime"`
 }
 
 type TagRules struct {
