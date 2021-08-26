@@ -1,6 +1,8 @@
 package formatx
 
 import (
+	"fmt"
+	"github.com/air-iot/service/util/json"
 	"regexp"
 	"strings"
 )
@@ -25,4 +27,17 @@ func TemplateVariableMapping(templateModelString string, mapping map[string]inte
 		templateModelString = strings.ReplaceAll(templateModelString, v, InterfaceTypeToString(mappingData))
 	}
 	return templateModelString
+}
+
+func GetBytes(key interface{}) ([]byte, error) {
+	switch v := key.(type) {
+	case []byte:
+		return v, nil
+	case string:
+		return []byte(v), nil
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, bool:
+		return []byte(fmt.Sprintf("%v", key)), nil
+	default:
+		return json.Marshal(key)
+	}
 }
