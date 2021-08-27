@@ -19,7 +19,6 @@ type (
 	// PipelineFunc 声明了一个Pipeline修改函数类型
 	PipelineFunc func() mongo.Pipeline
 )
-
 // QueryOption 查询条件
 type QueryOption struct {
 	Limit       *int                   `json:"limit,omitempty"`       // 查询数据长度
@@ -254,12 +253,12 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 					}
 				}
 				if list, ok := recursionVal.([]interface{}); ok {
-					if len(list) == 0 && strings.HasPrefix(k,"$") {
+					if len(list) == 0 && strings.HasPrefix(k, "$") {
 						delete(val, k)
 						continue
 					}
 				} else if list, ok := recursionVal.([]string); ok {
-					if len(list) == 0 && strings.HasPrefix(k,"$") {
+					if len(list) == 0 && strings.HasPrefix(k, "$") {
 						delete(val, k)
 						continue
 					}
@@ -299,12 +298,12 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 					}
 				}
 				if list, ok := recursionVal.([]interface{}); ok {
-					if len(list) == 0 && strings.HasPrefix(k,"$") {
+					if len(list) == 0 && strings.HasPrefix(k, "$") {
 						delete(*val, k)
 						continue
 					}
 				} else if list, ok := recursionVal.([]string); ok {
-					if len(list) == 0 && strings.HasPrefix(k,"$") {
+					if len(list) == 0 && strings.HasPrefix(k, "$") {
 						delete(*val, k)
 						continue
 					}
@@ -344,12 +343,12 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 					}
 				}
 				if list, ok := recursionVal.([]interface{}); ok {
-					if len(list) == 0 && strings.HasPrefix(k,"$") {
+					if len(list) == 0 && strings.HasPrefix(k, "$") {
 						delete(val, k)
 						continue
 					}
 				} else if list, ok := recursionVal.([]string); ok {
-					if len(list) == 0 && strings.HasPrefix(k,"$") {
+					if len(list) == 0 && strings.HasPrefix(k, "$") {
 						delete(val, k)
 						continue
 					}
@@ -389,12 +388,12 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 					}
 				}
 				if list, ok := recursionVal.([]interface{}); ok {
-					if len(list) == 0 && strings.HasPrefix(k,"$") {
+					if len(list) == 0 && strings.HasPrefix(k, "$") {
 						delete(*val, k)
 						continue
 					}
 				} else if list, ok := recursionVal.([]string); ok {
-					if len(list) == 0 && strings.HasPrefix(k,"$") {
+					if len(list) == 0 && strings.HasPrefix(k, "$") {
 						delete(*val, k)
 						continue
 					}
@@ -512,7 +511,6 @@ func RemoveEmptyOrNilArray(data interface{}) interface{} {
 	}
 }
 
-
 // QueryOptionToPipeline 转换查询到pipeline
 func QueryOptionToPipeline(query QueryOption) (pipeLine *mongo.Pipeline, countPipeLine *mongo.Pipeline, err error) {
 	if query.Pipeline != nil {
@@ -615,11 +613,11 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine *mongo.Pipeline, countPi
 								k = k + "._id"
 							}
 							v = RemoveEmptyOrNilArray(v)
-							if removeList, ok := v.([]interface{}); ok {
-								if len(removeList) == 0 {
-									continue
-								}
-							}
+							//if removeList, ok := v.([]interface{}); ok {
+						//	if len(removeList) == 0 {
+						//		continue
+						//	}
+						//}
 							if k == "$unwinds" {
 								switch vals := v.(type) {
 								case primitive.A:
@@ -671,11 +669,11 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine *mongo.Pipeline, countPi
 								k = k + "._id"
 							}
 							v = RemoveEmptyOrNilArray(v)
-							if removeList, ok := v.([]interface{}); ok {
-								if len(removeList) == 0 {
-									continue
-								}
-							}
+							//if removeList, ok := v.([]interface{}); ok {
+						//	if len(removeList) == 0 {
+						//		continue
+						//	}
+						//}
 
 							if k == "$unwinds" {
 								switch vals := v.(type) {
@@ -726,11 +724,11 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine *mongo.Pipeline, countPi
 						k = k + "._id"
 					}
 					v = RemoveEmptyOrNilArray(v)
-					if removeList, ok := v.([]interface{}); ok {
-						if len(removeList) == 0 {
-							continue
-						}
-					}
+					//if removeList, ok := v.([]interface{}); ok {
+						//	if len(removeList) == 0 {
+						//		continue
+						//	}
+						//}
 					if k == "$unwinds" {
 						switch vals := v.(type) {
 						case primitive.A:
@@ -1083,11 +1081,11 @@ func FindFilterOld(ctx context.Context, col *mongo.Collection, result *[]bson.M,
 						}
 					}
 					v = RemoveEmptyOrNilArray(v)
-					if removeList, ok := v.([]interface{}); ok {
-						if len(removeList) == 0 {
-							continue
-						}
-					}
+					//if removeList, ok := v.([]interface{}); ok {
+						//	if len(removeList) == 0 {
+						//		continue
+						//	}
+						//}
 					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 				}
 			}
@@ -1218,9 +1216,9 @@ func FindFilterOld(ctx context.Context, col *mongo.Collection, result *[]bson.M,
 	if sort, ok := query["sort"]; ok {
 		if s, ok := sort.(bson.M); ok {
 			if len(s) > 0 {
-				if sID,ok := s["id"];ok{
+				if sID, ok := s["id"]; ok {
 					s["_id"] = sID
-					delete(s,"id")
+					delete(s, "id")
 				}
 				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
 			}
@@ -1388,11 +1386,11 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 										k = k + "._id"
 									}
 									v = RemoveEmptyOrNilArray(v)
-									if removeList, ok := v.([]interface{}); ok {
-										if len(removeList) == 0 {
-											continue
-										}
-									}
+									//if removeList, ok := v.([]interface{}); ok {
+						//	if len(removeList) == 0 {
+						//		continue
+						//	}
+						//}
 									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 								}
 							}
@@ -1434,11 +1432,11 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 										k = k + "._id"
 									}
 									v = RemoveEmptyOrNilArray(v)
-									if removeList, ok := v.([]interface{}); ok {
-										if len(removeList) == 0 {
-											continue
-										}
-									}
+									//if removeList, ok := v.([]interface{}); ok {
+						//	if len(removeList) == 0 {
+						//		continue
+						//	}
+						//}
 									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 								}
 							}
@@ -1478,11 +1476,11 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 									k = k + "._id"
 								}
 								v = RemoveEmptyOrNilArray(v)
-								if removeList, ok := v.([]interface{}); ok {
-									if len(removeList) == 0 {
-										continue
-									}
-								}
+								//if removeList, ok := v.([]interface{}); ok {
+						//	if len(removeList) == 0 {
+						//		continue
+						//	}
+						//}
 								pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 							}
 						}
@@ -1519,11 +1517,11 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 								k = k + "._id"
 							}
 							v = RemoveEmptyOrNilArray(v)
-							if removeList, ok := v.([]interface{}); ok {
-								if len(removeList) == 0 {
-									continue
-								}
-							}
+							//if removeList, ok := v.([]interface{}); ok {
+						//	if len(removeList) == 0 {
+						//		continue
+						//	}
+						//}
 							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 						}
 					}
@@ -1560,11 +1558,11 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 							k = k + "._id"
 						}
 						v = RemoveEmptyOrNilArray(v)
-						if removeList, ok := v.([]interface{}); ok {
-							if len(removeList) == 0 {
-								continue
-							}
-						}
+						//if removeList, ok := v.([]interface{}); ok {
+						//	if len(removeList) == 0 {
+						//		continue
+						//	}
+						//}
 						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 					}
 				}
@@ -1663,9 +1661,9 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 	if sort, ok := query["sort"]; ok {
 		if s, ok := sort.(bson.M); ok {
 			if len(s) > 0 {
-				if sID,ok := s["id"];ok{
+				if sID, ok := s["id"]; ok {
 					s["_id"] = sID
-					delete(s,"id")
+					delete(s, "id")
 				}
 				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
 			}
