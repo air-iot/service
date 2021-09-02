@@ -866,7 +866,7 @@ flowloop:
 									counter++
 									continue logicLoop
 								}
-							}else if compare.ID != "" {
+							} else if compare.ID != "" {
 								compareValue := int64(0)
 								eleRaw, ok := data[compare.ID].(string)
 								if !ok {
@@ -1444,8 +1444,10 @@ flowloop:
 			}
 		case "更新记录时":
 			//fmt.Println("更新记录时 projectName ;", projectName, "data:", data)
-			if _, ok := data[settings.UpdateField.ID]; !ok {
-				continue
+			for _,update := range settings.UpdateField{
+				if _, ok := data[update.ID]; !ok {
+					continue flowloop
+				}
 			}
 			counter := 0
 		logicLoop1:
@@ -2160,7 +2162,7 @@ flowloop:
 									counter++
 									continue logicLoop1
 								}
-							}else if compare.ID != "" {
+							} else if compare.ID != "" {
 								compareValue := int64(0)
 								eleRaw, ok := data[compare.ID].(string)
 								if !ok {
@@ -3464,7 +3466,7 @@ flowloop:
 											counter++
 											continue logicLoop2
 										}
-									}else if compare.ID != "" {
+									} else if compare.ID != "" {
 										compareValue := int64(0)
 										eleRaw, ok := data[compare.ID].(string)
 										if !ok {
@@ -4687,9 +4689,9 @@ flowloop:
 			}
 		case "新增或更新记录时":
 			//fmt.Println("新增或更新记录时 projectName ;", projectName, "data:", data)
-			if settings.UpdateField.ID != "" {
-				if _, ok := data[settings.UpdateField.ID]; !ok {
-					continue
+			for _,update := range settings.UpdateField{
+				if _, ok := data[update.ID]; !ok {
+					continue flowloop
 				}
 			}
 			counter := 0
@@ -5405,7 +5407,7 @@ flowloop:
 									counter++
 									continue logicLoop5
 								}
-							}else if compare.ID != "" {
+							} else if compare.ID != "" {
 								compareValue := int64(0)
 								eleRaw, ok := data[compare.ID].(string)
 								if !ok {
@@ -5984,15 +5986,24 @@ flowloop:
 		//=================
 		isValid = true
 		if isValid {
-			for key, valRaw := range data {
-				if valMap, ok := valRaw.(map[string]interface{}); ok {
-					if extVal, ok := excelColNameTypeExtMap[key]; ok {
-						if id, ok := valMap["id"].(string); ok {
-							data["$#"+key] = bson.M{"id": id, "_tableName": extVal.RelateTo}
-							delete(data, key)
+			for key, dataM := range data {
+				//if valMap, ok := valRaw.(map[string]interface{}); ok {
+				if extVal, ok := excelColNameTypeExtMap[key]; ok {
+					//if id, ok := valMap["id"].(string); ok {
+					//data["$#"+key] = bson.M{"id": id, "_tableName": extVal.RelateTo}
+					eleRaw, ok := dataM.(map[string]interface{})
+					if ok {
+						if eleRaw != nil {
+							if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+								if relateVal != nil {
+									data[key] = relateVal
+								}
+							}
 						}
 					}
+					//}
 				}
+				//}
 			}
 
 			if loginTimeRaw, ok := data["time"].(string); ok {

@@ -42,7 +42,7 @@ type ExtFlowSettings struct {
 	Table        Table              `json:"table"`
 	Logic        []Logic            `json:"logic"`
 	EventType    string             `json:"eventType"`
-	SelectTyp    string             `json:"selectTyp"`
+	SelectTyp    string             `json:"selectType"`
 	SelectRecord []GeneralIDName    `json:"selectRecord"`
 	RangeType    string             `json:"rangeType"`
 	Invalid      bool               `json:"invalid"`
@@ -51,7 +51,7 @@ type ExtFlowSettings struct {
 	ValidTime    string             `json:"validTime"`
 	StartTime    string             `json:"startTime"`
 	EndTime      string             `json:"endTime"`
-	UpdateField  GeneralIDNameValue `json:"updateField"`
+	UpdateField  []GeneralIDNameValue `json:"updateField"`
 }
 
 type Logic struct {
