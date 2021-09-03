@@ -847,7 +847,7 @@ func (p *client) FindWarnById(headers map[string]string, id string, archive bool
 	return p.Get(u, headers, result)
 }
 
-func (p *client) SaveWarn(headers map[string]string, data, archive bool, result interface{}) error {
+func (p *client) SaveWarn(headers map[string]string, data interface{}, archive bool, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
 		host = "warning:9000"
