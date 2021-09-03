@@ -86,7 +86,7 @@ type Client interface {
 
 	FindWarnQuery(headers map[string]string, archive bool, query, result interface{}) error
 	FindWarnById(headers map[string]string, id string, archive bool, result interface{}) error
-	SaveWarn(headers map[string]string, data, archive bool, result interface{}) error
+	SaveWarn(headers map[string]string, data interface{}, archive bool, result interface{}) error
 	DelWarnById(headers map[string]string, id string, archive bool, result interface{}) error
 	UpdateWarnById(headers map[string]string, id string, archive bool, data, result interface{}) error
 	ReplaceWarnById(headers map[string]string, id string, archive bool, data, result interface{}) error
