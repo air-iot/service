@@ -9,7 +9,11 @@ import (
 	"github.com/air-iot/service/api"
 	"github.com/air-iot/service/gin/ginx"
 	"github.com/air-iot/service/init/mongodb"
+	"github.com/air-iot/service/init/zeebe"
+	"github.com/air-iot/service/logger"
 	"github.com/air-iot/service/util/json"
+	"github.com/camunda-cloud/zeebe/clients/go/pkg/entities"
+	"github.com/camunda-cloud/zeebe/clients/go/pkg/worker"
 	"github.com/tidwall/gjson"
 )
 
@@ -139,6 +143,14 @@ func TemplateVariableFlow(ctx context.Context, apiClient api.Client, templateMod
 	}
 	//识别变量,两边带${}
 	//匹配出变量数组
+
+	return TemplateVariableFlowBytes(ctx, apiClient, templateModelString, variablesBytes)
+}
+
+// TemplateVariableFlowBytes 流程模板变量映射
+func TemplateVariableFlowBytes(ctx context.Context, apiClient api.Client, templateModelString string, variablesBytes []byte) (interface{}, error) {
+	//识别变量,两边带${}
+	//匹配出变量数组
 	params := Reg.FindAllString(templateModelString, -1)
 
 	if len(params) == 1 {
@@ -185,4 +197,139 @@ func TemplateVariableFlow(ctx context.Context, apiClient api.Client, templateMod
 		}
 	}
 	return templateModelString, nil
+}
+
+type Handler func(projectID string, data interface{}) (map[string]interface{}, error)
+
+func Flow(ctx context.Context, client worker.JobClient, job entities.Job, apiClient api.Client, handler Handler) {
+	if err := flowHandler(ctx, client, job, apiClient, handler); err != nil {
+		logger.Errorf("流程 [%s] %s", job.GetBpmnProcessId(), err.Error())
+		if err := zeebe.FailJob(ctx, client, job, err.Error()); err != nil {
+			logger.Errorf("流程 [%s] 失败请求错误: %s", job.GetBpmnProcessId(), err.Error())
+		}
+		return
+	}
+	logger.Debugf("执行任务 [%s] 成功", job.GetBpmnProcessId())
+}
+
+func flowHandler(ctx context.Context, client worker.JobClient, job entities.Job, apiClient api.Client, handler Handler) error {
+	jobKey := job.GetKey()
+	headers, err := job.GetCustomHeadersAsMap()
+	if err != nil {
+		return fmt.Errorf("获取header错误: %s", err.Error())
+	}
+	conf, ok := headers["config"]
+	if !ok {
+		return fmt.Errorf("未找到配置字段")
+	}
+	logger.Debugf("流程 [%s] 头数据: %+v", job.GetBpmnProcessId(), headers)
+	variables, err := job.GetVariablesAsMap()
+	if err != nil {
+		return fmt.Errorf("获取变量错误: %s", err.Error())
+	}
+	logger.Debugf("流程 [%s] 变量数据: %+v", job.GetBpmnProcessId(), variables)
+	variablesBytes, err := json.Marshal(variables)
+	if err != nil {
+		return err
+	}
+	projectIDResult := gjson.GetBytes(variablesBytes, "#project")
+	if !projectIDResult.Exists() {
+		return fmt.Errorf("未找到项目ID")
+	}
+	projectID := projectIDResult.String()
+	configMap := make(map[string]interface{})
+	if err := json.Unmarshal([]byte(conf), &configMap); err != nil {
+		return fmt.Errorf("转换配置信息错误: %s", err.Error())
+	}
+	data, err := ConvertVariable(ctx, apiClient, variablesBytes, configMap)
+	if err != nil {
+		return fmt.Errorf("变量替换错误: %s", err.Error())
+	}
+	logger.Debugf("处理后的数据: %+v", data)
+	result, err := handler(projectID, data)
+	if err != nil {
+		return fmt.Errorf("处理结果错误: %s", err.Error())
+	}
+	if result != nil && len(result) > 0 {
+		variables[job.GetElementId()] = result
+	}
+	request, err := client.NewCompleteJobCommand().JobKey(jobKey).VariablesFromMap(variables)
+	if err != nil {
+		return fmt.Errorf("创建请求错误: %s", err.Error())
+	}
+	_, err = request.Send(ctx)
+	if err != nil {
+		return fmt.Errorf("发请求错误: %s", err.Error())
+	}
+	return nil
+}
+
+// ConvertVariable 替换变量值
+func ConvertVariable(ctx context.Context, apiClient api.Client, variables []byte, config interface{}) (interface{}, error) {
+	switch val := config.(type) {
+	case map[string]interface{}:
+		for k, v := range val {
+			res, err := ConvertVariable(ctx, apiClient, variables, v)
+			if err != nil {
+				return nil, err
+			}
+			val[k] = res
+		}
+		return val, nil
+	case *map[string]interface{}:
+		for k, v := range *val {
+			res, err := ConvertVariable(ctx, apiClient, variables, v)
+			if err != nil {
+				return nil, err
+			}
+			(*val)[k] = res
+		}
+		return val, nil
+	case []interface{}:
+		for i, v := range val {
+			res, err := ConvertVariable(ctx, apiClient, variables, v)
+			if err != nil {
+				return nil, err
+			}
+			val[i] = res
+		}
+		return val, nil
+	case *[]interface{}:
+		for i, v := range *val {
+			res, err := ConvertVariable(ctx, apiClient, variables, v)
+			if err != nil {
+				return nil, err
+			}
+			(*val)[i] = res
+		}
+		return val, nil
+	case []map[string]interface{}:
+		var tmp = make([]interface{}, len(val))
+		for i, v := range val {
+			res, err := ConvertVariable(ctx, apiClient, variables, v)
+			if err != nil {
+				return nil, err
+			}
+			tmp[i] = res
+		}
+		return tmp, nil
+	case *[]map[string]interface{}:
+		var tmp = make([]interface{}, len(*val))
+		for i, v := range *val {
+			res, err := ConvertVariable(ctx, apiClient, variables, v)
+			if err != nil {
+				return nil, err
+			}
+			tmp[i] = res
+		}
+		return tmp, nil
+	case string:
+		res, err := TemplateVariableFlowBytes(ctx, apiClient, val, variables)
+		if err != nil {
+			return nil, fmt.Errorf("替换变量数据错误: %s", err.Error())
+		}
+		return res, nil
+	default:
+		return val, nil
+	}
 }
