@@ -1214,3 +1214,48 @@ func (p *client) FindSystemVariableQuery(headers map[string]string, query, resul
 	u.RawQuery = v.Encode()
 	return p.Get(u, headers, result)
 }
+
+func (p *client) FindSystemVariableById(headers map[string]string, id string, result interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "core:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/systemVariable/%s", id)}
+	return p.Get(u, headers, result)
+}
+
+func (p *client) SaveSystemVariable(headers map[string]string, data, result interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "core:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "core/systemVariable"}
+	return p.Post(u, headers, data, result)
+}
+
+func (p *client) DelSystemVariableById(headers map[string]string, id string, result interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "core:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/systemVariable/%s", id)}
+	return p.Delete(u, headers, result)
+}
+
+func (p *client) UpdateSystemVariableById(headers map[string]string, id string, data, result interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "core:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/systemVariable/%s", id)}
+	return p.Patch(u, headers, data, result)
+}
+
+func (p *client) ReplaceSystemVariableById(headers map[string]string, id string, data, result interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "core:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/systemVariable/%s", id)}
+	return p.Put(u, headers, data, result)
+}
