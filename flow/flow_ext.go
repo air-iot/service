@@ -5986,25 +5986,25 @@ flowloop:
 		//=================
 		isValid = true
 		if isValid {
-			for key, dataM := range data {
-				//if valMap, ok := valRaw.(map[string]interface{}); ok {
-				if extVal, ok := excelColNameTypeExtMap[key]; ok {
-					//if id, ok := valMap["id"].(string); ok {
-					//data["$#"+key] = bson.M{"id": id, "_tableName": extVal.RelateTo}
-					eleRaw, ok := dataM.(map[string]interface{})
-					if ok {
-						if eleRaw != nil {
-							if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-								if relateVal != nil {
-									data[key] = relateVal
-								}
-							}
-						}
-					}
-					//}
-				}
-				//}
-			}
+			//for key, dataM := range data {
+			//	//if valMap, ok := valRaw.(map[string]interface{}); ok {
+			//	if extVal, ok := excelColNameTypeExtMap[key]; ok {
+			//		//if id, ok := valMap["id"].(string); ok {
+			//		//data["$#"+key] = bson.M{"id": id, "_tableName": extVal.RelateTo}
+			//		eleRaw, ok := dataM.(map[string]interface{})
+			//		if ok {
+			//			if eleRaw != nil {
+			//				if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+			//					if relateVal != nil {
+			//						data[key] = relateVal
+			//					}
+			//				}
+			//			}
+			//		}
+			//		//}
+			//	}
+			//	//}
+			//}
 
 			if loginTimeRaw, ok := data["time"].(string); ok {
 				loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)

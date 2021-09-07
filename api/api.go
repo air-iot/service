@@ -60,8 +60,10 @@ type Client interface {
 	SaveManyExt(headers map[string]string, collection string, data, result interface{}) error
 	DelExtById(headers map[string]string, collection, id string, result interface{}) error
 	UpdateExtById(headers map[string]string, collection, id string, data, result interface{}) error
+	UpdateManyExt(headers map[string]string, collection string, query, data, result interface{}) error
 	ReplaceExtById(headers map[string]string, collection, id string, data, result interface{}) error
 	DelExtAll(headers map[string]string, tableName, result interface{}) error
+	DelManyExt(headers map[string]string, collection string, query, result interface{}) error
 
 	FindEventQuery(headers map[string]string, query, result interface{}) error
 	FindEventById(headers map[string]string, id string, result interface{}) error

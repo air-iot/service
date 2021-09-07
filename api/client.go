@@ -373,6 +373,38 @@ func (p *client) UpdateExtById(headers map[string]string, tableName, id string, 
 	return p.Patch(u, headers, data, result)
 }
 
+func (p *client) UpdateManyExt(headers map[string]string, tableName string, query, data, result interface{}) error {
+	b, err := json.Marshal(query)
+	if err != nil {
+		return err
+	}
+	host := p.cfg.Host
+	if host == "" {
+		host = "core:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/ext/many/%s", tableName)}
+	v := url.Values{}
+	v.Set("query", string(b))
+	u.RawQuery = v.Encode()
+	return p.Patch(u, headers, data, result)
+}
+
+func (p *client) DelManyExt(headers map[string]string, tableName string, query, result interface{}) error {
+	b, err := json.Marshal(query)
+	if err != nil {
+		return err
+	}
+	host := p.cfg.Host
+	if host == "" {
+		host = "core:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/ext/many/%s", tableName)}
+	v := url.Values{}
+	v.Set("query", string(b))
+	u.RawQuery = v.Encode()
+	return p.Delete(u, headers, result)
+}
+
 func (p *client) ReplaceExtById(headers map[string]string, tableName, id string, data, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
