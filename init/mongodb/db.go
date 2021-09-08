@@ -19,6 +19,7 @@ type (
 	// PipelineFunc 声明了一个Pipeline修改函数类型
 	PipelineFunc func() mongo.Pipeline
 )
+
 // QueryOption 查询条件
 type QueryOption struct {
 	Limit       *int                   `json:"limit,omitempty"`       // 查询数据长度
@@ -613,11 +614,14 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine *mongo.Pipeline, countPi
 								k = k + "._id"
 							}
 							v = RemoveEmptyOrNilArray(v)
-							//if removeList, ok := v.([]interface{}); ok {
-						//	if len(removeList) == 0 {
-						//		continue
-						//	}
-						//}
+							switch k {
+							case "$and","$or","$nor":
+								if removeList, ok := v.([]interface{}); ok {
+									if len(removeList) == 0 {
+										continue
+									}
+								}
+							}
 							if k == "$unwinds" {
 								switch vals := v.(type) {
 								case primitive.A:
@@ -669,11 +673,14 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine *mongo.Pipeline, countPi
 								k = k + "._id"
 							}
 							v = RemoveEmptyOrNilArray(v)
-							//if removeList, ok := v.([]interface{}); ok {
-						//	if len(removeList) == 0 {
-						//		continue
-						//	}
-						//}
+							switch k {
+							case "$and","$or","$nor":
+								if removeList, ok := v.([]interface{}); ok {
+									if len(removeList) == 0 {
+										continue
+									}
+								}
+							}
 
 							if k == "$unwinds" {
 								switch vals := v.(type) {
@@ -724,11 +731,14 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine *mongo.Pipeline, countPi
 						k = k + "._id"
 					}
 					v = RemoveEmptyOrNilArray(v)
-					//if removeList, ok := v.([]interface{}); ok {
-						//	if len(removeList) == 0 {
-						//		continue
-						//	}
-						//}
+					switch k {
+					case "$and","$or","$nor":
+						if removeList, ok := v.([]interface{}); ok {
+							if len(removeList) == 0 {
+								continue
+							}
+						}
+					}
 					if k == "$unwinds" {
 						switch vals := v.(type) {
 						case primitive.A:
@@ -1081,11 +1091,14 @@ func FindFilterOld(ctx context.Context, col *mongo.Collection, result *[]bson.M,
 						}
 					}
 					v = RemoveEmptyOrNilArray(v)
-					//if removeList, ok := v.([]interface{}); ok {
-						//	if len(removeList) == 0 {
-						//		continue
-						//	}
-						//}
+					switch k {
+					case "$and","$or","$nor":
+						if removeList, ok := v.([]interface{}); ok {
+							if len(removeList) == 0 {
+								continue
+							}
+						}
+					}
 					pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 				}
 			}
@@ -1386,11 +1399,14 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 										k = k + "._id"
 									}
 									v = RemoveEmptyOrNilArray(v)
-									//if removeList, ok := v.([]interface{}); ok {
-						//	if len(removeList) == 0 {
-						//		continue
-						//	}
-						//}
+									switch k {
+									case "$and","$or","$nor":
+										if removeList, ok := v.([]interface{}); ok {
+											if len(removeList) == 0 {
+												continue
+											}
+										}
+									}
 									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 								}
 							}
@@ -1432,11 +1448,14 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 										k = k + "._id"
 									}
 									v = RemoveEmptyOrNilArray(v)
-									//if removeList, ok := v.([]interface{}); ok {
-						//	if len(removeList) == 0 {
-						//		continue
-						//	}
-						//}
+									switch k {
+									case "$and","$or","$nor":
+										if removeList, ok := v.([]interface{}); ok {
+											if len(removeList) == 0 {
+												continue
+											}
+										}
+									}
 									pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 								}
 							}
@@ -1476,11 +1495,14 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 									k = k + "._id"
 								}
 								v = RemoveEmptyOrNilArray(v)
-								//if removeList, ok := v.([]interface{}); ok {
-						//	if len(removeList) == 0 {
-						//		continue
-						//	}
-						//}
+								switch k {
+								case "$and","$or","$nor":
+									if removeList, ok := v.([]interface{}); ok {
+										if len(removeList) == 0 {
+											continue
+										}
+									}
+								}
 								pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 							}
 						}
@@ -1517,11 +1539,14 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 								k = k + "._id"
 							}
 							v = RemoveEmptyOrNilArray(v)
-							//if removeList, ok := v.([]interface{}); ok {
-						//	if len(removeList) == 0 {
-						//		continue
-						//	}
-						//}
+							switch k {
+							case "$and","$or","$nor":
+								if removeList, ok := v.([]interface{}); ok {
+									if len(removeList) == 0 {
+										continue
+									}
+								}
+							}
 							pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 						}
 					}
@@ -1558,11 +1583,14 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 							k = k + "._id"
 						}
 						v = RemoveEmptyOrNilArray(v)
-						//if removeList, ok := v.([]interface{}); ok {
-						//	if len(removeList) == 0 {
-						//		continue
-						//	}
-						//}
+						switch k {
+						case "$and","$or","$nor":
+							if removeList, ok := v.([]interface{}); ok {
+								if len(removeList) == 0 {
+									continue
+								}
+							}
+						}
 						pipeLine = append(pipeLine, bson.D{bson.E{Key: "$match", Value: bson.M{k: v}}})
 					}
 				}
