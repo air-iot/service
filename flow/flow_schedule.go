@@ -137,6 +137,12 @@ func TriggerAddScheduleFlow(ctx context.Context, redisClient redisdb.Client, mon
 					}
 				}
 			}
+			if startValidTime, ok := settings["startValidTime"].(time.Time); ok {
+				if timex.GetLocalTimeNow(time.Now()).Unix() < startValidTime.Unix() {
+					logger.Debugf("流程(%s)的定时任务开始时间未到:%s",flowID)
+					return
+				}
+			}
 			if endTime, ok := settings["endTime"].(time.Time); ok {
 				if timex.GetLocalTimeNow(time.Now()).Unix() >= endTime.Unix() {
 					//logger.Debugf(eventScheduleLog, "流程(%s)的定时任务结束时间已到，不再执行", eventID)
@@ -343,6 +349,12 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 								}
 							}
 						}
+					}
+				}
+				if startValidTime, ok := settings["startValidTime"].(primitive.DateTime); ok {
+					if timex.GetLocalTimeNow(time.Now()).Unix() < int64(startValidTime)/1000 {
+						logger.Debugf("流程(%s)的定时任务开始时间未到:%s",flowID)
+						return
 					}
 				}
 				if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
