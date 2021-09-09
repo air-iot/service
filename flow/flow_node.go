@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/air-iot/service/logger"
 	"github.com/air-iot/service/util/flowx"
+	"github.com/air-iot/service/util/json"
 	"github.com/camunda-cloud/zeebe/clients/go/pkg/zbc"
 	"time"
 
@@ -85,7 +86,7 @@ func TriggerDeviceModifyFlow(ctx context.Context, redisClient redisdb.Client, mo
 
 	query := map[string]interface{}{
 		"filter": map[string]interface{}{
-			"type":               DeviceModify,
+			"type":                DeviceModify,
 			"settings.eventType":  modifyTypeAfterMapping,
 			"settings.eventRange": "node",
 		},
@@ -172,10 +173,6 @@ flowloop:
 				//	}
 				//}
 
-				content := ""
-				if contentInSettings, ok := settings["content"].(string); ok {
-					content = contentInSettings
-				}
 				//departmentConditionList := make([]string, 0)
 				//modelConditionList := make([]string, 0)
 
@@ -228,8 +225,6 @@ flowloop:
 											data["nodeUid"] = formatx.FormatKeyInfo(nodeInfo, "uid")
 											data["time"] = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
-											data["content"] = content
-
 											switch modifyTypeAfterMapping {
 											case "编辑资产画面", "删除资产画面":
 												dashboardInfo, ok := data["dashboard"].(map[string]interface{})
@@ -261,6 +256,19 @@ flowloop:
 													continue
 												}
 												data["time"] = loginTime.UnixNano() / 1e6
+											}
+
+											if contentInSettings, ok := settings["content"].(string); ok {
+												b,err := json.Marshal(data)
+												if err != nil {
+													continue
+												}
+												templateContent, err := TemplateVariableMappingFlow(ctx, apiClient, contentInSettings, string(b))
+												if err != nil {
+													logger.Errorf(fmt.Sprintf("资产修改事件的内容模板替换失败:%s", err.Error()))
+													continue
+												}
+												data["content"] = templateContent
 											}
 
 											if flowXml, ok := flowInfo["flowXml"].(string); ok {
@@ -340,6 +348,66 @@ flowloop:
 					}
 				}
 				if isValid {
+					if modifyTypeAfterMapping == "修改资产属性" {
+						if props, ok := settings["prop"].(primitive.A); ok {
+							if len(props) != 0 {
+								counter := 0
+								if dataMap, ok := data["data"].(map[string]interface{}); ok {
+									for _, prop := range props {
+										if propM, ok := prop.(primitive.M); ok {
+											if key, ok := propM["id"].(string); ok {
+												if propType, ok := propM["propType"].(string); ok {
+													switch propType {
+													case "自定义属性":
+														if custom,ok := dataMap["custom"].(primitive.M);ok{
+															if value, ok := propM["value"]; ok {
+																if value != nil {
+																	if _, ok := custom[key]; ok {
+																		if custom[key] == value {
+																			counter++
+																		}
+																	}
+																} else if _, ok := custom[key]; ok {
+																	counter++
+																}
+															} else {
+																if _, ok := custom[key]; ok {
+																	counter++
+																}
+															}
+														}
+													case "内置属性":
+														if value, ok := propM["value"]; ok {
+															if value != nil {
+																if _, ok := dataMap[key]; ok {
+																	if dataMap[key] == value {
+																		counter++
+																	}
+																}
+															} else if _, ok := dataMap[key]; ok {
+																counter++
+															}
+														} else {
+															if _, ok := dataMap[key]; ok {
+																counter++
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								} else {
+									logger.Debugf("传入的修改资产数据没有data字段或格式不正确")
+									continue
+								}
+								if counter == 0 {
+									logger.Debugf("传入的修改资产数据的修改字段未满足条件")
+									continue
+								}
+							}
+						}
+					}
 					nodeInfo := bson.M{}
 					if initNode, ok := data["initNode"].(map[string]interface{}); ok {
 						nodeInfo = initNode
@@ -377,7 +445,18 @@ flowloop:
 					data["nodeUid"] = formatx.FormatKeyInfo(nodeInfo, "uid")
 					data["time"] = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
-					data["content"] = content
+					if contentInSettings, ok := settings["content"].(string); ok {
+						b,err := json.Marshal(data)
+						if err != nil {
+							continue
+						}
+						templateContent, err := TemplateVariableMappingFlow(ctx, apiClient, contentInSettings, string(b))
+						if err != nil {
+							logger.Errorf(fmt.Sprintf("资产修改事件的内容模板替换失败:%s", err.Error()))
+							continue
+						}
+						data["content"] = templateContent
+					}
 
 					switch modifyTypeAfterMapping {
 					case "编辑资产画面", "删除资产画面":
@@ -558,7 +637,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 
 	query := map[string]interface{}{
 		"filter": map[string]interface{}{
-			"type":               DeviceModify,
+			"type":                DeviceModify,
 			"settings.eventType":  modifyTypeAfterMapping,
 			"settings.eventRange": "model",
 		},

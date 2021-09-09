@@ -95,7 +95,6 @@ flowloop:
 			continue
 		}
 
-		rangeDefine := ""
 		if settings.ValidTime == "timeLimit" {
 			if settings.Range != "once" {
 				//判断有效期
@@ -6024,7 +6023,7 @@ flowloop:
 
 		//对只能执行一次的流程进行失效
 		if settings.ValidTime == "timeLimit" {
-			if rangeDefine == "once" && hasExecute {
+			if settings.Range == "once" && hasExecute {
 				logger.Warnln("流程(%s)为只执行一次的流程", flowID)
 				//修改流程为失效
 				updateMap := bson.M{"settings.invalid": true}

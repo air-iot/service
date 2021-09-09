@@ -23,16 +23,17 @@ type EventType string
 type EventHandlerType string
 
 const (
-	ComputeLogic EventType = "数据事件"
-	Alarm        EventType = "报警事件"
-	Startup      EventType = "启动系统"
-	ShutDown     EventType = "关闭系统"
-	Schedule     EventType = "计划事件"
-	Login        EventType = "用户登录"
-	Log          EventType = "日志事件"
-	ExecCmd      EventType = "执行指令"
-	DeviceModify EventType = "资产修改"
-	ExtModify EventType = "工作表事件"
+	ComputeNodeLogic  EventType = "资产数据事件"
+	ComputeModelLogic EventType = "模型数据事件"
+	Alarm             EventType = "报警事件"
+	Startup           EventType = "启动系统"
+	ShutDown          EventType = "关闭系统"
+	Schedule          EventType = "计划事件"
+	Login             EventType = "用户登录"
+	Log               EventType = "日志事件"
+	ExecCmd           EventType = "执行指令"
+	DeviceModify      EventType = "模型资产事件"
+	ExtModify         EventType = "工作表事件"
 
 	//HandlerEmail     EventHandlerType = "email"
 	//HandlerWechat    EventHandlerType = "wechat"
@@ -143,9 +144,9 @@ func TriggerFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *m
 			data["time"] = loginTime.UnixNano() / 1e6
 		}
 
-		err = flowx.StartFlow(zbClient,flowInfo.FlowXml,projectName,data)
+		err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, data)
 		if err != nil {
-			logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID,err.Error())
+			logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 			continue
 		}
 
