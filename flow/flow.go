@@ -237,7 +237,7 @@ func flowHandler(ctx context.Context, client worker.JobClient, job entities.Job,
 		return fmt.Errorf("未找到项目ID")
 	}
 	projectID := projectIDResult.String()
-	configMap := make(map[string]interface{})
+	var configMap interface{}
 	if err := json.Unmarshal([]byte(conf), &configMap); err != nil {
 		return fmt.Errorf("转换配置信息错误: %s", err.Error())
 	}
