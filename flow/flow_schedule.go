@@ -209,14 +209,6 @@ func TriggerAddScheduleFlow(ctx context.Context, redisClient redisdb.Client, mon
 
 func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, zbClient zbc.Client, projectName string, data map[string]interface{}, c *cron.Cron) error {
 	//headerMap := map[string]string{ginx.XRequestProject: projectName}
-	c.Stop()
-	//c = cron.New(cron.WithSeconds(), cron.WithChain(cron.DelayIfStillRunning(cron.DefaultLogger)))
-	//c.Start()
-
-	testBefore := c.Entries()
-	for _, v := range testBefore {
-		c.Remove(v.ID)
-	}
 
 	pipeline := mongo.Pipeline{}
 	paramMatch := bson.D{bson.E{Key: "$match", Value: bson.M{"type": Schedule}}}
@@ -229,6 +221,15 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 
 	////logger.Debugf(eventScheduleLog, "开始遍历流程列表")
 	//fmt.Println("len eventInfoList:",len(eventInfoList))
+	if len(flowInfoList) == 0{
+		return nil
+	}
+	c.Stop()
+
+	testBefore := c.Entries()
+	for _, v := range testBefore {
+		c.Remove(v.ID)
+	}
 	for i, flowInfo := range flowInfoList {
 		j := i
 		flowInfo = flowInfoList[j]

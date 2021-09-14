@@ -204,14 +204,6 @@ func TriggerAddSchedule(ctx context.Context, redisClient redisdb.Client, mongoCl
 
 func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, data map[string]interface{}, c *cron.Cron) error {
 	//headerMap := map[string]string{ginx.XRequestProject: projectName}
-	c.Stop()
-	//c = cron.New(cron.WithSeconds(), cron.WithChain(cron.DelayIfStillRunning(cron.DefaultLogger)))
-	//c.Start()
-
-	testBefore := c.Entries()
-	for _, v := range testBefore {
-		c.Remove(v.ID)
-	}
 
 	pipeline := mongo.Pipeline{}
 	paramMatch := bson.D{bson.E{Key: "$match", Value: bson.M{"type": Schedule}}}
@@ -233,8 +225,15 @@ func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client
 		return fmt.Errorf("获取所有计划事件失败:%s", err.Error())
 	}
 
-	////logger.Debugf(eventScheduleLog, "开始遍历事件列表")
-	//fmt.Println("len eventInfoList:",len(eventInfoList))
+	if len(eventInfoList) == 0{
+		return nil
+	}
+	c.Stop()
+
+	testBefore := c.Entries()
+	for _, v := range testBefore {
+		c.Remove(v.ID)
+	}
 	for i, eventInfo := range eventInfoList {
 		j := i
 		eventInfo = eventInfoList[j]
