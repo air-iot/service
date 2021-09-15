@@ -86,11 +86,11 @@ type Tag struct {
 	StatsVal      interface{}            `json:"statsVal"`
 	EndTime       map[string]interface{} `json:"endTime"`
 
-	Extend   bool    `json:"extend"`
-	Filterfl bool    `json:"filterfl"`
-	Total    float64 `json:"total"`
-	TimeBase float64 `json:"timeBase"`
-	Filter   float64 `json:"filter"`
+	NotExtend bool    `json:"notExtend"`
+	Filterfl  bool    `json:"filterfl"`
+	Total     float64 `json:"total"`
+	TimeBase  float64 `json:"timeBase"`
+	Filter    float64 `json:"filter"`
 }
 
 type TagRules struct {
