@@ -346,10 +346,7 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 								"name":  tagCache.Name,
 								"value": v,
 							})
-							dataMapInLoop[k] = map[string]interface{}{
-								"name":  tagCache.Name,
-								"value": v,
-							}
+							dataMapInLoop[k] = v
 							//dataMapInLoop["tagInfo"] = formatx.FormatDataInfoList(fields)
 						}
 						if customMap, ok := nodeCustomFieldsMap[data.Uid]; ok {

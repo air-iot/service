@@ -371,10 +371,7 @@ flowloop:
 					}
 					for _, fieldsMap := range data.Fields {
 						if id, ok := fieldsMap["id"].(string); ok {
-							sendMapInner[id] = map[string]interface{}{
-								"name":  fieldsMap["name"],
-								"value": fieldsMap["value"],
-							}
+							sendMapInner[id] = fieldsMap["value"]
 						}
 					}
 
@@ -551,10 +548,7 @@ flowloop:
 				}
 				for _, fieldsMap := range data.Fields {
 					if id, ok := fieldsMap["id"].(string); ok {
-						sendMapInner[id] = map[string]interface{}{
-							"name":  fieldsMap["name"],
-							"value": fieldsMap["value"],
-						}
+						sendMapInner[id] = fieldsMap["value"]
 					}
 				}
 
