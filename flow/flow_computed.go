@@ -316,6 +316,7 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 						}
 
 						fields := make([]map[string]interface{}, 0)
+						dataMapInLoop := map[string]interface{}{}
 						deptMap := bson.M{}
 						for _, id := range departmentStringIDList {
 							deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
@@ -324,7 +325,7 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 						if sendTime == 0 {
 							sendTime = timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6
 						}
-						dataMap = map[string]interface{}{
+						dataMapInLoop = map[string]interface{}{
 							"time":         sendTime,
 							"$#model":      bson.M{"id": modelID, "_tableName": "model"},
 							"$#department": deptMap,
@@ -345,18 +346,22 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 								"name":  tagCache.Name,
 								"value": v,
 							})
-							dataMap[k] = v
-							//dataMap["tagInfo"] = formatx.FormatDataInfoList(fields)
+							dataMapInLoop[k] = map[string]interface{}{
+								"name":  tagCache.Name,
+								"value": v,
+							}
+							//dataMapInLoop["tagInfo"] = formatx.FormatDataInfoList(fields)
 						}
+						if customMap, ok := nodeCustomFieldsMap[data.Uid]; ok {
+							customDataMap := map[string]interface{}{}
+							for k, v := range customMap {
+								customDataMap[k] = v
+							}
+							dataMapInLoop["custom"] = customDataMap
+						}
+						dataMap[nodeUIDNodeMap[uidInMap]] = dataMapInLoop
 					}
 
-					if customMap, ok := nodeCustomFieldsMap[data.Uid]; ok {
-						customDataMap := map[string]interface{}{}
-						for k, v := range customMap {
-							customDataMap[k] = v
-						}
-						dataMap["custom"] = customDataMap
-					}
 
 					err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, dataMap)
 					if err != nil {
@@ -645,7 +650,6 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 							}
 
 							fields := make([]map[string]interface{}, 0)
-							dataMapInLoop := map[string]interface{}{}
 							deptMap := bson.M{}
 							for _, id := range departmentStringIDList {
 								deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
@@ -654,7 +658,7 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 							if sendTime == 0 {
 								sendTime = timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6
 							}
-							dataMapInLoop = map[string]interface{}{
+							dataMap = map[string]interface{}{
 								"time":         sendTime,
 								"$#model":      bson.M{"id": modelID, "_tableName": "model"},
 								"$#department": deptMap,
@@ -675,13 +679,9 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 									"name":  tagCache.Name,
 									"value": v,
 								})
-								dataMapInLoop[k] = map[string]interface{}{
-									"name":  tagCache.Name,
-									"value": v,
-								}
-								//dataMapInLoop["tagInfo"] = formatx.FormatDataInfoList(fields)
+								dataMap[k] = v
+								//dataMap["tagInfo"] = formatx.FormatDataInfoList(fields)
 							}
-							dataMap[nodeUIDNodeMap[uidInMap]] = dataMapInLoop
 						}
 
 						err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, dataMap)
