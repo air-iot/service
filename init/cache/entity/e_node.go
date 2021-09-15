@@ -152,6 +152,12 @@ type TagMongo struct {
 	StartTime     primitive.M `json:"startTime" bson:"startTime"`
 	StatsVal      interface{} `json:"statsVal" bson:"statsVal"`
 	EndTime       primitive.M `json:"endTime" bson:"endTime"`
+
+	Extend   bool        `json:"extend" bson:"extend"`
+	Filterfl bool        `json:"filterfl" bson:"filterfl"`
+	Total    interface{} `json:"total" bson:"total"`
+	TimeBase interface{} `json:"timeBase" bson:"timeBase"`
+	Filter   interface{} `json:"filter" bson:"filter"`
 }
 
 type NodeIDUidForRedis struct {
