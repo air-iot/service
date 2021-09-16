@@ -19,7 +19,7 @@ import (
 
 var Reg, _ = regexp.Compile("\\${(.+?)}")
 
-const ExtraSymbol = "$#"
+const ExtraSymbol = "#$"
 
 type SystemVariable struct {
 	Uid   string      `json:"uid"`
@@ -48,7 +48,7 @@ func FindExtra(ctx context.Context, apiClient api.Client, param string, variable
 	if projectID == "" {
 		return nil, fmt.Errorf("项目ID变量为空")
 	}
-	if paramArr[index] == "$#systemVariable" {
+	if paramArr[index] == "#$systemVariable" {
 		systemVariables := make([]SystemVariable, 0)
 		if err := apiClient.FindSystemVariableQuery(map[string]string{ginx.XRequestProject: projectID}, mongodb.QueryOption{
 			Filter:  map[string]interface{}{"uid": paramArr[index+1]},
