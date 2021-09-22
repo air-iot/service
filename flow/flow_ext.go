@@ -24,7 +24,7 @@ import (
 
 var flowExtModifyLog = map[string]interface{}{"name": "工作表流程触发"}
 
-func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, zbClient zbc.Client, projectName string, data map[string]interface{}) error {
+func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, zbClient zbc.Client, projectName, tableName string, data map[string]interface{}) error {
 	////logger.Debugf(eventDeviceModifyLog, "开始执行资产修改流程触发器")
 	////logger.Debugf(eventDeviceModifyLog, "传入参数为:%+v", data)
 	//ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30)*time.Second)
@@ -55,8 +55,9 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 
 	query := map[string]interface{}{
 		"filter": map[string]interface{}{
-			"type":               ExtModify,
-			"settings.eventType": modifyTypeAfterMapping,
+			"type":                ExtModify,
+			"settings.eventType":  modifyTypeAfterMapping,
+			"settings.table.name": tableName,
 			//"settings.eventRange": "node",
 		},
 		"project": map[string]interface{}{
@@ -131,6 +132,11 @@ flowloop:
 					continue
 				}
 			}
+		}
+
+		if tableName != settings.Table.Name {
+			logger.Debugf("不是流程(%s)触发需要的工作表", flowID)
+			continue
 		}
 
 		//判断流程是否已经触发
@@ -1443,7 +1449,7 @@ flowloop:
 			}
 		case "更新记录时":
 			//fmt.Println("更新记录时 projectName ;", projectName, "data:", data)
-			for _,update := range settings.UpdateField{
+			for _, update := range settings.UpdateField {
 				if _, ok := data[update.ID]; !ok {
 					continue flowloop
 				}
@@ -4688,7 +4694,7 @@ flowloop:
 			}
 		case "新增或更新记录时":
 			//fmt.Println("新增或更新记录时 projectName ;", projectName, "data:", data)
-			for _,update := range settings.UpdateField{
+			for _, update := range settings.UpdateField {
 				if _, ok := data[update.ID]; !ok {
 					continue flowloop
 				}
