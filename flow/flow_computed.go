@@ -327,9 +327,9 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 						}
 						dataMapInLoop = map[string]interface{}{
 							"time":         sendTime,
-							"$#model":      bson.M{"id": modelID, "_tableName": "model"},
-							"$#department": deptMap,
-							"$#node":       bson.M{"id": nodeID, "_tableName": "node"},
+							"#$model":      bson.M{"id": modelID, "_tableName": "model"},
+							"#$department": deptMap,
+							"#$node":       bson.M{"id": nodeID, "_tableName": "node"},
 							//"modelId":        nodeUIDModelMap[uidInMap],
 							//"nodeId":         nodeUIDNodeMap[uidInMap],
 							//"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
@@ -657,9 +657,9 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 							}
 							dataMap = map[string]interface{}{
 								"time":         sendTime,
-								"$#model":      bson.M{"id": modelID, "_tableName": "model"},
-								"$#department": deptMap,
-								"$#node":       bson.M{"id": nodeID, "_tableName": "node"},
+								"#$model":      bson.M{"id": modelID, "_tableName": "model"},
+								"#$department": deptMap,
+								"#$node":       bson.M{"id": nodeID, "_tableName": "node"},
 								//"modelId":        nodeUIDModelMap[uidInMap],
 								//"nodeId":         nodeUIDNodeMap[uidInMap],
 								//"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),

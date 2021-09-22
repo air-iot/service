@@ -230,7 +230,7 @@ flowloop:
 												dashboardInfo, ok := data["dashboard"].(map[string]interface{})
 												if !ok {
 													if dashboardInfoID, ok := data["dashboard"].(string); ok {
-														data["$#dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
+														data["#$dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
 													} else {
 														continue
 													}
@@ -238,7 +238,7 @@ flowloop:
 												} else {
 													data["dashboardName"] = formatx.FormatKeyInfo(dashboardInfo, "name")
 													if dashboardInfoID, ok := dashboardInfo["id"].(string); ok {
-														data["$#dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
+														data["#$dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
 													}
 												}
 											}
@@ -247,9 +247,9 @@ flowloop:
 											for _, id := range departmentStringIDList {
 												deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
 											}
-											data["$#department"] = deptMap
-											data["$#model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
-											data["$#node"] = bson.M{nodeID: bson.M{"id": nodeID, "_tableName": "node"}}
+											data["#$department"] = deptMap
+											data["#$model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
+											data["#$node"] = bson.M{nodeID: bson.M{"id": nodeID, "_tableName": "node"}}
 											if loginTimeRaw, ok := data["time"].(string); ok {
 												loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
 												if err != nil {
@@ -463,7 +463,7 @@ flowloop:
 						dashboardInfo, ok := data["dashboard"].(map[string]interface{})
 						if !ok {
 							if dashboardInfoID, ok := data["dashboard"].(string); ok {
-								data["$#dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
+								data["#$dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
 							} else {
 								continue
 							}
@@ -471,7 +471,7 @@ flowloop:
 						} else {
 							data["dashboardName"] = formatx.FormatKeyInfo(dashboardInfo, "name")
 							if dashboardInfoID, ok := dashboardInfo["id"].(string); ok {
-								data["$#dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
+								data["#$dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
 							}
 						}
 					}
@@ -480,9 +480,9 @@ flowloop:
 					for _, id := range departmentStringIDList {
 						deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
 					}
-					data["$#department"] = deptMap
-					data["$#model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
-					data["$#node"] = bson.M{nodeID: bson.M{"id": nodeID, "_tableName": "node"}}
+					data["#$department"] = deptMap
+					data["#$model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
+					data["#$node"] = bson.M{nodeID: bson.M{"id": nodeID, "_tableName": "node"}}
 					if loginTimeRaw, ok := data["time"].(string); ok {
 						loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
 						if err != nil {
@@ -780,7 +780,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 						dashboardInfo, ok := data["dashboard"].(map[string]interface{})
 						if !ok {
 							if dashboardInfoID, ok := data["dashboard"].(string); ok {
-								data["$#dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
+								data["#$dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
 							} else {
 								continue
 							}
@@ -788,7 +788,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 						} else {
 							data["dashboardName"] = formatx.FormatKeyInfo(dashboardInfo, "name")
 							if dashboardInfoID, ok := dashboardInfo["id"].(string); ok {
-								data["$#dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
+								data["#$dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
 							}
 						}
 					}
@@ -797,8 +797,8 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 					for _, id := range departmentStringIDList {
 						deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
 					}
-					data["$#department"] = deptMap
-					data["$#model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
+					data["#$department"] = deptMap
+					data["#$model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
 					if loginTimeRaw, ok := data["time"].(string); ok {
 						loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
 						if err != nil {

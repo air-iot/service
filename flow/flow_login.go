@@ -275,9 +275,9 @@ func TriggerLoginFlow(ctx context.Context, redisClient redisdb.Client, mongoClie
 		for _, id := range roleIDs {
 			roleMap[id] = bson.M{"id": id, "_tableName": "role"}
 		}
-		data["$#department"] = deptMap
-		data["$#role"] = roleMap
-		data["$#user"] = bson.M{userID: bson.M{"id": userID, "_tableName": "user"}}
+		data["#$department"] = deptMap
+		data["#$role"] = roleMap
+		data["#$user"] = bson.M{userID: bson.M{"id": userID, "_tableName": "user"}}
 		if loginTimeRaw, ok := data["time"].(string); ok {
 			loginTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(loginTimeRaw), loginTimeRaw, time.Local)
 			if err != nil {

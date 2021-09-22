@@ -352,9 +352,9 @@ flowloop:
 					//生成报警对象并发送
 					sendMapInner := bson.M{
 						"time":           timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
-						"$#model":        bson.M{"id": modelID, "_tableName": "model"},
-						"$#department":   deptMap,
-						"$#node":         bson.M{"id": nodeID, "_tableName": "node"},
+						"#$model":        bson.M{"id": modelID, "_tableName": "model"},
+						"#$department":   deptMap,
+						"#$node":         bson.M{"id": nodeID, "_tableName": "node"},
 						"type":           dataMappingType,
 						"status":         data.Status,
 						"processed":      data.Processed,
@@ -529,9 +529,9 @@ flowloop:
 				//生成报警对象并发送
 				sendMapInner := bson.M{
 					"time":           timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
-					"$#model":        bson.M{"id": modelID, "_tableName": "model"},
-					"$#department":   deptMap,
-					"$#node":         bson.M{"id": nodeID, "_tableName": "node"},
+					"#$model":        bson.M{"id": modelID, "_tableName": "model"},
+					"#$department":   deptMap,
+					"#$node":         bson.M{"id": nodeID, "_tableName": "node"},
 					"type":           dataMappingType,
 					"status":         data.Status,
 					"processed":      data.Processed,
@@ -882,7 +882,7 @@ flowloop:
 			//生成报警对象并发送
 			sendMapInner := bson.M{
 				"time":    timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
-				"$#model": bson.M{"id": modelID, "_tableName": "model"},
+				"#$model": bson.M{"id": modelID, "_tableName": "model"},
 				"type":    dataMappingType,
 				//"status":         data.Status,
 				//"processed":      data.Processed,
@@ -1242,9 +1242,9 @@ flowloop:
 			//生成报警对象并发送
 			sendMapInner := bson.M{
 				"time":         timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
-				"$#model":      bson.M{"id": modelID, "_tableName": "model"},
-				"$#department": deptMap,
-				"$#node":       bson.M{"id": nodeID, "_tableName": "node"},
+				"#$model":      bson.M{"id": modelID, "_tableName": "model"},
+				"#$department": deptMap,
+				"#$node":       bson.M{"id": nodeID, "_tableName": "node"},
 				"type":         dataMappingType,
 				//"status":         data.Status,
 				//"processed":      data.Processed,

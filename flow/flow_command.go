@@ -199,9 +199,9 @@ func TriggerExecCmdFlow(ctx context.Context, redisClient redisdb.Client, mongoCl
 							}
 							sendMap := bson.M{nodeID: bson.M	{
 								"time":         timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
-								"$#model":      bson.M{"id": modelID, "_tableName": "model"},
-								"$#department": deptMap,
-								"$#node":       bson.M{"id": nodeID, "_tableName": "node"},
+								"#$model":      bson.M{"id": modelID, "_tableName": "model"},
+								"#$department": deptMap,
+								"#$node":       bson.M{"id": nodeID, "_tableName": "node"},
 								"cmdName":  commandName,
 								//"departmentName": departmentStringIDList,
 								//"modelName":      formatx.FormatKeyInfo(modelInfo, "name"),
