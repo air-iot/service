@@ -57,7 +57,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 		"filter": map[string]interface{}{
 			"type":                ExtModify,
 			"settings.eventType":  modifyTypeAfterMapping,
-			"settings.table.name": tableName,
+			"settings.ext.name": tableName,
 			//"settings.eventRange": "node",
 		},
 		"project": map[string]interface{}{
@@ -85,21 +85,21 @@ flowloop:
 		settings := flowInfo.Settings
 
 		//判断是否已经失效
-		if settings.Invalid {
+		if flowInfo.Invalid {
 			logger.Warnln("流程(%s)已经失效", flowID)
 			continue
 		}
 
 		//判断禁用
-		if settings.Disable {
+		if flowInfo.Disable {
 			logger.Warnln("流程(%s)已经被禁用", flowID)
 			continue
 		}
 
-		if settings.ValidTime == "timeLimit" {
-			if settings.Range != "once" {
+		if flowInfo.ValidTime == "timeLimit" {
+			if flowInfo.Range != "once" {
 				//判断有效期
-				startTime := settings.StartTime
+				startTime := flowInfo.StartTime
 				formatLayout := timex.FormatTimeFormat(startTime)
 				formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
 				if err != nil {
@@ -111,7 +111,7 @@ flowloop:
 					continue
 				}
 
-				endTime := settings.EndTime
+				endTime := flowInfo.EndTime
 				formatLayout = timex.FormatTimeFormat(endTime)
 				formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
 				if err != nil {
@@ -121,7 +121,7 @@ flowloop:
 				if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
 					logger.Debugf("流程(%s)的定时任务结束时间已到，不执行", flowID)
 					//修改流程为失效
-					updateMap := bson.M{"settings.invalid": true}
+					updateMap := bson.M{"invalid": true}
 					//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), eventID, updateMap)
 					var r = make(map[string]interface{})
 					err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
@@ -6028,11 +6028,11 @@ flowloop:
 		}
 
 		//对只能执行一次的流程进行失效
-		if settings.ValidTime == "timeLimit" {
-			if settings.Range == "once" && hasExecute {
+		if flowInfo.ValidTime == "timeLimit" {
+			if flowInfo.Range == "once" && hasExecute {
 				logger.Warnln("流程(%s)为只执行一次的流程", flowID)
 				//修改流程为失效
-				updateMap := bson.M{"settings.invalid": true}
+				updateMap := bson.M{"invalid": true}
 				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 				var r = make(map[string]interface{})
 				err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)

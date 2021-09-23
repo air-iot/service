@@ -78,67 +78,54 @@ flowloop:
 		settings := flowInfo.Settings
 
 		//判断是否已经失效
-		if invalid, ok := settings["invalid"].(bool); ok {
-			if invalid {
-				//logger.Warnln(eventLog, "流程(%s)已经失效", eventID)
-				continue
-			}
+		if flowInfo.Invalid {
+			logger.Warnln("流程(%s)已经失效", flowID)
+			continue
 		}
 
 		//判断禁用
-		if disable, ok := settings["disable"].(bool); ok {
-			if disable {
-				//logger.Warnln(eventAlarmLog, "流程(%s)已经被禁用", eventID)
-				continue
-			}
+		if flowInfo.Disable {
+			logger.Warnln("流程(%s)已经被禁用", flowID)
+			continue
 		}
 
-		rangeDefine := ""
-		validTime, ok := settings["validTime"].(string)
-		if ok {
-			if validTime == "timeLimit" {
-				if rangeDefine, ok = settings["range"].(string); ok {
-					if rangeDefine != "once" {
-						//判断有效期
-						if startTime, ok := settings["startTime"].(string); ok {
-							formatLayout := timex.FormatTimeFormat(startTime)
-							formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
-							if err != nil {
-								logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
-								continue
-							}
-							if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
-								//logger.Debugf(eventAlarmLog, "流程(%s)的定时任务开始时间未到，不执行", eventID)
-								continue
-							}
-						}
-
-						if endTime, ok := settings["endTime"].(string); ok {
-							formatLayout := timex.FormatTimeFormat(endTime)
-							formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
-							if err != nil {
-								logger.Errorf("时间范围字段值格式错误:%s", err.Error())
-								continue
-							}
-							if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
-								//logger.Debugf(eventAlarmLog, "流程(%s)的定时任务结束时间已到，不执行", eventID)
-								//修改流程为失效
-								updateMap := bson.M{"settings.invalid": true}
-								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
-								var r = make(map[string]interface{})
-								err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
-								if err != nil {
-									//logger.Errorf(eventAlarmLog, "失效流程(%s)失败:%s", eventID, err.Error())
-									continue
-								}
-								continue
-							}
-						}
-					}
+		//if flowInfo.ValidTime == "timeLimit" {
+		//	if flowInfo.Range != "once" {
+				//判断有效期
+				startTime := flowInfo.StartTime
+				formatLayout := timex.FormatTimeFormat(startTime)
+				formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
+				if err != nil {
+					logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
+					continue
 				}
-			}
-		}
+				if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
+					logger.Debugf("流程(%s)的定时任务开始时间未到，不执行", flowID)
+					continue
+				}
 
+				endTime := flowInfo.EndTime
+				formatLayout = timex.FormatTimeFormat(endTime)
+				formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
+				if err != nil {
+					logger.Errorf("时间范围字段值格式错误:%s", err.Error())
+					continue
+				}
+				if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
+					logger.Debugf("流程(%s)的定时任务结束时间已到，不执行", flowID)
+					//修改流程为失效
+					updateMap := bson.M{"invalid": true}
+					//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), eventID, updateMap)
+					var r = make(map[string]interface{})
+					err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
+					if err != nil {
+						logger.Errorf("失效流程(%s)失败:%s", flowID, err.Error())
+						continue
+					}
+					continue
+				}
+		//	}
+		//}
 		//判断流程是否已经触发
 		hasExecute := false
 		hasValidAction := false
@@ -564,11 +551,11 @@ flowloop:
 		}
 
 		//对只能执行一次的流程进行失效
-		if validTime == "timeLimit" {
-			if rangeDefine == "once" && hasExecute {
+		if flowInfo.ValidTime == "timeLimit" {
+			if flowInfo.Range == "once" && hasExecute {
 				//logger.Warnln(eventAlarmLog, "流程(%s)为只执行一次的流程", flowID)
 				//修改流程为失效
-				updateMap := bson.M{"settings.invalid": true}
+				updateMap := bson.M{"invalid": true}
 				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), flowID, updateMap)
 				var r = make(map[string]interface{})
 				err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
@@ -623,66 +610,54 @@ flowloop:
 		settings := flowInfo.Settings
 
 		//判断是否已经失效
-		if invalid, ok := settings["invalid"].(bool); ok {
-			if invalid {
-				//logger.Warnln(eventLog, "流程(%s)已经失效", eventID)
-				continue
-			}
+		if flowInfo.Invalid {
+			logger.Warnln("流程(%s)已经失效", flowID)
+			continue
 		}
 
 		//判断禁用
-		if disable, ok := settings["disable"].(bool); ok {
-			if disable {
-				//logger.Warnln(eventAlarmLog, "流程(%s)已经被禁用", eventID)
-				continue
-			}
+		if flowInfo.Disable {
+			logger.Warnln("流程(%s)已经被禁用", flowID)
+			continue
 		}
 
-		rangeDefine := ""
-		validTime, ok := settings["validTime"].(string)
-		if ok {
-			if validTime == "timeLimit" {
-				if rangeDefine, ok = settings["range"].(string); ok {
-					if rangeDefine != "once" {
-						//判断有效期
-						if startTime, ok := settings["startTime"].(string); ok {
-							formatLayout := timex.FormatTimeFormat(startTime)
-							formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
-							if err != nil {
-								logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
-								continue
-							}
-							if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
-								//logger.Debugf(eventAlarmLog, "流程(%s)的定时任务开始时间未到，不执行", eventID)
-								continue
-							}
-						}
-
-						if endTime, ok := settings["endTime"].(string); ok {
-							formatLayout := timex.FormatTimeFormat(endTime)
-							formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
-							if err != nil {
-								logger.Errorf("时间范围字段值格式错误:%s", err.Error())
-								continue
-							}
-							if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
-								//logger.Debugf(eventAlarmLog, "流程(%s)的定时任务结束时间已到，不执行", eventID)
-								//修改流程为失效
-								updateMap := bson.M{"settings.invalid": true}
-								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
-								var r = make(map[string]interface{})
-								err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
-								if err != nil {
-									//logger.Errorf(eventAlarmLog, "失效流程(%s)失败:%s", eventID, err.Error())
-									continue
-								}
-								continue
-							}
-						}
-					}
+		//if flowInfo.ValidTime == "timeLimit" {
+		//	if flowInfo.Range != "once" {
+				//判断有效期
+				startTime := flowInfo.StartTime
+				formatLayout := timex.FormatTimeFormat(startTime)
+				formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
+				if err != nil {
+					logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
+					continue
 				}
-			}
-		}
+				if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
+					logger.Debugf("流程(%s)的定时任务开始时间未到，不执行", flowID)
+					continue
+				}
+
+				endTime := flowInfo.EndTime
+				formatLayout = timex.FormatTimeFormat(endTime)
+				formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
+				if err != nil {
+					logger.Errorf("时间范围字段值格式错误:%s", err.Error())
+					continue
+				}
+				if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
+					logger.Debugf("流程(%s)的定时任务结束时间已到，不执行", flowID)
+					//修改流程为失效
+					updateMap := bson.M{"invalid": true}
+					//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), eventID, updateMap)
+					var r = make(map[string]interface{})
+					err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
+					if err != nil {
+						logger.Errorf("失效流程(%s)失败:%s", flowID, err.Error())
+						continue
+					}
+					continue
+				}
+		//	}
+		//}
 
 		//判断流程是否已经触发
 		hasExecute := false
@@ -903,11 +878,11 @@ flowloop:
 		}
 
 		//对只能执行一次的流程进行失效
-		if validTime == "timeLimit" {
-			if rangeDefine == "once" && hasExecute {
+		if flowInfo.ValidTime == "timeLimit" {
+			if flowInfo.Range == "once" && hasExecute {
 				//logger.Warnln(eventAlarmLog, "流程(%s)为只执行一次的流程", eventID)
 				//修改流程为失效
-				updateMap := bson.M{"settings.invalid": true}
+				updateMap := bson.M{"invalid": true}
 				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap
 				var r = make(map[string]interface{})
 				err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
@@ -973,67 +948,54 @@ flowloop:
 		settings := flowInfo.Settings
 
 		//判断是否已经失效
-		if invalid, ok := settings["invalid"].(bool); ok {
-			if invalid {
-				//logger.Warnln(flowLog, "流程(%s)已经失效", flowID)
-				continue
-			}
+		if flowInfo.Invalid {
+			logger.Warnln("流程(%s)已经失效", flowID)
+			continue
 		}
 
 		//判断禁用
-		if disable, ok := settings["disable"].(bool); ok {
-			if disable {
-				//logger.Warnln(flowAlarmLog, "流程(%s)已经被禁用", flowID)
-				continue
-			}
+		if flowInfo.Disable {
+			logger.Warnln("流程(%s)已经被禁用", flowID)
+			continue
 		}
 
-		rangeDefine := ""
-		validTime, ok := settings["validTime"].(string)
-		if ok {
-			if validTime == "timeLimit" {
-				if rangeDefine, ok = settings["range"].(string); ok {
-					if rangeDefine != "once" {
-						//判断有效期
-						if startTime, ok := settings["startTime"].(string); ok {
-							formatLayout := timex.FormatTimeFormat(startTime)
-							formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
-							if err != nil {
-								logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
-								continue
-							}
-							if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
-								//logger.Debugf(flowAlarmLog, "流程(%s)的定时任务开始时间未到，不执行", flowID)
-								continue
-							}
-						}
-
-						if endTime, ok := settings["endTime"].(string); ok {
-							formatLayout := timex.FormatTimeFormat(endTime)
-							formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
-							if err != nil {
-								logger.Errorf("时间范围字段值格式错误:%s", err.Error())
-								continue
-							}
-							if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
-								//logger.Debugf(flowAlarmLog, "流程(%s)的定时任务结束时间已到，不执行", flowID)
-								//修改流程为失效
-								updateMap := bson.M{"settings.invalid": true}
-								//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), flowID, updateMap)
-								var r = make(map[string]interface{})
-								err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
-								if err != nil {
-									//logger.Errorf(flowAlarmLog, "失效流程(%s)失败:%s", flowID, err.Error())
-									continue
-								}
-								continue
-							}
-						}
-					}
+		//if flowInfo.ValidTime == "timeLimit" {
+		//	if flowInfo.Range != "once" {
+				//判断有效期
+				startTime := flowInfo.StartTime
+				formatLayout := timex.FormatTimeFormat(startTime)
+				formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
+				if err != nil {
+					logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
+					continue
 				}
-			}
-		}
+				if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
+					logger.Debugf("流程(%s)的定时任务开始时间未到，不执行", flowID)
+					continue
+				}
 
+				endTime := flowInfo.EndTime
+				formatLayout = timex.FormatTimeFormat(endTime)
+				formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
+				if err != nil {
+					logger.Errorf("时间范围字段值格式错误:%s", err.Error())
+					continue
+				}
+				if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
+					logger.Debugf("流程(%s)的定时任务结束时间已到，不执行", flowID)
+					//修改流程为失效
+					updateMap := bson.M{"invalid": true}
+					//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), eventID, updateMap)
+					var r = make(map[string]interface{})
+					err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
+					if err != nil {
+						logger.Errorf("失效流程(%s)失败:%s", flowID, err.Error())
+						continue
+					}
+					continue
+				}
+		//	}
+		//}
 		//判断流程是否已经触发
 		hasExecute := false
 		hasValidAction := false
@@ -1271,11 +1233,11 @@ flowloop:
 		}
 
 		//对只能执行一次的流程进行失效
-		if validTime == "timeLimit" {
-			if rangeDefine == "once" && hasExecute {
+		if flowInfo.ValidTime == "timeLimit" {
+			if flowInfo.Range == "once" && hasExecute {
 				//logger.Warnln(flowAlarmLog, "流程(%s)为只执行一次的流程", flowID)
 				//修改流程为失效
-				updateMap := bson.M{"settings.invalid": true}
+				updateMap := bson.M{"invalid": true}
 				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), flowID, updateMap)
 				var r = make(map[string]interface{})
 				err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)

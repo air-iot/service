@@ -106,7 +106,7 @@ flowloop:
 			if settings, ok := flowInfo["settings"].(primitive.M); ok {
 
 				//判断是否已经失效
-				if invalid, ok := settings["invalid"].(bool); ok {
+				if invalid, ok := flowInfo["invalid"].(bool); ok {
 					if invalid {
 						//logger.Warnln(eventLog, "流程(%s)已经失效", eventID)
 						continue
@@ -114,7 +114,7 @@ flowloop:
 				}
 
 				//判断禁用
-				if disable, ok := settings["disable"].(bool); ok {
+				if disable, ok := flowInfo["disable"].(bool); ok {
 					if disable {
 						//logger.Warnln(eventDeviceModifyLog, "流程(%s)已经被禁用", eventID)
 						continue
@@ -122,40 +122,40 @@ flowloop:
 				}
 
 				rangeDefine := ""
-				validTime, ok := settings["validTime"].(string)
-				if ok {
-					if validTime == "timeLimit" {
-						if rangeDefine, ok = settings["range"].(string); ok {
-							if rangeDefine != "once" {
-								//判断有效期
-								if startTime, ok := settings["startTime"].(primitive.DateTime); ok {
-									startTimeInt := int64(startTime / 1e3)
-									if timex.GetLocalTimeNow(time.Now()).Unix() < startTimeInt {
-										//logger.Debugf(eventDeviceModifyLog, "流程(%s)的定时任务开始时间未到，不执行", eventID)
-										continue
-									}
-								}
-
-								if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
-									endTimeInt := int64(endTime / 1e3)
-									if timex.GetLocalTimeNow(time.Now()).Unix() >= endTimeInt {
-										//logger.Debugf(eventDeviceModifyLog, "流程(%s)的定时任务结束时间已到，不执行", eventID)
-										//修改流程为失效
-										updateMap := bson.M{"settings.invalid": true}
-										//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
-										var r = make(map[string]interface{})
-										err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
-										if err != nil {
-											//logger.Errorf(eventDeviceModifyLog, "失效流程(%s)失败:%s", eventID, err.Error())
-											continue
-										}
-										continue
-									}
-								}
-							}
-						}
+				//validTime, ok := flowInfo["validTime"].(string)
+				//if ok {
+				//	if validTime == "timeLimit" {
+				//		if rangeDefine, ok = flowInfo["range"].(string); ok {
+				//			if rangeDefine != "once" {
+				//判断有效期
+				if startTime, ok := flowInfo["startTime"].(primitive.DateTime); ok {
+					startTimeInt := int64(startTime / 1e3)
+					if timex.GetLocalTimeNow(time.Now()).Unix() < startTimeInt {
+						//logger.Debugf(eventDeviceModifyLog, "流程(%s)的定时任务开始时间未到，不执行", eventID)
+						continue
 					}
 				}
+
+				if endTime, ok := flowInfo["endTime"].(primitive.DateTime); ok {
+					endTimeInt := int64(endTime / 1e3)
+					if timex.GetLocalTimeNow(time.Now()).Unix() >= endTimeInt {
+						//logger.Debugf(eventDeviceModifyLog, "流程(%s)的定时任务结束时间已到，不执行", eventID)
+						//修改流程为失效
+						updateMap := bson.M{"invalid": true}
+						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+						var r = make(map[string]interface{})
+						err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
+						if err != nil {
+							//logger.Errorf(eventDeviceModifyLog, "失效流程(%s)失败:%s", eventID, err.Error())
+							continue
+						}
+						continue
+					}
+				}
+				//}
+				//		}
+				//	}
+				//}
 
 				//判断流程是否已经触发
 				hasExecute := false
@@ -259,7 +259,7 @@ flowloop:
 											}
 
 											if contentInSettings, ok := settings["content"].(string); ok {
-												b,err := json.Marshal(data)
+												b, err := json.Marshal(data)
 												if err != nil {
 													continue
 												}
@@ -359,7 +359,7 @@ flowloop:
 												if propType, ok := propM["propType"].(string); ok {
 													switch propType {
 													case "自定义属性":
-														if custom,ok := dataMap["custom"].(primitive.M);ok{
+														if custom, ok := dataMap["custom"].(primitive.M); ok {
 															if value, ok := propM["value"]; ok {
 																if value != nil {
 																	if _, ok := custom[key]; ok {
@@ -446,7 +446,7 @@ flowloop:
 					data["time"] = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
 					if contentInSettings, ok := settings["content"].(string); ok {
-						b,err := json.Marshal(data)
+						b, err := json.Marshal(data)
 						if err != nil {
 							continue
 						}
@@ -505,11 +505,11 @@ flowloop:
 				}
 
 				//对只能执行一次的流程进行失效
-				if validTime == "timeLimit" {
+				//if validTime == "timeLimit" {
 					if rangeDefine == "once" && hasExecute {
 						//logger.Warnln(eventDeviceModifyLog, "流程(%s)为只执行一次的流程", eventID)
 						//修改流程为失效
-						updateMap := bson.M{"settings.invalid": true}
+						updateMap := bson.M{"invalid": true}
 						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 						var r = make(map[string]interface{})
 						err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
@@ -518,7 +518,7 @@ flowloop:
 							continue
 						}
 					}
-				}
+				//}
 			}
 		}
 	}
@@ -660,7 +660,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 			if settings, ok := flowInfo["settings"].(primitive.M); ok {
 
 				//判断是否已经失效
-				if invalid, ok := settings["invalid"].(bool); ok {
+				if invalid, ok := flowInfo["invalid"].(bool); ok {
 					if invalid {
 						//logger.Warnln(eventLog, "流程(%s)已经失效", eventID)
 						continue
@@ -668,7 +668,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 				}
 
 				//判断禁用
-				if disable, ok := settings["disable"].(bool); ok {
+				if disable, ok := flowInfo["disable"].(bool); ok {
 					if disable {
 						//logger.Warnln(eventDeviceModifyLog, "流程(%s)已经被禁用", eventID)
 						continue
@@ -676,13 +676,13 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 				}
 
 				rangeDefine := ""
-				validTime, ok := settings["validTime"].(string)
-				if ok {
-					if validTime == "timeLimit" {
-						if rangeDefine, ok = settings["range"].(string); ok {
-							if rangeDefine != "once" {
+				//validTime, ok := flowInfo["validTime"].(string)
+				//if ok {
+				//	if validTime == "timeLimit" {
+				//		if rangeDefine, ok = flowInfo["range"].(string); ok {
+				//			if rangeDefine != "once" {
 								//判断有效期
-								if startTime, ok := settings["startTime"].(primitive.DateTime); ok {
+								if startTime, ok := flowInfo["startTime"].(primitive.DateTime); ok {
 									startTimeInt := int64(startTime / 1e3)
 									if timex.GetLocalTimeNow(time.Now()).Unix() < startTimeInt {
 										//logger.Debugf(eventDeviceModifyLog, "流程(%s)的定时任务开始时间未到，不执行", eventID)
@@ -690,12 +690,12 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 									}
 								}
 
-								if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
+								if endTime, ok := flowInfo["endTime"].(primitive.DateTime); ok {
 									endTimeInt := int64(endTime / 1e3)
 									if timex.GetLocalTimeNow(time.Now()).Unix() >= endTimeInt {
 										//logger.Debugf(eventDeviceModifyLog, "流程(%s)的定时任务结束时间已到，不执行", eventID)
 										//修改流程为失效
-										updateMap := bson.M{"settings.invalid": true}
+										updateMap := bson.M{"invalid": true}
 										//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 										var r = make(map[string]interface{})
 										err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
@@ -706,10 +706,10 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 										continue
 									}
 								}
-							}
-						}
-					}
-				}
+				//			}
+				//		}
+				//	}
+				//}
 
 				//判断流程是否已经触发
 				hasExecute := false
@@ -821,11 +821,11 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 				}
 
 				//对只能执行一次的流程进行失效
-				if validTime == "timeLimit" {
+				//if validTime == "timeLimit" {
 					if rangeDefine == "once" && hasExecute {
 						//logger.Warnln(eventDeviceModifyLog, "流程(%s)为只执行一次的流程", eventID)
 						//修改流程为失效
-						updateMap := bson.M{"settings.invalid": true}
+						updateMap := bson.M{"invalid": true}
 						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
 						var r = make(map[string]interface{})
 						err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
@@ -834,7 +834,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 							continue
 						}
 					}
-				}
+				//}
 			}
 		}
 	}
