@@ -7,6 +7,7 @@ import (
 	"github.com/air-iot/service/init/cache/table"
 	"github.com/air-iot/service/logger"
 	"github.com/air-iot/service/util/flowx"
+	"github.com/air-iot/service/util/json"
 	"github.com/air-iot/service/util/numberx"
 	"github.com/camunda-cloud/zeebe/clients/go/pkg/zbc"
 	"strings"
@@ -55,9 +56,9 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 
 	query := map[string]interface{}{
 		"filter": map[string]interface{}{
-			"type":                ExtModify,
-			"settings.eventType":  modifyTypeAfterMapping,
-			"settings.ext.name": tableName,
+			"type":               ExtModify,
+			"settings.eventType": modifyTypeAfterMapping,
+			"settings.ext.name":  tableName,
 			//"settings.eventRange": "node",
 		},
 		"project": map[string]interface{}{
@@ -75,6 +76,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 		return nil
 	}
 
+	variables := map[string]interface{}{"#project": projectName}
+	variablesBytes, err := json.Marshal(variables)
+	if err != nil {
+		return err
+	}
 	//fmt.Println("flowInfoList:", len(flowInfoList))
 	////logger.Debugf(eventDeviceModifyLog, "开始遍历流程列表")
 flowloop:
@@ -96,43 +102,47 @@ flowloop:
 			continue
 		}
 
-		if flowInfo.ValidTime == "timeLimit" {
-			if flowInfo.Range != "once" {
-				//判断有效期
-				startTime := flowInfo.StartTime
-				formatLayout := timex.FormatTimeFormat(startTime)
-				formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
-				if err != nil {
-					logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
-					continue
-				}
-				if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
-					logger.Debugf("流程(%s)的定时任务开始时间未到，不执行", flowID)
-					continue
-				}
-
-				endTime := flowInfo.EndTime
-				formatLayout = timex.FormatTimeFormat(endTime)
-				formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
-				if err != nil {
-					logger.Errorf("时间范围字段值格式错误:%s", err.Error())
-					continue
-				}
-				if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
-					logger.Debugf("流程(%s)的定时任务结束时间已到，不执行", flowID)
-					//修改流程为失效
-					updateMap := bson.M{"invalid": true}
-					//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), eventID, updateMap)
-					var r = make(map[string]interface{})
-					err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
-					if err != nil {
-						logger.Errorf("失效流程(%s)失败:%s", flowID, err.Error())
-						continue
-					}
-					continue
-				}
+		//if flowInfo.ValidTime == "timeLimit" {
+		//	if flowInfo.Range != "once" {
+		//判断有效期
+		startTime := flowInfo.StartTime
+		formatLayout := timex.FormatTimeFormat(startTime)
+		if startTime != "" {
+			formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
+			if err != nil {
+				logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
+				continue
+			}
+			if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
+				logger.Debugf("流程(%s)的定时任务开始时间未到，不执行", flowID)
+				continue
 			}
 		}
+
+		endTime := flowInfo.EndTime
+		formatLayout = timex.FormatTimeFormat(endTime)
+		if endTime != "" {
+			formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
+			if err != nil {
+				logger.Errorf("时间范围字段值格式错误:%s", err.Error())
+				continue
+			}
+			if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
+				logger.Debugf("流程(%s)的定时任务结束时间已到，不执行", flowID)
+				//修改流程为失效
+				updateMap := bson.M{"invalid": true}
+				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), eventID, updateMap)
+				var r = make(map[string]interface{})
+				err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
+				if err != nil {
+					logger.Errorf("失效流程(%s)失败:%s", flowID, err.Error())
+					continue
+				}
+				continue
+			}
+		}
+		//	}
+		//}
 
 		if tableName != settings.Table.Name {
 			logger.Debugf("不是流程(%s)触发需要的工作表", flowID)
@@ -156,6 +166,16 @@ flowloop:
 		//fmt.Println("settings.EventType:", settings.EventType)
 		counter := 0
 		orCounter := 0
+		for _, logic := range settings.Logic {
+			for i, compare := range logic.Compare {
+				formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.Value)
+				if err != nil{
+					logger.Errorf("流程(%s)中替换模板变量失败:%s", flowID, err.Error())
+					continue
+				}
+				logic.Compare[i].Value = formatVal
+			}
+		}
 		switch settings.EventType {
 		case "新增记录时":
 			//fmt.Println("新增记录时 projectName ;", projectName, "data:", data)

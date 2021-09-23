@@ -65,7 +65,17 @@ func TriggerAddScheduleFlow(ctx context.Context, redisClient redisdb.Client, mon
 					}
 					cronExpression = formatx.GetCronExpressionOnce(scheduleType, formatStartTime)
 				}
-			} else {
+			} else if scheduleType == "fixed" {
+				if startTime, ok := settings["startValidTime"].(string); ok {
+					formatLayout := timex.FormatTimeFormat(startTime)
+					formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
+					if err != nil {
+						logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
+						return fmt.Errorf("时间范围字段值格式错误:%s", err.Error())
+					}
+					cronExpression = formatx.GetCronExpressionOnce(scheduleType, formatStartTime)
+				}
+			}else{
 				if scheduleType, ok := settings["type"].(string); ok {
 					if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
 						cronExpression = formatx.GetCronExpression(scheduleType, startTime)
@@ -249,7 +259,7 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 		return fmt.Errorf("获取所有计划流程失败:%s", err.Error())
 	}
 
-	////logger.Debugf(eventScheduleLog, "开始遍历流程列表")
+	logger.Debugf("开始遍历流程列表")
 	//fmt.Println("len eventInfoList:",len(eventInfoList))
 	if len(flowInfoList) == 0 {
 		return nil
@@ -263,17 +273,17 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 	for i, flowInfo := range flowInfoList {
 		j := i
 		flowInfo = flowInfoList[j]
-		//logger.Debugf(eventScheduleLog, "流程信息为:%+v", eventInfo)
+		//logger.Debugf("流程信息为:%+v", flowInfo)
 		flowName := flowInfo.Name
 		if flowName == "" {
-			//logger.Errorf(eventScheduleLog, "传入参数中流程名称不存在或类型错误")
+			logger.Errorf("传入参数中流程名称不存在或类型错误")
 			continue
 		}
 		//logger.Debugf(eventScheduleLog, "开始分析流程")
 		flowID := flowInfo.ID
 		settings := flowInfo.Settings
 		if settings == nil || len(settings) == 0 {
-			//logger.Errorf(eventScheduleLog, "流程的配置不存在")
+			logger.Errorf( "流程的配置不存在")
 			continue
 		}
 		//判断是否已经失效
@@ -299,21 +309,30 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 					}
 					cronExpression = formatx.GetCronExpressionOnce(scheduleType, &formatStartTime)
 				}
-			} else {
+			} else if scheduleType == "fixed" {
+				if startTime, ok := settings["startValidTime"].(primitive.DateTime); ok {
+					formatStartTime := time.Unix(int64(startTime/1e3), 0)
+					if err != nil {
+						//logger.Errorf(eventScheduleLog, "时间转time.Time失败:%s", err.Error())
+						continue
+					}
+					cronExpression = formatx.GetCronExpressionOnce(scheduleType, &formatStartTime)
+				}
+			}else{
 				if scheduleType, ok := settings["type"].(string); ok {
-					if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
+					if startTime, ok := settings["startTime"].(primitive.M); ok {
 						cronExpression = formatx.GetCronExpression(scheduleType, startTime)
 					}
 				}
 			}
 		} else if scheduleType, ok := settings["type"].(string); ok {
-			if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
+			if startTime, ok := settings["startTime"].(primitive.M); ok {
 				cronExpression = formatx.GetCronExpression(scheduleType, startTime)
 			}
 		}
 		if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
 			if timex.GetLocalTimeNow(time.Now()).Unix() >= int64(endTime)/1000 {
-				//logger.Debugf(eventScheduleLog, "流程(%s)的定时任务结束流程已到，不再执行", eventID)
+				logger.Debugf("流程(%s)的定时任务结束流程已到，不再执行", flowID)
 				//修改流程为失效
 				updateMap := bson.M{"invalid": true}
 				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
@@ -328,10 +347,10 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 			}
 		}
 		if cronExpression == "" {
-			//logger.Errorf(eventScheduleLog, "流程(%s)的定时表达式解析失败", eventID)
+			logger.Errorf("流程(%s)的定时表达式解析失败", flowID)
 			continue
 		}
-		//logger.Debugf(eventScheduleLog, "流程(%s)的定时cron为:(%s)", eventID, cronExpression)
+		logger.Debugf("流程(%s)的定时cron为:(%s)", flowID, cronExpression)
 
 		flowInfoCron := flowInfo
 		flowIDCron := flowID
@@ -368,17 +387,17 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 						}
 					} else {
 						scheduleType, ok = settings["type"].(string)
-						if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
+						if startTime, ok := settings["startTime"].(primitive.M); ok {
 							if year, ok := startTime["year"]; ok {
 								if year != nil {
 									yearFloat, err := numberx.GetFloatNumber(year)
 									if err != nil {
-										//logger.Debugf(eventScheduleLog, "流程(%s)的年份转数字失败:%s", err.Error())
+										logger.Debugf("流程(%s)的年份转数字失败:%s", err.Error())
 										return
 									}
 									if int(yearFloat) != 0 {
 										if time.Now().Year()%int(yearFloat) != 0 {
-											//logger.Debugf(eventScheduleLog, "流程(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
+											logger.Debugf("流程(%s)的定时任务开始时间未到或已经超过，不执行", flowIDCron)
 											return
 										}
 									}
@@ -388,17 +407,17 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 					}
 				} else {
 					scheduleType, ok = settings["type"].(string)
-					if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
+					if startTime, ok := settings["startTime"].(primitive.M); ok {
 						if year, ok := startTime["year"]; ok {
 							if year != nil {
 								yearFloat, err := numberx.GetFloatNumber(year)
 								if err != nil {
-									//logger.Debugf(eventScheduleLog, "流程(%s)的年份转数字失败:%s", err.Error())
+									logger.Debugf("流程(%s)的年份转数字失败:%s", err.Error())
 									return
 								}
 								if int(yearFloat) != 0 {
 									if time.Now().Year()%int(yearFloat) != 0 {
-										//logger.Debugf(eventScheduleLog, "流程(%s)的定时任务开始时间未到或已经超过，不执行", eventID)
+										logger.Debugf("流程(%s)的定时任务开始时间未到或已经超过，不执行", flowIDCron)
 										return
 									}
 								}
@@ -408,13 +427,13 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 				}
 				if startValidTime, ok := settings["startValidTime"].(primitive.DateTime); ok {
 					if timex.GetLocalTimeNow(time.Now()).Unix() < int64(startValidTime)/1000 {
-						logger.Debugf("流程(%s)的定时任务开始时间未到:%s", flowID)
+						logger.Debugf("流程(%s)的定时任务开始时间未到:%s", flowIDCron)
 						return
 					}
 				}
 				if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
 					if timex.GetLocalTimeNow(time.Now()).Unix() >= int64(endTime)/1000 {
-						//logger.Debugf(eventScheduleLog, "流程(%s)的定时任务结束流程已到，不再执行", eventID)
+						logger.Debugf("流程(%s)的定时任务结束流程已到，不再执行", flowIDCron)
 
 						//修改流程为失效
 						updateMap := bson.M{"invalid": true}
@@ -450,6 +469,7 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowIDCron, err.Error())
 				return
 			}
+			logger.Debugf("流程(%s)触发成功",flowIDCron)
 
 			if isOnce {
 				//logger.Warnln(eventAlarmLog, "流程(%s)为只执行一次的流程", eventID)

@@ -106,39 +106,43 @@ func TriggerExecCmdFlow(ctx context.Context, redisClient redisdb.Client, mongoCl
 
 		//if flowInfo.ValidTime == "timeLimit" {
 		//	if flowInfo.Range != "once" {
-				//判断有效期
-				startTime := flowInfo.StartTime
-				formatLayout := timex.FormatTimeFormat(startTime)
-				formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
-				if err != nil {
-					logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
-					continue
-				}
-				if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
-					logger.Debugf("流程(%s)的定时任务开始时间未到，不执行", flowID)
-					continue
-				}
+		//判断有效期
+		startTime := flowInfo.StartTime
+		formatLayout := timex.FormatTimeFormat(startTime)
+		if startTime != "" {
+			formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
+			if err != nil {
+				logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
+				continue
+			}
+			if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
+				logger.Debugf("流程(%s)的定时任务开始时间未到，不执行", flowID)
+				continue
+			}
+		}
 
-				endTime := flowInfo.EndTime
-				formatLayout = timex.FormatTimeFormat(endTime)
-				formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
+		endTime := flowInfo.EndTime
+		formatLayout = timex.FormatTimeFormat(endTime)
+		if endTime != "" {
+			formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
+			if err != nil {
+				logger.Errorf("时间范围字段值格式错误:%s", err.Error())
+				continue
+			}
+			if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
+				logger.Debugf("流程(%s)的定时任务结束时间已到，不执行", flowID)
+				//修改流程为失效
+				updateMap := bson.M{"invalid": true}
+				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), eventID, updateMap)
+				var r= make(map[string]interface{})
+				err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
 				if err != nil {
-					logger.Errorf("时间范围字段值格式错误:%s", err.Error())
+					logger.Errorf("失效流程(%s)失败:%s", flowID, err.Error())
 					continue
 				}
-				if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
-					logger.Debugf("流程(%s)的定时任务结束时间已到，不执行", flowID)
-					//修改流程为失效
-					updateMap := bson.M{"invalid": true}
-					//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), eventID, updateMap)
-					var r = make(map[string]interface{})
-					err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
-					if err != nil {
-						logger.Errorf("失效流程(%s)失败:%s", flowID, err.Error())
-						continue
-					}
-					continue
-				}
+				continue
+			}
+		}
 		//	}
 		//}
 
@@ -185,12 +189,12 @@ func TriggerExecCmdFlow(ctx context.Context, redisClient redisdb.Client, mongoCl
 							for _, id := range departmentStringIDList {
 								deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
 							}
-							sendMap := bson.M{nodeID: bson.M	{
+							sendMap := bson.M{nodeID: bson.M{
 								"time":         timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
 								"#$model":      bson.M{"id": modelID, "_tableName": "model"},
 								"#$department": deptMap,
-								"#$node":       bson.M{"id": nodeID, "_tableName": "node","uid":nodeID},
-								"cmdName":  commandName,
+								"#$node":       bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
+								"cmdName":      commandName,
 								//"departmentName": departmentStringIDList,
 								//"modelName":      formatx.FormatKeyInfo(modelInfo, "name"),
 								//"nodeName":       formatx.FormatKeyInfo(nodeInfo, "name"),

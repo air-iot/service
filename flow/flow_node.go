@@ -370,10 +370,6 @@ flowloop:
 																} else if _, ok := custom[key]; ok {
 																	counter++
 																}
-															} else {
-																if _, ok := custom[key]; ok {
-																	counter++
-																}
 															}
 														}
 													case "内置属性":
@@ -385,10 +381,6 @@ flowloop:
 																	}
 																}
 															} else if _, ok := dataMap[key]; ok {
-																counter++
-															}
-														} else {
-															if _, ok := dataMap[key]; ok {
 																counter++
 															}
 														}
