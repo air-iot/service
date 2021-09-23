@@ -3,9 +3,6 @@ package flow
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"strings"
-
 	"github.com/air-iot/service/api"
 	"github.com/air-iot/service/gin/ginx"
 	"github.com/air-iot/service/init/mongodb"
@@ -15,6 +12,9 @@ import (
 	"github.com/camunda-cloud/zeebe/clients/go/pkg/entities"
 	"github.com/camunda-cloud/zeebe/clients/go/pkg/worker"
 	"github.com/tidwall/gjson"
+	"regexp"
+	"strings"
+	"time"
 )
 
 var Reg, _ = regexp.Compile("\\${(.+?)}")
@@ -32,6 +32,12 @@ func TrimSymbol(s string) string {
 }
 
 func FindExtra(ctx context.Context, apiClient api.Client, param string, variables []byte) (*gjson.Result, error) {
+	if param == "#$time" {
+		timeMap := map[string]interface{}{param: time.Now().Local().Format("2006-01-02 15:04:05")}
+		timeBytes, _ := json.Marshal(timeMap)
+		result := gjson.GetBytes(timeBytes, param)
+		return &result, nil
+	}
 	paramArr := strings.Split(param, ".")
 	var index int
 	for i, paramTmp := range paramArr {
@@ -93,7 +99,6 @@ func FindExtra(ctx context.Context, apiClient api.Client, param string, variable
 			return nil, fmt.Errorf("查询模型错误: %v", err)
 		}
 	}
-
 	dataBytes, err := json.Marshal(val)
 	if err != nil {
 		return nil, fmt.Errorf("数据库数据转字节错误: %v", err)
