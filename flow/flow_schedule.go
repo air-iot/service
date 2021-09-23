@@ -55,17 +55,7 @@ func TriggerAddScheduleFlow(ctx context.Context, redisClient redisdb.Client, mon
 
 
 		if scheduleType, ok := settings["selectType"].(string); ok {
-			if scheduleType == "once" {
-				if startTime, ok := settings["startTime"].(string); ok {
-					formatLayout := timex.FormatTimeFormat(startTime)
-					formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
-					if err != nil {
-						logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
-						return fmt.Errorf("时间范围字段值格式错误:%s", err.Error())
-					}
-					cronExpression = formatx.GetCronExpressionOnce(scheduleType, formatStartTime)
-				}
-			} else if scheduleType == "fixed" {
+			if scheduleType == "fixed" || scheduleType == "once" {
 				if startTime, ok := settings["startValidTime"].(string); ok {
 					formatLayout := timex.FormatTimeFormat(startTime)
 					formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
@@ -113,9 +103,11 @@ func TriggerAddScheduleFlow(ctx context.Context, redisClient redisdb.Client, mon
 		if settings, ok := data["settings"].(map[string]interface{}); ok {
 			var ok bool
 			if scheduleType, ok = settings["selectType"].(string); ok {
-				if scheduleType == "once" {
-					isOnce = true
-					if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
+				if scheduleType == "fixed" || scheduleType == "once" {
+					if scheduleType == "once"{
+						isOnce = true
+					}
+					if startTime, ok := settings["startValidTime"].(map[string]interface{}); ok {
 						if year, ok := startTime["year"]; ok {
 							yearString := formatx.InterfaceTypeToString(year)
 							if time.Now().Format("2006") != yearString {
@@ -123,7 +115,7 @@ func TriggerAddScheduleFlow(ctx context.Context, redisClient redisdb.Client, mon
 								return
 							}
 						}
-					} else if startTime, ok := settings["startTime"].(string); ok {
+					} else if startTime, ok := settings["startValidTime"].(string); ok {
 						formatLayout := timex.FormatTimeFormat(startTime)
 						formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
 						if err != nil {
@@ -300,16 +292,7 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 
 		cronExpression := ""
 		if scheduleType, ok := settings["selectType"].(string); ok {
-			if scheduleType == "once" {
-				if startTime, ok := settings["startTime"].(primitive.DateTime); ok {
-					formatStartTime := time.Unix(int64(startTime/1e3), 0)
-					if err != nil {
-						//logger.Errorf(eventScheduleLog, "时间转time.Time失败:%s", err.Error())
-						continue
-					}
-					cronExpression = formatx.GetCronExpressionOnce(scheduleType, &formatStartTime)
-				}
-			} else if scheduleType == "fixed" {
+			if scheduleType == "fixed" || scheduleType == "once" {
 				if startTime, ok := settings["startValidTime"].(primitive.DateTime); ok {
 					formatStartTime := time.Unix(int64(startTime/1e3), 0)
 					if err != nil {
@@ -363,9 +346,11 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 			if settings != nil && len(settings) != 0 {
 				var ok bool
 				if scheduleType, ok = settings["selectType"].(string); ok {
-					if scheduleType == "once" {
-						isOnce = true
-						if startTime, ok := settings["startTime"].(primitive.M); ok {
+					if scheduleType == "once" || scheduleType == "fixed" {
+						if scheduleType == "once"{
+							isOnce = true
+						}
+						if startTime, ok := settings["startValidTime"].(primitive.M); ok {
 							if year, ok := startTime["year"]; ok {
 								yearString := formatx.InterfaceTypeToString(year)
 								if time.Now().Format("2006") != yearString {
@@ -373,7 +358,7 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 									return
 								}
 							}
-						} else if startTime, ok := settings["startTime"].(primitive.DateTime); ok {
+						} else if startTime, ok := settings["startValidTime"].(primitive.DateTime); ok {
 							formatStartTime := time.Unix(int64(startTime/1e3), 0)
 							if err != nil {
 								//logger.Errorf(eventScheduleLog, "时间转time.Time失败:%s", err.Error())
