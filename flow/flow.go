@@ -79,7 +79,8 @@ func FindExtra(ctx context.Context, apiClient api.Client, param string, variable
 	}
 	pathID := append(append(make([]string, 0), paramArr[:index+1]...), "id")
 	pathTableName := append(append(make([]string, 0), paramArr[:index+1]...), "_tableName")
-	id := gjson.GetBytes(variables, strings.Join(pathID, ".")).String()
+	idResult := gjson.GetBytes(variables, strings.Join(pathID, "."))
+	id := idResult.String()
 	if id == "" {
 		return nil, fmt.Errorf("ID变量为空")
 	}
@@ -91,6 +92,9 @@ func FindExtra(ctx context.Context, apiClient api.Client, param string, variable
 	val := make(map[string]interface{})
 	switch tableName {
 	case "node":
+		if paramArr[index+1] == "uid" {
+			return &idResult, nil
+		}
 		if err := apiClient.FindNodeById(map[string]string{ginx.XRequestProject: projectID}, id, &val); err != nil {
 			return nil, fmt.Errorf("查询资产错误: %v", err)
 		}
