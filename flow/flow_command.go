@@ -189,7 +189,7 @@ func TriggerExecCmdFlow(ctx context.Context, redisClient redisdb.Client, mongoCl
 								"time":         timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
 								"#$model":      bson.M{"id": modelID, "_tableName": "model"},
 								"#$department": deptMap,
-								"#$node":       bson.M{"id": nodeID, "_tableName": "node"},
+								"#$node":       bson.M{"id": nodeID, "_tableName": "node","uid":nodeID},
 								"cmdName":  commandName,
 								//"departmentName": departmentStringIDList,
 								//"modelName":      formatx.FormatKeyInfo(modelInfo, "name"),
