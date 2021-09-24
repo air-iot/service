@@ -191,11 +191,11 @@ func FormatTimeFormat(data string) string {
 		switch len(data) {
 		case 20:
 			formatLayout = formatLayout + "Z"
-		case 21:
-			formatLayout = formatLayout + ".0Z"
 		case 22:
-			formatLayout = formatLayout + ".00Z"
+			formatLayout = formatLayout + ".0Z"
 		case 23:
+			formatLayout = formatLayout + ".00Z"
+		case 24:
 			formatLayout = formatLayout + ".000Z"
 		}
 	} else {
