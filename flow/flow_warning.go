@@ -157,6 +157,7 @@ flowloop:
 					needCount := len(rangeTypeList)
 					actualCount := 0
 
+					isNode := false
 					for _, rangeType := range rangeTypeList {
 						switch rangeType {
 						case "warnType":
@@ -256,6 +257,7 @@ flowloop:
 								actualCount++
 							}
 						case "node":
+							isNode = true
 							hasValidWarn = false
 							//判断该流程是否指定了特定报警规则
 							if nodeList, ok := settings["node"].([]interface{}); ok {
@@ -366,7 +368,12 @@ flowloop:
 						}
 					}
 
-					sendMap := bson.M{nodeID: sendMapInner}
+					var sendMap interface{}
+					if !isNode{
+						sendMap = bson.M{nodeID: sendMapInner}
+					}else{
+						sendMap = sendMapInner
+					}
 
 					err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
 					if err != nil {
@@ -378,6 +385,7 @@ flowloop:
 			case "timeout":
 			case "dataPoint":
 				hasValidWarn := false
+				isNode := false
 				if dataType, ok := settings["dateType"].(string); ok {
 					dataPointList := make([]string, 0)
 					fieldIDMap := map[string]interface{}{}
@@ -458,6 +466,7 @@ flowloop:
 							}
 						}
 					case "node":
+						isNode = true
 						if len(dataPointList) != 0 {
 						dataPointListLoop2:
 							for _, point := range dataPointList {
@@ -543,7 +552,12 @@ flowloop:
 					}
 				}
 
-				sendMap := bson.M{nodeID: sendMapInner}
+				var sendMap interface{}
+				if !isNode{
+					sendMap = bson.M{nodeID: sendMapInner}
+				}else{
+					sendMap = sendMapInner
+				}
 
 				err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
 				if err != nil {

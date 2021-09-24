@@ -168,12 +168,46 @@ flowloop:
 		orCounter := 0
 		for _, logic := range settings.Logic {
 			for i, compare := range logic.Compare {
-				formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.Value)
-				if err != nil{
-					logger.Errorf("流程(%s)中替换模板变量失败:%s", flowID, err.Error())
-					continue
+				if compare.Value != "" {
+					formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.Value)
+					if err != nil {
+						logger.Errorf("流程(%s)中替换模板Value变量失败:%s", flowID, err.Error())
+						continue
+					}
+					logic.Compare[i].Value = formatVal
 				}
-				logic.Compare[i].Value = formatVal
+				if compare.StartTime.Value != "" {
+					formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.StartTime.Value)
+					if err != nil {
+						logger.Errorf("流程(%s)中替换模板StartTime变量失败:%s", flowID, err.Error())
+						continue
+					}
+					logic.Compare[i].StartTime.Value = formatVal
+				}
+				if compare.EndTime.Value != "" {
+					formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.EndTime.Value)
+					if err != nil {
+						logger.Errorf("流程(%s)中替换模板EndTime变量失败:%s", flowID, err.Error())
+						continue
+					}
+					logic.Compare[i].EndTime.Value = formatVal
+				}
+				if compare.StartValue.Value != "" {
+					formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.StartValue.Value)
+					if err != nil {
+						logger.Errorf("流程(%s)中替换模板StartValue变量失败:%s", flowID, err.Error())
+						continue
+					}
+					logic.Compare[i].StartValue.Value = formatVal
+				}
+				if compare.EndValue.Value != "" {
+					formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.EndValue.Value)
+					if err != nil {
+						logger.Errorf("流程(%s)中替换模板EndValue变量失败:%s", flowID, err.Error())
+						continue
+					}
+					logic.Compare[i].EndValue.Value = formatVal
+				}
 			}
 		}
 		switch settings.EventType {
@@ -319,11 +353,11 @@ flowloop:
 									counter++
 									continue logicLoop
 								}
-								if !!strings.HasSuffix(dataVal, compareVal) {
+								if !strings.HasSuffix(dataVal, compareVal) {
 									counter++
 									continue logicLoop
 								}
-							} else if !!strings.HasSuffix(dataVal, compareInValue) {
+							} else if !strings.HasSuffix(dataVal, compareInValue) {
 								counter++
 								continue logicLoop
 							}

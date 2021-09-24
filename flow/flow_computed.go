@@ -496,15 +496,20 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 			nodeUIDModelMap := map[string]string{}
 			nodeUIDNodeMap := map[string]string{}
 			nodeUIDNodeMap[nodeUIDInData] = nodeID
-			if modelInfoInMap, ok := settings["model"].(map[string]interface{}); ok {
-				if modelIDInInfo, ok := modelInfoInMap["id"].(string); ok {
-					nodeUIDModelMap[nodeUIDInData] = modelIDInInfo
-				}
-			}
+			//if modelInfoInMap, ok := settings["model"].(map[string]interface{}); ok {
+			//	if modelIDInInfo, ok := modelInfoInMap["id"].(string); ok {
+			//		nodeUIDModelMap[nodeUIDInData] = modelIDInInfo
+			//	}
+			//}
 			for _, tag := range tags {
 				//if tagMap, ok := settings["tags"].(map[string]interface{}); ok {
 				if tagMap, ok := tag.(map[string]interface{}); ok {
 					if tagIDInMap, ok := tagMap["id"].(string); ok {
+						if modelInfoInMap, ok := tagMap["model"].(map[string]interface{}); ok {
+							if modelIDInInfo, ok := modelInfoInMap["id"].(string); ok {
+								nodeUIDModelMap[nodeUIDInData] = modelIDInInfo
+							}
+						}
 						formatx.MergeDataMap(nodeUIDInData, tagIDInMap, &nodeUIDFieldsMap)
 					}
 					//if modelInfoInMap, ok := tagMap["model"].(map[string]interface{}); ok {

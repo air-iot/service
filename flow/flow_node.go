@@ -3,10 +3,13 @@ package flow
 import (
 	"context"
 	"fmt"
+	"github.com/air-iot/service/init/cache/entity"
 	"github.com/air-iot/service/logger"
 	"github.com/air-iot/service/util/flowx"
 	"github.com/air-iot/service/util/json"
+	"github.com/air-iot/service/util/numberx"
 	"github.com/camunda-cloud/zeebe/clients/go/pkg/zbc"
+	"strings"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -249,7 +252,7 @@ flowloop:
 											}
 											data["#$department"] = deptMap
 											data["#$model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
-											data["#$node"] = bson.M{nodeID: bson.M{"id": nodeID, "_tableName": "node","uid":nodeID}}
+											data["#$node"] = bson.M{nodeID: bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID}}
 											if loginTimeRaw, ok := data["time"].(string); ok {
 												loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
 												if err != nil {
@@ -354,36 +357,1231 @@ flowloop:
 								counter := 0
 								if dataMap, ok := data["data"].(map[string]interface{}); ok {
 									for _, prop := range props {
-										if propM, ok := prop.(primitive.M); ok {
-											if key, ok := propM["id"].(string); ok {
-												if propType, ok := propM["propType"].(string); ok {
-													switch propType {
-													case "自定义属性":
-														if custom, ok := dataMap["custom"].(primitive.M); ok {
-															if value, ok := propM["value"]; ok {
-																if value != nil {
-																	if _, ok := custom[key]; ok {
-																		if custom[key] == value {
-																			counter++
-																		}
+										b, err := json.Marshal(prop)
+										if err != nil {
+											continue
+										}
+										logic := entity.Logic{}
+										err = json.Unmarshal(b, &logic)
+										if err != nil {
+											continue
+										}
+										switch logic.PropType {
+										case "自定义属性":
+											if custom, ok := dataMap["custom"].(primitive.M); ok {
+												switch logic.DataType {
+												case "文本":
+													switch logic.Relation {
+													case "是":
+														for _, compare := range logic.Compare {
+															if custom[logic.ID] == compare.Value {
+																counter++
+															}
+														}
+													case "不是":
+														for _, compare := range logic.Compare {
+															if custom[logic.ID] != compare.Value {
+																counter++
+															}
+														}
+													case "包含":
+														for _, compare := range logic.Compare {
+															compareInValue := ""
+															if ele, ok := compare.Value.(string); ok {
+																compareInValue = ele
+															}
+															dataVal, ok := data[logic.ID].(string)
+															if !ok {
+																continue
+															}
+															if strings.Contains(dataVal, compareInValue) {
+																counter++
+															}
+														}
+													case "不包含":
+														for _, compare := range logic.Compare {
+															compareInValue := ""
+															if ele, ok := compare.Value.(string); ok {
+																compareInValue = ele
+															}
+															dataVal, ok := data[logic.ID].(string)
+															if !ok {
+																continue
+															}
+															if !strings.Contains(dataVal, compareInValue) {
+																counter++
+															}
+														}
+													case "开始为":
+														for _, compare := range logic.Compare {
+															compareInValue := ""
+															if ele, ok := compare.Value.(string); ok {
+																compareInValue = ele
+															}
+															dataVal, ok := data[logic.ID].(string)
+															if !ok {
+																continue
+															}
+															if strings.HasPrefix(dataVal, compareInValue) {
+																counter++
+															}
+														}
+													case "结尾为":
+														for _, compare := range logic.Compare {
+															compareInValue := ""
+															if ele, ok := compare.Value.(string); ok {
+																compareInValue = ele
+															}
+															dataVal, ok := data[logic.ID].(string)
+															if !ok {
+																continue
+															}
+															if strings.HasSuffix(dataVal, compareInValue) {
+																counter++
+															}
+														}
+													case "为空":
+														if data[logic.ID] == nil {
+															counter++
+														}
+													case "不为空":
+														if data[logic.ID] != nil {
+															counter++
+														}
+													}
+												case "选择器":
+													switch logic.Relation {
+													case "是", "等于":
+														for _, compare := range logic.Compare {
+															if custom[logic.ID] == compare.Value {
+																counter++
+															}
+														}
+													case "不是", "不等于":
+														for _, compare := range logic.Compare {
+															if custom[logic.ID] != compare.Value {
+																counter++
+															}
+														}
+													case "为空":
+														if data[logic.ID] == nil {
+															counter++
+														}
+													case "不为空":
+														if data[logic.ID] != nil {
+															counter++
+														}
+													}
+												case "数值":
+													switch logic.Relation {
+													case "等于":
+														for _, compare := range logic.Compare {
+															if custom[logic.ID] == compare.Value {
+																counter++
+															}
+														}
+													case "不等于":
+														for _, compare := range logic.Compare {
+															if custom[logic.ID] != compare.Value {
+																counter++
+															}
+														}
+													case "大于":
+														for _, compare := range logic.Compare {
+															logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+															if err != nil {
+																continue
+															}
+															compareVal, err := numberx.GetFloatNumber(compare.Value)
+															if err != nil {
+																continue
+															}
+															if logicVal > compareVal {
+																counter++
+															}
+														}
+													case "小于":
+														for _, compare := range logic.Compare {
+															logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+															if err != nil {
+																continue
+															}
+															compareVal, err := numberx.GetFloatNumber(compare.Value)
+															if err != nil {
+																continue
+															}
+															if logicVal < compareVal {
+																counter++
+															}
+														}
+													case "大于等于":
+														for _, compare := range logic.Compare {
+															logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+															if err != nil {
+																continue
+															}
+															compareVal, err := numberx.GetFloatNumber(compare.Value)
+															if err != nil {
+																continue
+															}
+															if logicVal >= compareVal {
+																counter++
+															}
+														}
+													case "小于等于":
+														for _, compare := range logic.Compare {
+															logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+															if err != nil {
+																continue
+															}
+															compareVal, err := numberx.GetFloatNumber(compare.Value)
+															if err != nil {
+																continue
+															}
+															if logicVal <= compareVal {
+																counter++
+															}
+														}
+													case "在范围内":
+														for _, compare := range logic.Compare {
+															logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+															if err != nil {
+																continue
+															}
+															startVal := float64(0)
+															endVal := float64(0)
+															startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
+															if err != nil {
+																continue
+															}
+															endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
+															if err != nil {
+																continue
+															}
+															if logicVal >= startVal && logicVal <= endVal {
+																counter++
+															}
+														}
+													case "不在范围内":
+														for _, compare := range logic.Compare {
+															logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+															if err != nil {
+																continue
+															}
+															startVal := float64(0)
+															endVal := float64(0)
+															startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
+															if err != nil {
+																continue
+															}
+															endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
+															if err != nil {
+																continue
+															}
+															if logicVal < startVal || logicVal > endVal {
+																counter++
+															}
+														}
+													case "为空":
+														if data[logic.ID] == nil {
+															counter++
+														}
+													case "不为空":
+														if data[logic.ID] != nil {
+															counter++
+														}
+													}
+												case "时间":
+													switch logic.Relation {
+													case "等于":
+														for _, compare := range logic.Compare {
+															compareInValue := int64(0)
+															if ele, ok := compare.Value.(string); ok {
+																if ele != "" {
+																	eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+																	if err != nil {
+																		continue
 																	}
-																} else if _, ok := custom[key]; ok {
+																	compareInValue = eleTime.Unix()
+																}
+															}
+															dataVal := int64(0)
+															eleRaw, ok := data[logic.ID].(string)
+															if !ok {
+																continue
+															} else {
+																if eleRaw != "" {
+																	formatLayout := timex.FormatTimeFormat(eleRaw)
+																	timeConvert, err := timex.ConvertStringToTime(formatLayout, eleRaw, time.Local)
+																	if err != nil {
+																		logger.Errorf("传入的时间转换失败:%s", err.Error())
+																		continue
+																	}
+																	dataVal = timeConvert.Unix()
+																}
+															}
+															if compare.TimeType != "" {
+																switch compare.TimeType {
+																case "今天":
+																	compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+																case "昨天":
+																	compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+																case "明天":
+																	compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+																case "本周":
+																	week := int(time.Now().Weekday())
+																	if week == 0 {
+																		week = 7
+																	}
+																	compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+																case "上周":
+																	week := int(time.Now().Weekday())
+																	if week == 0 {
+																		week = 7
+																	}
+																	compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+																case "今年":
+																	compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+																case "去年":
+																	compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+																case "明年":
+																	compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+																case "指定时间":
+																	if compare.SpecificTime != "" {
+																		eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
+																		if err != nil {
+																			continue
+																		}
+																		compareInValue = eleTime.Unix()
+																	}
+																}
+																if dataVal == compareInValue {
 																	counter++
 																}
 															}
 														}
-													case "内置属性":
-														if value, ok := propM["value"]; ok {
-															if value != nil {
-																if _, ok := dataMap[key]; ok {
-																	if dataMap[key] == value {
-																		counter++
+													case "不等于":
+														for _, compare := range logic.Compare {
+															compareInValue := int64(0)
+															if ele, ok := compare.Value.(string); ok {
+																if ele != "" {
+																	eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+																	if err != nil {
+																		continue
+																	}
+																	compareInValue = eleTime.Unix()
+																}
+															}
+															dataVal := int64(0)
+															eleRaw, ok := data[logic.ID].(string)
+															if !ok {
+																continue
+															} else {
+																if eleRaw != "" {
+																	formatLayout := timex.FormatTimeFormat(eleRaw)
+																	timeConvert, err := timex.ConvertStringToTime(formatLayout, eleRaw, time.Local)
+																	if err != nil {
+																		logger.Errorf("传入的时间转换失败:%s", err.Error())
+																		continue
+																	}
+																	dataVal = timeConvert.Unix()
+																}
+															}
+															if compare.TimeType != "" {
+																switch compare.TimeType {
+																case "今天":
+																	compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+																case "昨天":
+																	compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+																case "明天":
+																	compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+																case "本周":
+																	week := int(time.Now().Weekday())
+																	if week == 0 {
+																		week = 7
+																	}
+																	compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+																case "上周":
+																	week := int(time.Now().Weekday())
+																	if week == 0 {
+																		week = 7
+																	}
+																	compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+																case "今年":
+																	compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+																case "去年":
+																	compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+																case "明年":
+																	compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+																case "指定时间":
+																	if compare.SpecificTime != "" {
+																		eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
+																		if err != nil {
+																			continue
+																		}
+																		compareInValue = eleTime.Unix()
 																	}
 																}
-															} else if _, ok := dataMap[key]; ok {
+																if dataVal != compareInValue {
+																	counter++
+																}
+															}
+														}
+													case "早于":
+														for _, compare := range logic.Compare {
+															compareInValue := int64(0)
+															if ele, ok := compare.Value.(string); ok {
+																if ele != "" {
+																	eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+																	if err != nil {
+																		continue
+																	}
+																	compareInValue = eleTime.Unix()
+																}
+															}
+															dataVal := int64(0)
+															eleRaw, ok := data[logic.ID].(string)
+															if !ok {
+																continue
+															} else {
+																if eleRaw != "" {
+																	formatLayout := timex.FormatTimeFormat(eleRaw)
+																	timeConvert, err := timex.ConvertStringToTime(formatLayout, eleRaw, time.Local)
+																	if err != nil {
+																		logger.Errorf("传入的时间转换失败:%s", err.Error())
+																		continue
+																	}
+																	dataVal = timeConvert.Unix()
+																}
+															}
+															if compare.TimeType != "" {
+																switch compare.TimeType {
+																case "今天":
+																	compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+																case "昨天":
+																	compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+																case "明天":
+																	compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+																case "本周":
+																	week := int(time.Now().Weekday())
+																	if week == 0 {
+																		week = 7
+																	}
+																	compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+																case "上周":
+																	week := int(time.Now().Weekday())
+																	if week == 0 {
+																		week = 7
+																	}
+																	compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+																case "今年":
+																	compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+																case "去年":
+																	compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+																case "明年":
+																	compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+																case "指定时间":
+																	if compare.SpecificTime != "" {
+																		eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
+																		if err != nil {
+																			continue
+																		}
+																		compareInValue = eleTime.Unix()
+																	}
+																}
+																if dataVal < compareInValue {
+																	counter++
+																}
+															}
+														}
+													case "晚于":
+														for _, compare := range logic.Compare {
+															compareInValue := int64(0)
+															if ele, ok := compare.Value.(string); ok {
+																if ele != "" {
+																	eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+																	if err != nil {
+																		continue
+																	}
+																	compareInValue = eleTime.Unix()
+																}
+															}
+															dataVal := int64(0)
+															eleRaw, ok := data[logic.ID].(string)
+															if !ok {
+																continue
+															} else {
+																if eleRaw != "" {
+																	formatLayout := timex.FormatTimeFormat(eleRaw)
+																	timeConvert, err := timex.ConvertStringToTime(formatLayout, eleRaw, time.Local)
+																	if err != nil {
+																		logger.Errorf("传入的时间转换失败:%s", err.Error())
+																		continue
+																	}
+																	dataVal = timeConvert.Unix()
+																}
+															}
+															if compare.TimeType != "" {
+																switch compare.TimeType {
+																case "今天":
+																	compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+																case "昨天":
+																	compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+																case "明天":
+																	compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+																case "本周":
+																	week := int(time.Now().Weekday())
+																	if week == 0 {
+																		week = 7
+																	}
+																	compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+																case "上周":
+																	week := int(time.Now().Weekday())
+																	if week == 0 {
+																		week = 7
+																	}
+																	compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+																case "今年":
+																	compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+																case "去年":
+																	compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+																case "明年":
+																	compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+																case "指定时间":
+																	if compare.SpecificTime != "" {
+																		eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
+																		if err != nil {
+																			continue
+																		}
+																		compareInValue = eleTime.Unix()
+																	}
+																}
+																if dataVal > compareInValue {
+																	counter++
+																}
+															}
+														}
+													case "在范围内":
+														for _, compare := range logic.Compare {
+															logicVal := int64(0)
+															eleRaw, ok := data[logic.ID].(string)
+															if !ok {
+																continue
+															} else {
+																if eleRaw != "" {
+																	formatLayout := timex.FormatTimeFormat(eleRaw)
+																	timeConvert, err := timex.ConvertStringToTime(formatLayout, eleRaw, time.Local)
+																	if err != nil {
+																		logger.Errorf("传入的时间转换失败:%s", err.Error())
+																		continue
+																	}
+																	logicVal = timeConvert.Unix()
+																}
+															}
+															startVal := int64(0)
+															endVal := int64(0)
+															if compare.StartTime.Value != "" {
+																if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
+																	eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+																	if err != nil {
+																		continue
+																	}
+																	startVal = eleTime.Unix()
+																}
+															}
+															if compare.EndTime.Value != "" {
+																if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+																	eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+																	if err != nil {
+																		continue
+																	}
+																	endVal = eleTime.Unix()
+																}
+															}
+															if logicVal >= startVal && logicVal <= endVal {
 																counter++
 															}
 														}
+													case "不在范围内":
+														for _, compare := range logic.Compare {
+															logicVal := int64(0)
+															eleRaw, ok := data[logic.ID].(string)
+															if !ok {
+																continue
+															} else {
+																if eleRaw != "" {
+																	formatLayout := timex.FormatTimeFormat(eleRaw)
+																	timeConvert, err := timex.ConvertStringToTime(formatLayout, eleRaw, time.Local)
+																	if err != nil {
+																		logger.Errorf("传入的时间转换失败:%s", err.Error())
+																		continue
+																	}
+																	logicVal = timeConvert.Unix()
+																}
+															}
+															startVal := int64(0)
+															endVal := int64(0)
+															if compare.StartTime.Value != "" {
+																if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
+																	eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+																	if err != nil {
+																		continue
+																	}
+																	startVal = eleTime.Unix()
+																}
+															}
+															if compare.EndTime.Value != "" {
+																if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+																	eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+																	if err != nil {
+																		continue
+																	}
+																	endVal = eleTime.Unix()
+																}
+															}
+															if logicVal < startVal || logicVal > endVal {
+																counter++
+															}
+														}
+													case "为空":
+														if data[logic.ID] == nil {
+															counter++
+														}
+													case "不为空":
+														if data[logic.ID] != nil {
+															counter++
+														}
+													}
+												case "布尔值", "附件", "定位":
+													switch logic.Relation {
+													case "是", "等于":
+														for _, compare := range logic.Compare {
+															if custom[logic.ID] == compare.Value {
+																counter++
+															}
+														}
+													case "不是", "不等于":
+														for _, compare := range logic.Compare {
+															if custom[logic.ID] != compare.Value {
+																counter++
+															}
+														}
+													case "为空":
+														if data[logic.ID] == nil {
+															counter++
+														}
+													case "不为空":
+														if data[logic.ID] != nil {
+															counter++
+														}
+													}
+												}
+											}
+										case "内置属性":
+											switch logic.DataType {
+											case "文本":
+												switch logic.Relation {
+												case "是":
+													for _, compare := range logic.Compare {
+														if dataMap[logic.ID] == compare.Value {
+															counter++
+														}
+													}
+												case "不是":
+													for _, compare := range logic.Compare {
+														if dataMap[logic.ID] != compare.Value {
+															counter++
+														}
+													}
+												case "包含":
+													for _, compare := range logic.Compare {
+														compareInValue := ""
+														if ele, ok := compare.Value.(string); ok {
+															compareInValue = ele
+														}
+														dataVal, ok := data[logic.ID].(string)
+														if !ok {
+															continue
+														}
+														if strings.Contains(dataVal, compareInValue) {
+															counter++
+														}
+													}
+												case "不包含":
+													for _, compare := range logic.Compare {
+														compareInValue := ""
+														if ele, ok := compare.Value.(string); ok {
+															compareInValue = ele
+														}
+														dataVal, ok := data[logic.ID].(string)
+														if !ok {
+															continue
+														}
+														if !strings.Contains(dataVal, compareInValue) {
+															counter++
+														}
+													}
+												case "开始为":
+													for _, compare := range logic.Compare {
+														compareInValue := ""
+														if ele, ok := compare.Value.(string); ok {
+															compareInValue = ele
+														}
+														dataVal, ok := data[logic.ID].(string)
+														if !ok {
+															continue
+														}
+														if strings.HasPrefix(dataVal, compareInValue) {
+															counter++
+														}
+													}
+												case "结尾为":
+													for _, compare := range logic.Compare {
+														compareInValue := ""
+														if ele, ok := compare.Value.(string); ok {
+															compareInValue = ele
+														}
+														dataVal, ok := data[logic.ID].(string)
+														if !ok {
+															continue
+														}
+														if strings.HasSuffix(dataVal, compareInValue) {
+															counter++
+														}
+													}
+												case "为空":
+													if data[logic.ID] == nil {
+														counter++
+													}
+												case "不为空":
+													if data[logic.ID] != nil {
+														counter++
+													}
+												}
+											case "选择器":
+												switch logic.Relation {
+												case "是", "等于":
+													for _, compare := range logic.Compare {
+														if dataMap[logic.ID] == compare.Value {
+															counter++
+														}
+													}
+												case "不是", "不等于":
+													for _, compare := range logic.Compare {
+														if dataMap[logic.ID] != compare.Value {
+															counter++
+														}
+													}
+												case "为空":
+													if data[logic.ID] == nil {
+														counter++
+													}
+												case "不为空":
+													if data[logic.ID] != nil {
+														counter++
+													}
+												}
+											case "数值":
+												switch logic.Relation {
+												case "等于":
+													for _, compare := range logic.Compare {
+														if dataMap[logic.ID] == compare.Value {
+															counter++
+														}
+													}
+												case "不等于":
+													for _, compare := range logic.Compare {
+														if dataMap[logic.ID] != compare.Value {
+															counter++
+														}
+													}
+												case "大于":
+													for _, compare := range logic.Compare {
+														logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+														if err != nil {
+															continue
+														}
+														compareVal, err := numberx.GetFloatNumber(compare.Value)
+														if err != nil {
+															continue
+														}
+														if logicVal > compareVal {
+															counter++
+														}
+													}
+												case "小于":
+													for _, compare := range logic.Compare {
+														logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+														if err != nil {
+															continue
+														}
+														compareVal, err := numberx.GetFloatNumber(compare.Value)
+														if err != nil {
+															continue
+														}
+														if logicVal < compareVal {
+															counter++
+														}
+													}
+												case "大于等于":
+													for _, compare := range logic.Compare {
+														logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+														if err != nil {
+															continue
+														}
+														compareVal, err := numberx.GetFloatNumber(compare.Value)
+														if err != nil {
+															continue
+														}
+														if logicVal >= compareVal {
+															counter++
+														}
+													}
+												case "小于等于":
+													for _, compare := range logic.Compare {
+														logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+														if err != nil {
+															continue
+														}
+															compareVal, err := numberx.GetFloatNumber(compare.Value)
+															if err != nil {
+																continue
+															}
+															if logicVal <= compareVal {
+																counter++
+															}
+													}
+												case "在范围内":
+													for _, compare := range logic.Compare {
+														logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+														if err != nil {
+															continue
+														}
+														startVal := float64(0)
+														endVal := float64(0)
+															startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
+															if err != nil {
+																continue
+															}
+															endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
+															if err != nil {
+																continue
+															}
+														if logicVal >= startVal && logicVal <= endVal {
+															counter++
+														}
+													}
+												case "不在范围内":
+													for _, compare := range logic.Compare {
+														logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+														if err != nil {
+															continue
+														}
+														startVal := float64(0)
+														endVal := float64(0)
+														startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
+														if err != nil {
+															continue
+														}
+														endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
+														if err != nil {
+															continue
+														}
+														if logicVal < startVal || logicVal > endVal {
+															counter++
+														}
+													}
+												case "为空":
+													if data[logic.ID] == nil {
+														counter++
+													}
+												case "不为空":
+													if data[logic.ID] != nil {
+														counter++
+													}
+												}
+											case "时间":
+												switch logic.Relation {
+												case "等于":
+													for _, compare := range logic.Compare {
+														compareInValue := int64(0)
+														if ele, ok := compare.Value.(string); ok {
+															if ele != "" {
+																eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+																if err != nil {
+																	continue
+																}
+																compareInValue = eleTime.Unix()
+															}
+														}
+														dataVal := int64(0)
+														eleRaw, ok := data[logic.ID].(string)
+														if !ok {
+															continue
+														} else {
+															if eleRaw != "" {
+																formatLayout := timex.FormatTimeFormat(eleRaw)
+																timeConvert, err := timex.ConvertStringToTime(formatLayout, eleRaw, time.Local)
+																if err != nil {
+																	logger.Errorf("传入的时间转换失败:%s", err.Error())
+																	continue
+																}
+																dataVal = timeConvert.Unix()
+															}
+														}
+														if compare.TimeType != "" {
+															switch compare.TimeType {
+															case "今天":
+																compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+															case "昨天":
+																compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+															case "明天":
+																compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+															case "本周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+															case "上周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+															case "今年":
+																compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+															case "去年":
+																compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+															case "明年":
+																compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+															case "指定时间":
+																if compare.SpecificTime != "" {
+																	eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
+																	if err != nil {
+																		continue
+																	}
+																	compareInValue = eleTime.Unix()
+																}
+															}
+															if dataVal == compareInValue {
+																counter++
+															}
+														}
+													}
+												case "不等于":
+													for _, compare := range logic.Compare {
+														compareInValue := int64(0)
+														if ele, ok := compare.Value.(string); ok {
+															if ele != "" {
+																eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+																if err != nil {
+																	continue
+																}
+																compareInValue = eleTime.Unix()
+															}
+														}
+														dataVal := int64(0)
+														eleRaw, ok := data[logic.ID].(string)
+														if !ok {
+															continue
+														} else {
+															if eleRaw != "" {
+																formatLayout := timex.FormatTimeFormat(eleRaw)
+																timeConvert, err := timex.ConvertStringToTime(formatLayout, eleRaw, time.Local)
+																if err != nil {
+																	logger.Errorf("传入的时间转换失败:%s", err.Error())
+																	continue
+																}
+																dataVal = timeConvert.Unix()
+															}
+														}
+														if compare.TimeType != "" {
+															switch compare.TimeType {
+															case "今天":
+																compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+															case "昨天":
+																compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+															case "明天":
+																compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+															case "本周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+															case "上周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+															case "今年":
+																compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+															case "去年":
+																compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+															case "明年":
+																compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+															case "指定时间":
+																if compare.SpecificTime != "" {
+																	eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
+																	if err != nil {
+																		continue
+																	}
+																	compareInValue = eleTime.Unix()
+																}
+															}
+															if dataVal != compareInValue {
+																counter++
+															}
+														}
+													}
+												case "早于":
+													for _, compare := range logic.Compare {
+														compareInValue := int64(0)
+														if ele, ok := compare.Value.(string); ok {
+															if ele != "" {
+																eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+																if err != nil {
+																	continue
+																}
+																compareInValue = eleTime.Unix()
+															}
+														}
+														dataVal := int64(0)
+														eleRaw, ok := data[logic.ID].(string)
+														if !ok {
+															continue
+														} else {
+															if eleRaw != "" {
+																formatLayout := timex.FormatTimeFormat(eleRaw)
+																timeConvert, err := timex.ConvertStringToTime(formatLayout, eleRaw, time.Local)
+																if err != nil {
+																	logger.Errorf("传入的时间转换失败:%s", err.Error())
+																	continue
+																}
+																dataVal = timeConvert.Unix()
+															}
+														}
+														if compare.TimeType != "" {
+															switch compare.TimeType {
+															case "今天":
+																compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+															case "昨天":
+																compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+															case "明天":
+																compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+															case "本周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+															case "上周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+															case "今年":
+																compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+															case "去年":
+																compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+															case "明年":
+																compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+															case "指定时间":
+																if compare.SpecificTime != "" {
+																	eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
+																	if err != nil {
+																		continue
+																	}
+																	compareInValue = eleTime.Unix()
+																}
+															}
+															if dataVal < compareInValue {
+																counter++
+															}
+														}
+													}
+												case "晚于":
+													for _, compare := range logic.Compare {
+														compareInValue := int64(0)
+														if ele, ok := compare.Value.(string); ok {
+															if ele != "" {
+																eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+																if err != nil {
+																	continue
+																}
+																compareInValue = eleTime.Unix()
+															}
+														}
+														dataVal := int64(0)
+														eleRaw, ok := data[logic.ID].(string)
+														if !ok {
+															continue
+														} else {
+															if eleRaw != "" {
+																formatLayout := timex.FormatTimeFormat(eleRaw)
+																timeConvert, err := timex.ConvertStringToTime(formatLayout, eleRaw, time.Local)
+																if err != nil {
+																	logger.Errorf("传入的时间转换失败:%s", err.Error())
+																	continue
+																}
+																dataVal = timeConvert.Unix()
+															}
+														}
+														if compare.TimeType != "" {
+															switch compare.TimeType {
+															case "今天":
+																compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+															case "昨天":
+																compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+															case "明天":
+																compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+															case "本周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+															case "上周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+															case "今年":
+																compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+															case "去年":
+																compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+															case "明年":
+																compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+															case "指定时间":
+																if compare.SpecificTime != "" {
+																	eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
+																	if err != nil {
+																		continue
+																	}
+																	compareInValue = eleTime.Unix()
+																}
+															}
+															if dataVal > compareInValue {
+																counter++
+															}
+														}
+													}
+												case "在范围内":
+													for _, compare := range logic.Compare {
+														logicVal := int64(0)
+														eleRaw, ok := data[logic.ID].(string)
+														if !ok {
+															continue
+														} else {
+															if eleRaw != "" {
+																formatLayout := timex.FormatTimeFormat(eleRaw)
+																timeConvert, err := timex.ConvertStringToTime(formatLayout, eleRaw, time.Local)
+																if err != nil {
+																	logger.Errorf("传入的时间转换失败:%s", err.Error())
+																	continue
+																}
+																logicVal = timeConvert.Unix()
+															}
+														}
+														startVal := int64(0)
+														endVal := int64(0)
+														if compare.StartTime.Value != "" {
+															if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
+																eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+																if err != nil {
+																	continue
+																}
+																startVal = eleTime.Unix()
+															}
+														}
+														if compare.EndTime.Value != "" {
+															if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+																eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+																if err != nil {
+																	continue
+																}
+																endVal = eleTime.Unix()
+															}
+														}
+														if logicVal >= startVal && logicVal <= endVal {
+															counter++
+														}
+													}
+												case "不在范围内":
+													for _, compare := range logic.Compare {
+														logicVal := int64(0)
+														eleRaw, ok := data[logic.ID].(string)
+														if !ok {
+															continue
+														} else {
+															if eleRaw != "" {
+																formatLayout := timex.FormatTimeFormat(eleRaw)
+																timeConvert, err := timex.ConvertStringToTime(formatLayout, eleRaw, time.Local)
+																if err != nil {
+																	logger.Errorf("传入的时间转换失败:%s", err.Error())
+																	continue
+																}
+																logicVal = timeConvert.Unix()
+															}
+														}
+														startVal := int64(0)
+														endVal := int64(0)
+														if compare.StartTime.Value != "" {
+															if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
+																eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+																if err != nil {
+																	continue
+																}
+																startVal = eleTime.Unix()
+															}
+														}
+														if compare.EndTime.Value != "" {
+															if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+																eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+																if err != nil {
+																	continue
+																}
+																endVal = eleTime.Unix()
+															}
+														}
+														if logicVal < startVal || logicVal > endVal {
+															counter++
+														}
+													}
+												case "为空":
+													if data[logic.ID] == nil {
+														counter++
+													}
+												case "不为空":
+													if data[logic.ID] != nil {
+														counter++
+													}
+												}
+											case "布尔值", "附件", "定位":
+												switch logic.Relation {
+												case "是", "等于":
+													for _, compare := range logic.Compare {
+														if dataMap[logic.ID] == compare.Value {
+															counter++
+														}
+													}
+												case "不是", "不等于":
+													for _, compare := range logic.Compare {
+														if dataMap[logic.ID] != compare.Value {
+															counter++
+														}
+													}
+												case "为空":
+													if data[logic.ID] == nil {
+														counter++
+													}
+												case "不为空":
+													if data[logic.ID] != nil {
+														counter++
 													}
 												}
 											}
@@ -393,7 +1591,7 @@ flowloop:
 									logger.Debugf("传入的修改资产数据没有data字段或格式不正确")
 									continue
 								}
-								if counter == 0 {
+								if counter != len(props) {
 									logger.Debugf("传入的修改资产数据的修改字段未满足条件")
 									continue
 								}
@@ -474,7 +1672,7 @@ flowloop:
 					}
 					data["#$department"] = deptMap
 					data["#$model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
-					data["#$node"] = bson.M{nodeID: bson.M{"id": nodeID, "_tableName": "node","uid":nodeID}}
+					data["#$node"] = bson.M{nodeID: bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID}}
 					if loginTimeRaw, ok := data["time"].(string); ok {
 						loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
 						if err != nil {
@@ -498,18 +1696,18 @@ flowloop:
 
 				//对只能执行一次的流程进行失效
 				//if validTime == "timeLimit" {
-					if rangeDefine == "once" && hasExecute {
-						//logger.Warnln(eventDeviceModifyLog, "流程(%s)为只执行一次的流程", eventID)
-						//修改流程为失效
-						updateMap := bson.M{"invalid": true}
-						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
-						var r = make(map[string]interface{})
-						err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
-						if err != nil {
-							//logger.Errorf(eventDeviceModifyLog, "失效流程(%s)失败:%s", eventID, err.Error())
-							continue
-						}
+				if rangeDefine == "once" && hasExecute {
+					//logger.Warnln(eventDeviceModifyLog, "流程(%s)为只执行一次的流程", eventID)
+					//修改流程为失效
+					updateMap := bson.M{"invalid": true}
+					//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+					var r = make(map[string]interface{})
+					err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
+					if err != nil {
+						//logger.Errorf(eventDeviceModifyLog, "失效流程(%s)失败:%s", eventID, err.Error())
+						continue
 					}
+				}
 				//}
 			}
 		}
@@ -673,31 +1871,31 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 				//	if validTime == "timeLimit" {
 				//		if rangeDefine, ok = flowInfo["range"].(string); ok {
 				//			if rangeDefine != "once" {
-								//判断有效期
-								if startTime, ok := flowInfo["startTime"].(primitive.DateTime); ok {
-									startTimeInt := int64(startTime / 1e3)
-									if timex.GetLocalTimeNow(time.Now()).Unix() < startTimeInt {
-										//logger.Debugf(eventDeviceModifyLog, "流程(%s)的定时任务开始时间未到，不执行", eventID)
-										continue
-									}
-								}
+				//判断有效期
+				if startTime, ok := flowInfo["startTime"].(primitive.DateTime); ok {
+					startTimeInt := int64(startTime / 1e3)
+					if timex.GetLocalTimeNow(time.Now()).Unix() < startTimeInt {
+						//logger.Debugf(eventDeviceModifyLog, "流程(%s)的定时任务开始时间未到，不执行", eventID)
+						continue
+					}
+				}
 
-								if endTime, ok := flowInfo["endTime"].(primitive.DateTime); ok {
-									endTimeInt := int64(endTime / 1e3)
-									if timex.GetLocalTimeNow(time.Now()).Unix() >= endTimeInt {
-										//logger.Debugf(eventDeviceModifyLog, "流程(%s)的定时任务结束时间已到，不执行", eventID)
-										//修改流程为失效
-										updateMap := bson.M{"invalid": true}
-										//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
-										var r = make(map[string]interface{})
-										err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
-										if err != nil {
-											//logger.Errorf(eventDeviceModifyLog, "失效流程(%s)失败:%s", eventID, err.Error())
-											continue
-										}
-										continue
-									}
-								}
+				if endTime, ok := flowInfo["endTime"].(primitive.DateTime); ok {
+					endTimeInt := int64(endTime / 1e3)
+					if timex.GetLocalTimeNow(time.Now()).Unix() >= endTimeInt {
+						//logger.Debugf(eventDeviceModifyLog, "流程(%s)的定时任务结束时间已到，不执行", eventID)
+						//修改流程为失效
+						updateMap := bson.M{"invalid": true}
+						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+						var r = make(map[string]interface{})
+						err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
+						if err != nil {
+							//logger.Errorf(eventDeviceModifyLog, "失效流程(%s)失败:%s", eventID, err.Error())
+							continue
+						}
+						continue
+					}
+				}
 				//			}
 				//		}
 				//	}
@@ -814,18 +2012,18 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 
 				//对只能执行一次的流程进行失效
 				//if validTime == "timeLimit" {
-					if rangeDefine == "once" && hasExecute {
-						//logger.Warnln(eventDeviceModifyLog, "流程(%s)为只执行一次的流程", eventID)
-						//修改流程为失效
-						updateMap := bson.M{"invalid": true}
-						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
-						var r = make(map[string]interface{})
-						err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
-						if err != nil {
-							//logger.Errorf(eventDeviceModifyLog, "失效流程(%s)失败:%s", eventID, err.Error())
-							continue
-						}
+				if rangeDefine == "once" && hasExecute {
+					//logger.Warnln(eventDeviceModifyLog, "流程(%s)为只执行一次的流程", eventID)
+					//修改流程为失效
+					updateMap := bson.M{"invalid": true}
+					//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+					var r = make(map[string]interface{})
+					err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
+					if err != nil {
+						//logger.Errorf(eventDeviceModifyLog, "失效流程(%s)失败:%s", eventID, err.Error())
+						continue
 					}
+				}
 				//}
 			}
 		}

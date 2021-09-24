@@ -79,6 +79,7 @@ type Logic struct {
 	Compare   []GeneralExtCompare `json:"compare"`
 	DataType  string              `json:"dataType"`
 	LogicType string              `json:"logicType"`
+	PropType string              `json:"propType"`
 }
 
 type Table struct {
