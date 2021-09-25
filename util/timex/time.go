@@ -197,8 +197,8 @@ func FormatTimeFormat(data string) string {
 			for i := 1; i <= len(data)-21; i++ {
 				formatLayout += "0"
 			}
+			formatLayout += "Z"
 		}
-		formatLayout += "Z"
 	} else {
 		switch len(data) {
 		case 25:
@@ -209,8 +209,8 @@ func FormatTimeFormat(data string) string {
 			for i := 1; i <= len(data)-26; i++ {
 				formatLayout += "0"
 			}
+			formatLayout += data[len(data)-6:]
 		}
-		formatLayout += data[len(data)-6:]
 	}
 	return formatLayout
 }
