@@ -382,213 +382,213 @@ flowloop:
 					}
 					hasExecute = true
 				}
-			case "timeout":
-				if dataType, ok := settings["dateType"].(string); ok {
-					switch dataType {
-					case "model":
-						isNode := false
-						if modelMap, ok := settings["model"].(map[string]interface{}); ok {
-							if modelIDInSettings, ok := modelMap["id"].(string); ok {
-								if modelID == modelIDInSettings {
-									if tags, ok := settings["tags"].([]interface{}); ok {
-										hasField := false
-										//if modelInfoInMap, ok := settings["model"].(map[string]interface{}); ok {
-										//	if modelIDInInfo, ok := modelInfoInMap["id"].(string); ok {
-										//		nodeUIDModelMap[nodeUIDInData] = modelIDInInfo
-										//	}
-										//}
-									fieldLoopTags:
-										for _, tag := range tags {
-											//if tagMap, ok := settings["tags"].(map[string]interface{}); ok {
-											if tagMap, ok := tag.(map[string]interface{}); ok {
-												if tagIDInMap, ok := tagMap["id"].(string); ok {
-													for _, field := range data.Fields {
-														if fieldID, ok := field["id"].(string); ok {
-															if tagIDInMap == fieldID {
-																hasField = true
-																break fieldLoopTags
-															}
-														}
-													}
-												}
-											}
-										}
-										if hasField {
-
-											//生成发送消息
-											departmentStringIDList := make([]string, 0)
-											//var departmentObjectList primitive.A
-											if departmentIDList, ok := nodeInfo["department"].([]interface{}); ok {
-												departmentStringIDList = formatx.InterfaceListToStringList(departmentIDList)
-											} else {
-												//logger.Warnf(flowAlarmLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
-											}
-
-											deptInfoList := make([]map[string]interface{}, 0)
-											if len(departmentStringIDList) != 0 {
-												err := department.GetByList(ctx, redisClient, mongoClient, projectName, departmentStringIDList, &deptInfoList)
-												if err != nil {
-													return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
-												}
-											}
-											//dataMappingType, err := setting.GetByWarnKindID(ctx, redisClient, mongoClient, projectName, data.Type)
-											//if err != nil {
-											//	//logger.Errorf(flowAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
-											//	continue
-											//}
-
-											deptMap := bson.M{}
-											for _, id := range departmentStringIDList {
-												deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
-											}
-											//生成报警对象并发送
-											sendMapInner := bson.M{
-												"time":           timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
-												"#$model":        bson.M{"id": modelID, "_tableName": "model"},
-												"#$department":   deptMap,
-												"#$node":         bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
-												"type":           data.Type,
-												"status":         data.Status,
-												"processed":      data.Processed,
-												"desc":           data.Desc,
-												"level":          data.Level,
-												"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
-												"modelName":      formatx.FormatKeyInfo(modelInfo, "name"),
-												"nodeName":       formatx.FormatKeyInfo(nodeInfo, "name"),
-												"tagInfo":        formatx.FormatDataInfoList(data.Fields),
-												//"fields":         fieldsMap,
-												"userName":  data.HandleUserName,
-												"action":    actionType,
-												"isWarning": true,
-											}
-											for _, fieldsMap := range data.Fields {
-												if id, ok := fieldsMap["id"].(string); ok {
-													sendMapInner[id] = fieldsMap["value"]
-												}
-											}
-
-											var sendMap interface{}
-											if !isNode {
-												sendMap = bson.M{nodeID: sendMapInner}
-											} else {
-												sendMap = sendMapInner
-											}
-
-											err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
-											if err != nil {
-												logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
-												continue
-											}
-											hasExecute = true
-										}
-									}
-								}
-							}
-						}
-					case "node":
-						isNode := true
-						if tags, ok := settings["tags"].([]interface{}); ok {
-							hasField := false
-							//if modelInfoInMap, ok := settings["model"].(map[string]interface{}); ok {
-							//	if modelIDInInfo, ok := modelInfoInMap["id"].(string); ok {
-							//		nodeUIDModelMap[nodeUIDInData] = modelIDInInfo
-							//	}
-							//}
-						fieldLoopTags2:
-							for _, tag := range tags {
-
-								//if tagMap, ok := settings["tags"].(map[string]interface{}); ok {
-								if tagMap, ok := tag.(map[string]interface{}); ok {
-									if nodeMap, ok := tagMap["node"].(map[string]interface{}); ok {
-										if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
-											if nodeID == nodeIDInSettings {
-												if tagIDInMap, ok := tagMap["id"].(string); ok {
-													for _, field := range data.Fields {
-														if fieldID, ok := field["id"].(string); ok {
-															if tagIDInMap == fieldID {
-																hasField = true
-																break fieldLoopTags2
-															}
-														}
-													}
-												}
-											}
-										}
-									}
-								}
-							}
-							if hasField {
-
-								//生成发送消息
-								departmentStringIDList := make([]string, 0)
-								//var departmentObjectList primitive.A
-								if departmentIDList, ok := nodeInfo["department"].([]interface{}); ok {
-									departmentStringIDList = formatx.InterfaceListToStringList(departmentIDList)
-								} else {
-									//logger.Warnf(flowAlarmLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
-								}
-
-								deptInfoList := make([]map[string]interface{}, 0)
-								if len(departmentStringIDList) != 0 {
-									err := department.GetByList(ctx, redisClient, mongoClient, projectName, departmentStringIDList, &deptInfoList)
-									if err != nil {
-										return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
-									}
-								}
-								//dataMappingType, err := setting.GetByWarnKindID(ctx, redisClient, mongoClient, projectName, data.Type)
-								//if err != nil {
-								//	//logger.Errorf(flowAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
-								//	continue
-								//}
-
-								deptMap := bson.M{}
-								for _, id := range departmentStringIDList {
-									deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
-								}
-								//生成报警对象并发送
-								sendMapInner := bson.M{
-									"time":           timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
-									"#$model":        bson.M{"id": modelID, "_tableName": "model"},
-									"#$department":   deptMap,
-									"#$node":         bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
-									"type":           data.Type,
-									"status":         data.Status,
-									"processed":      data.Processed,
-									"desc":           data.Desc,
-									"level":          data.Level,
-									"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
-									"modelName":      formatx.FormatKeyInfo(modelInfo, "name"),
-									"nodeName":       formatx.FormatKeyInfo(nodeInfo, "name"),
-									"tagInfo":        formatx.FormatDataInfoList(data.Fields),
-									//"fields":         fieldsMap,
-									"userName":  data.HandleUserName,
-									"action":    actionType,
-									"isWarning": true,
-								}
-								for _, fieldsMap := range data.Fields {
-									if id, ok := fieldsMap["id"].(string); ok {
-										sendMapInner[id] = fieldsMap["value"]
-									}
-								}
-
-								var sendMap interface{}
-								if !isNode {
-									sendMap = bson.M{nodeID: sendMapInner}
-								} else {
-									sendMap = sendMapInner
-								}
-
-								err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
-								if err != nil {
-									logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
-									continue
-								}
-								hasExecute = true
-							}
-						}
-
-					}
-				}
+			//case "timeout":
+			//	if dataType, ok := settings["dateType"].(string); ok {
+			//		switch dataType {
+			//		case "model":
+			//			isNode := false
+			//			if modelMap, ok := settings["model"].(map[string]interface{}); ok {
+			//				if modelIDInSettings, ok := modelMap["id"].(string); ok {
+			//					if modelID == modelIDInSettings {
+			//						if tags, ok := settings["tags"].([]interface{}); ok {
+			//							hasField := false
+			//							//if modelInfoInMap, ok := settings["model"].(map[string]interface{}); ok {
+			//							//	if modelIDInInfo, ok := modelInfoInMap["id"].(string); ok {
+			//							//		nodeUIDModelMap[nodeUIDInData] = modelIDInInfo
+			//							//	}
+			//							//}
+			//						fieldLoopTags:
+			//							for _, tag := range tags {
+			//								//if tagMap, ok := settings["tags"].(map[string]interface{}); ok {
+			//								if tagMap, ok := tag.(map[string]interface{}); ok {
+			//									if tagIDInMap, ok := tagMap["id"].(string); ok {
+			//										for _, field := range data.Fields {
+			//											if fieldID, ok := field["id"].(string); ok {
+			//												if tagIDInMap == fieldID {
+			//													hasField = true
+			//													break fieldLoopTags
+			//												}
+			//											}
+			//										}
+			//									}
+			//								}
+			//							}
+			//							if hasField {
+			//
+			//								//生成发送消息
+			//								departmentStringIDList := make([]string, 0)
+			//								//var departmentObjectList primitive.A
+			//								if departmentIDList, ok := nodeInfo["department"].([]interface{}); ok {
+			//									departmentStringIDList = formatx.InterfaceListToStringList(departmentIDList)
+			//								} else {
+			//									//logger.Warnf(flowAlarmLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
+			//								}
+			//
+			//								deptInfoList := make([]map[string]interface{}, 0)
+			//								if len(departmentStringIDList) != 0 {
+			//									err := department.GetByList(ctx, redisClient, mongoClient, projectName, departmentStringIDList, &deptInfoList)
+			//									if err != nil {
+			//										return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
+			//									}
+			//								}
+			//								//dataMappingType, err := setting.GetByWarnKindID(ctx, redisClient, mongoClient, projectName, data.Type)
+			//								//if err != nil {
+			//								//	//logger.Errorf(flowAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
+			//								//	continue
+			//								//}
+			//
+			//								deptMap := bson.M{}
+			//								for _, id := range departmentStringIDList {
+			//									deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
+			//								}
+			//								//生成报警对象并发送
+			//								sendMapInner := bson.M{
+			//									"time":           timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+			//									"#$model":        bson.M{"id": modelID, "_tableName": "model"},
+			//									"#$department":   deptMap,
+			//									"#$node":         bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
+			//									"type":           data.Type,
+			//									"status":         data.Status,
+			//									"processed":      data.Processed,
+			//									"desc":           data.Desc,
+			//									"level":          data.Level,
+			//									"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
+			//									"modelName":      formatx.FormatKeyInfo(modelInfo, "name"),
+			//									"nodeName":       formatx.FormatKeyInfo(nodeInfo, "name"),
+			//									"tagInfo":        formatx.FormatDataInfoList(data.Fields),
+			//									//"fields":         fieldsMap,
+			//									"userName":  data.HandleUserName,
+			//									"action":    actionType,
+			//									"isWarning": true,
+			//								}
+			//								for _, fieldsMap := range data.Fields {
+			//									if id, ok := fieldsMap["id"].(string); ok {
+			//										sendMapInner[id] = fieldsMap["value"]
+			//									}
+			//								}
+			//
+			//								var sendMap interface{}
+			//								if !isNode {
+			//									sendMap = bson.M{nodeID: sendMapInner}
+			//								} else {
+			//									sendMap = sendMapInner
+			//								}
+			//
+			//								err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
+			//								if err != nil {
+			//									logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
+			//									continue
+			//								}
+			//								hasExecute = true
+			//							}
+			//						}
+			//					}
+			//				}
+			//			}
+			//		case "node":
+			//			isNode := true
+			//			if tags, ok := settings["tags"].([]interface{}); ok {
+			//				hasField := false
+			//				//if modelInfoInMap, ok := settings["model"].(map[string]interface{}); ok {
+			//				//	if modelIDInInfo, ok := modelInfoInMap["id"].(string); ok {
+			//				//		nodeUIDModelMap[nodeUIDInData] = modelIDInInfo
+			//				//	}
+			//				//}
+			//			fieldLoopTags2:
+			//				for _, tag := range tags {
+			//
+			//					//if tagMap, ok := settings["tags"].(map[string]interface{}); ok {
+			//					if tagMap, ok := tag.(map[string]interface{}); ok {
+			//						if nodeMap, ok := tagMap["node"].(map[string]interface{}); ok {
+			//							if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
+			//								if nodeID == nodeIDInSettings {
+			//									if tagIDInMap, ok := tagMap["id"].(string); ok {
+			//										for _, field := range data.Fields {
+			//											if fieldID, ok := field["id"].(string); ok {
+			//												if tagIDInMap == fieldID {
+			//													hasField = true
+			//													break fieldLoopTags2
+			//												}
+			//											}
+			//										}
+			//									}
+			//								}
+			//							}
+			//						}
+			//					}
+			//				}
+			//				if hasField {
+			//
+			//					//生成发送消息
+			//					departmentStringIDList := make([]string, 0)
+			//					//var departmentObjectList primitive.A
+			//					if departmentIDList, ok := nodeInfo["department"].([]interface{}); ok {
+			//						departmentStringIDList = formatx.InterfaceListToStringList(departmentIDList)
+			//					} else {
+			//						//logger.Warnf(flowAlarmLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
+			//					}
+			//
+			//					deptInfoList := make([]map[string]interface{}, 0)
+			//					if len(departmentStringIDList) != 0 {
+			//						err := department.GetByList(ctx, redisClient, mongoClient, projectName, departmentStringIDList, &deptInfoList)
+			//						if err != nil {
+			//							return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
+			//						}
+			//					}
+			//					//dataMappingType, err := setting.GetByWarnKindID(ctx, redisClient, mongoClient, projectName, data.Type)
+			//					//if err != nil {
+			//					//	//logger.Errorf(flowAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
+			//					//	continue
+			//					//}
+			//
+			//					deptMap := bson.M{}
+			//					for _, id := range departmentStringIDList {
+			//						deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
+			//					}
+			//					//生成报警对象并发送
+			//					sendMapInner := bson.M{
+			//						"time":           timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+			//						"#$model":        bson.M{"id": modelID, "_tableName": "model"},
+			//						"#$department":   deptMap,
+			//						"#$node":         bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
+			//						"type":           data.Type,
+			//						"status":         data.Status,
+			//						"processed":      data.Processed,
+			//						"desc":           data.Desc,
+			//						"level":          data.Level,
+			//						"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
+			//						"modelName":      formatx.FormatKeyInfo(modelInfo, "name"),
+			//						"nodeName":       formatx.FormatKeyInfo(nodeInfo, "name"),
+			//						"tagInfo":        formatx.FormatDataInfoList(data.Fields),
+			//						//"fields":         fieldsMap,
+			//						"userName":  data.HandleUserName,
+			//						"action":    actionType,
+			//						"isWarning": true,
+			//					}
+			//					for _, fieldsMap := range data.Fields {
+			//						if id, ok := fieldsMap["id"].(string); ok {
+			//							sendMapInner[id] = fieldsMap["value"]
+			//						}
+			//					}
+			//
+			//					var sendMap interface{}
+			//					if !isNode {
+			//						sendMap = bson.M{nodeID: sendMapInner}
+			//					} else {
+			//						sendMap = sendMapInner
+			//					}
+			//
+			//					err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
+			//					if err != nil {
+			//						logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
+			//						continue
+			//					}
+			//					hasExecute = true
+			//				}
+			//			}
+			//
+			//		}
+			//	}
 			case "dataPoint":
 				hasValidWarn := false
 				isNode := false
@@ -1482,5 +1482,360 @@ flowloop:
 	}
 
 	////logger.Debugf(eventAlarmLog, "报警规则触发器执行结束")
+	return nil
+}
+
+func TriggerWarningRulesFlowTimeout(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, zbClient zbc.Client, projectName string) error {
+	////logger.Debugf(eventAlarmLog, "开始执行计算流程触发器")
+	////logger.Debugf(eventAlarmLog, "传入参数为:%+v", data)
+	headerMap := map[string]string{ginx.XRequestProject: projectName}
+
+	////logger.Debugf(eventAlarmLog, "开始获取当前模型的计算逻辑流程")
+	//获取当前模型的报警规则逻辑流程=============================================
+	flowInfoList := new([]entity.Flow)
+	err := flow.GetByType(ctx, redisClient, mongoClient, projectName, string(Alarm), flowInfoList)
+	if err != nil {
+		//logger.Debugf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的报警流程失败:%s", modelID, err.Error()))
+		return fmt.Errorf("获取报警流程失败:%s", err.Error())
+	}
+
+	////logger.Debugf(eventAlarmLog, "开始遍历流程列表")
+
+	for _, flowInfo := range *flowInfoList {
+		//logger.Debugf(eventAlarmLog, "开始分析流程")
+		flowID := flowInfo.ID
+		settings := flowInfo.Settings
+
+		//判断是否已经失效
+		if flowInfo.Invalid {
+			logger.Warnln("流程(%s)已经失效", flowID)
+			continue
+		}
+
+		//判断禁用
+		if flowInfo.Disable {
+			logger.Warnln("流程(%s)已经被禁用", flowID)
+			continue
+		}
+
+		//if flowInfo.ValidTime == "timeLimit" {
+		//	if flowInfo.Range != "once" {
+		//判断有效期
+		startTime := flowInfo.StartTime
+		formatLayout := timex.FormatTimeFormat(startTime)
+		if startTime != "" {
+			formatStartTime, err := timex.ConvertStringToTime(formatLayout, startTime, time.Local)
+			if err != nil {
+				logger.Errorf("开始时间范围字段值格式错误:%s", err.Error())
+				continue
+			}
+			if timex.GetLocalTimeNow(time.Now()).Unix() < formatStartTime.Unix() {
+				logger.Debugf("流程(%s)的定时任务开始时间未到，不执行", flowID)
+				continue
+			}
+		}
+
+		endTime := flowInfo.EndTime
+		formatLayout = timex.FormatTimeFormat(endTime)
+		if endTime != "" {
+			formatEndTime, err := timex.ConvertStringToTime(formatLayout, endTime, time.Local)
+			if err != nil {
+				logger.Errorf("时间范围字段值格式错误:%s", err.Error())
+				continue
+			}
+			if timex.GetLocalTimeNow(time.Now()).Unix() >= formatEndTime.Unix() {
+				logger.Debugf("流程(%s)的定时任务结束时间已到，不执行", flowID)
+				//修改流程为失效
+				updateMap := bson.M{"invalid": true}
+				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), eventID, updateMap)
+				var r = make(map[string]interface{})
+				err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
+				if err != nil {
+					logger.Errorf("失效流程(%s)失败:%s", flowID, err.Error())
+					continue
+				}
+				continue
+			}
+		}
+		//	}
+		//}
+		//判断流程是否已经触发
+		hasExecute := false
+
+		if warningType, ok := settings["warningType"].(string); ok {
+			switch warningType {
+			case "timeout":
+				if dataType, ok := settings["dateType"].(string); ok {
+					switch dataType {
+					case "model":
+						isNode := false
+						if modelMap, ok := settings["model"].(map[string]interface{}); ok {
+							if modelIDInSettings, ok := modelMap["id"].(string); ok {
+								nodeMap := map[string]map[string]interface{}{}
+								nodeInfoList := make([]map[string]interface{}, 0)
+								err = node.GetByModel(ctx, redisClient, mongoClient, projectName, modelIDInSettings, &nodeInfoList)
+								if err != nil {
+									//logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的资产(%s)失败:%s", modelID, nodeID, err.Error()))
+									return fmt.Errorf("获取当前模型(%s)的资产失败:%s", modelIDInSettings, err.Error())
+								}
+								for _, ele := range nodeInfoList {
+									if id, ok := ele["id"].(string); ok {
+										nodeMap[id] = ele
+									}
+								}
+
+								queryList := make([]map[string]interface{}, 0)
+								if tags, ok := settings["tags"].([]interface{}); ok {
+									for _, tag := range tags {
+										//if tagMap, ok := settings["tags"].(map[string]interface{}); ok {
+										if tagMap, ok := tag.(map[string]interface{}); ok {
+											if tagIDInMap, ok := tagMap["id"].(string); ok {
+												for _, ele := range nodeInfoList {
+													queryList = append(queryList, map[string]interface{}{
+														"id":    ele["id"],
+														"tagId": tagIDInMap,
+													})
+												}
+
+											}
+										}
+									}
+								}
+
+								result := make([]entity.LatestData, 0)
+								err = apiClient.PostLatest(headerMap, queryList, &result)
+								//_, tagResult, err := a.WebsocketBll.NodeBll.FindQueryTagByID(ctx,projectName,userID, c,nodeInfoID)
+								if err != nil {
+									return err
+								}
+
+								for _, res := range result {
+									if res.Off {
+										nodeID := res.ID
+										nodeInfo, ok := nodeMap[nodeID]
+										if !ok {
+											continue
+										}
+										//生成发送消息
+										departmentStringIDList := make([]string, 0)
+										//var departmentObjectList primitive.A
+										if departmentIDList, ok := nodeInfo["department"].([]interface{}); ok {
+											departmentStringIDList = formatx.InterfaceListToStringList(departmentIDList)
+										} else {
+											//logger.Warnf(flowAlarmLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
+										}
+
+										deptInfoList := make([]map[string]interface{}, 0)
+										if len(departmentStringIDList) != 0 {
+											err := department.GetByList(ctx, redisClient, mongoClient, projectName, departmentStringIDList, &deptInfoList)
+											if err != nil {
+												return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
+											}
+										}
+										//dataMappingType, err := setting.GetByWarnKindID(ctx, redisClient, mongoClient, projectName, data.Type)
+										//if err != nil {
+										//	//logger.Errorf(flowAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
+										//	continue
+										//}
+
+										deptMap := bson.M{}
+										for _, id := range departmentStringIDList {
+											deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
+										}
+										//生成报警对象并发送
+										sendMapInner := bson.M{
+											"time":         timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+											"#$model":      bson.M{"id": modelIDInSettings, "_tableName": "model"},
+											"#$department": deptMap,
+											"#$node":       bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
+											"type":         "数据点超时报警",
+											"status":       "未确认",
+											"processed":    "未处理",
+											"desc":         "数据点超时报警",
+											"level":        "中",
+											//"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
+											//"modelName":      formatx.FormatKeyInfo(modelInfo, "name"),
+											//"nodeName":       formatx.FormatKeyInfo(nodeInfo, "name"),
+											//"tagInfo": formatx.FormatDataInfoList(data.Fields),
+											//"fields":         fieldsMap,
+											//"userName":  data.HandleUserName,
+											//"action":    actionType,
+											"isWarning": true,
+										}
+
+										sendMapInner[res.TagID] = res.Value
+
+										var sendMap interface{}
+										if !isNode {
+											sendMap = bson.M{nodeID: sendMapInner}
+										} else {
+											sendMap = sendMapInner
+										}
+
+										err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
+										if err != nil {
+											logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
+											continue
+										}
+										hasExecute = true
+									}
+
+								}
+
+							}
+						}
+					case "node":
+						isNode := true
+						if tags, ok := settings["tags"].([]interface{}); ok {
+							nodeIDList := make([]string, 0)
+							for _, tag := range tags {
+								//if tagMap, ok := settings["tags"].(map[string]interface{}); ok {
+								if tagMap, ok := tag.(map[string]interface{}); ok {
+									if nodeMap, ok := tagMap["node"].(map[string]interface{}); ok {
+										if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
+											formatx.AddNonRepByLoop(nodeIDList, nodeIDInSettings)
+										}
+									}
+								}
+							}
+							nodeMap := map[string]map[string]interface{}{}
+							nodeInfoList := make([]map[string]interface{}, 0)
+							err = node.GetByList(ctx, redisClient, mongoClient, projectName, nodeIDList, &nodeInfoList)
+							if err != nil {
+								//logger.Errorf(eventAlarmLog, fmt.Sprintf("获取当前模型(%s)的资产(%s)失败:%s", modelID, nodeID, err.Error()))
+								return fmt.Errorf("获取资产list(%+v)失败:%s", nodeIDList, err.Error())
+							}
+							for _, ele := range nodeInfoList {
+								if id, ok := ele["id"].(string); ok {
+									nodeMap[id] = ele
+								}
+							}
+
+							queryList := make([]map[string]interface{}, 0)
+
+							for _, tag := range tags {
+								//if tagMap, ok := settings["tags"].(map[string]interface{}); ok {
+								if tagMap, ok := tag.(map[string]interface{}); ok {
+									if nodeMap, ok := tagMap["node"].(map[string]interface{}); ok {
+										if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
+											if tagIDInMap, ok := tagMap["id"].(string); ok {
+												queryList = append(queryList, map[string]interface{}{
+													"id":    nodeIDInSettings,
+													"tagId": tagIDInMap,
+												})
+											}
+										}
+									}
+								}
+							}
+
+							result := make([]entity.LatestData, 0)
+							err = apiClient.PostLatest(headerMap, queryList, &result)
+							//_, tagResult, err := a.WebsocketBll.NodeBll.FindQueryTagByID(ctx,projectName,userID, c,nodeInfoID)
+							if err != nil {
+								return err
+							}
+
+							for _, res := range result {
+								if res.Off {
+									nodeID := res.ID
+									nodeInfo, ok := nodeMap[nodeID]
+									if !ok {
+										continue
+									}
+									modelIDInSettings, ok := nodeInfo["model"].(string)
+									if !ok {
+										continue
+									}
+									//生成发送消息
+									departmentStringIDList := make([]string, 0)
+									//var departmentObjectList primitive.A
+									if departmentIDList, ok := nodeInfo["department"].([]interface{}); ok {
+										departmentStringIDList = formatx.InterfaceListToStringList(departmentIDList)
+									} else {
+										//logger.Warnf(flowAlarmLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
+									}
+
+									deptInfoList := make([]map[string]interface{}, 0)
+									if len(departmentStringIDList) != 0 {
+										err := department.GetByList(ctx, redisClient, mongoClient, projectName, departmentStringIDList, &deptInfoList)
+										if err != nil {
+											return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
+										}
+									}
+									//dataMappingType, err := setting.GetByWarnKindID(ctx, redisClient, mongoClient, projectName, data.Type)
+									//if err != nil {
+									//	//logger.Errorf(flowAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
+									//	continue
+									//}
+
+									deptMap := bson.M{}
+									for _, id := range departmentStringIDList {
+										deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
+									}
+									//生成报警对象并发送
+									sendMapInner := bson.M{
+										"time":         timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+										"#$model":      bson.M{"id": modelIDInSettings, "_tableName": "model"},
+										"#$department": deptMap,
+										"#$node":       bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
+										"type":         "数据点超时报警",
+										"status":       "未确认",
+										"processed":    "未处理",
+										"desc":         "数据点超时报警",
+										"level":        "中",
+										//"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
+										//"modelName":      formatx.FormatKeyInfo(modelInfo, "name"),
+										//"nodeName":       formatx.FormatKeyInfo(nodeInfo, "name"),
+										//"tagInfo": formatx.FormatDataInfoList(data.Fields),
+										//"fields":         fieldsMap,
+										//"userName":  data.HandleUserName,
+										//"action":    actionType,
+										"isWarning": true,
+									}
+
+									sendMapInner[res.TagID] = res.Value
+
+									var sendMap interface{}
+									if !isNode {
+										sendMap = bson.M{nodeID: sendMapInner}
+									} else {
+										sendMap = sendMapInner
+									}
+
+									err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
+									if err != nil {
+										logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
+										continue
+									}
+									hasExecute = true
+								}
+
+							}
+						}
+
+					}
+				}
+			}
+		}
+
+		//对只能执行一次的流程进行失效
+		if flowInfo.ValidTime == "timeLimit" {
+			if flowInfo.Range == "once" && hasExecute {
+				//logger.Warnln(eventAlarmLog, "流程(%s)为只执行一次的流程", flowID)
+				//修改流程为失效
+				updateMap := bson.M{"invalid": true}
+				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), flowID, updateMap)
+				var r = make(map[string]interface{})
+				err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
+				if err != nil {
+					//logger.Errorf(flowAlarmLog, "失效流程(%s)失败:%s", flowID, err.Error())
+					return fmt.Errorf("失效流程(%s)失败:%s", flowID, err.Error())
+				}
+			}
+		}
+	}
+
+	////logger.Debugf(flowAlarmLog, "报警规则触发器执行结束")
 	return nil
 }

@@ -164,3 +164,11 @@ type NodeIDUidForRedis struct {
 	ID  string `json:"id"`
 	Uid string `json:"uid"`
 }
+
+type LatestData struct {
+	ID    string  `json:"id"`
+	TagID string  `json:"tagId"`
+	Time  int64   `json:"time"`
+	Value float64 `json:"value"`
+	Off   bool    `json:"off"`
+}
