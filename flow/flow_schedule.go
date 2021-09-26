@@ -7,6 +7,7 @@ import (
 	"github.com/air-iot/service/util/flowx"
 	"github.com/air-iot/service/util/numberx"
 	"github.com/camunda-cloud/zeebe/clients/go/pkg/zbc"
+	"strings"
 	"sync"
 	"time"
 
@@ -205,7 +206,7 @@ func TriggerAddScheduleFlow(ctx context.Context, redisClient redisdb.Client, mon
 		}
 		sendMap := map[string]interface{}{
 			"time":     timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
-			"interval": scheduleTypeMap[scheduleType],
+			"interval": scheduleTypeMap[strings.ReplaceAll(scheduleType,numberx.HasNumberExp(scheduleType),"")],
 			"flowName": flowName,
 		}
 		if flowXml, ok := data["flowXml"].(string); ok {
@@ -479,7 +480,7 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 			}
 			sendMap := map[string]interface{}{
 				"time":     timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
-				"interval": scheduleTypeMap[scheduleType],
+				"interval": scheduleTypeMap[strings.ReplaceAll(scheduleType,numberx.HasNumberExp(scheduleType),"")],
 				"flowName": flowName,
 			}
 			err = flowx.StartFlow(zbClient, flowXml, projectName, sendMap)

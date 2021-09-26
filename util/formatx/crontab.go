@@ -1,17 +1,27 @@
 package formatx
 
-import "time"
+import (
+	"github.com/air-iot/service/util/numberx"
+	"time"
+)
 
 func GetCronExpression(scheduleType string, data map[string]interface{}) string {
 	cronExpression := ""
+	numberInterval := numberx.HasNumberExp(scheduleType)
 	switch scheduleType {
 	case "second":
+		if len(numberInterval) != 0{
+			data["second"] = numberInterval
+		}
 		secondString := InterfaceTypeToString(data["second"])
 		if secondString == "" {
 			secondString = "1"
 		}
 		cronExpression = "0/" + secondString + " * * * * ?"
 	case "minute":
+		if len(numberInterval) != 0{
+			data["minute"] = numberInterval
+		}
 		minuteString := InterfaceTypeToString(data["minute"])
 		if minuteString == "" || minuteString == "0" {
 			minuteString = "1"
@@ -22,6 +32,9 @@ func GetCronExpression(scheduleType string, data map[string]interface{}) string 
 		}
 		cronExpression = secondString + " 0/" + minuteString + " * * * ?"
 	case "hour":
+		if len(numberInterval) != 0{
+			data["hour"] = numberInterval
+		}
 		hourString := InterfaceTypeToString(data["hour"])
 		if hourString == "" || hourString == "0" {
 			hourString = "1"
@@ -36,6 +49,9 @@ func GetCronExpression(scheduleType string, data map[string]interface{}) string 
 		}
 		cronExpression = secondString + " " + minuteString + " 0/" + hourString + " * * ?"
 	case "day":
+		if len(numberInterval) != 0{
+			data["day"] = numberInterval
+		}
 		dayString := InterfaceTypeToString(data["day"])
 		if dayString == "" || dayString == "0" {
 			dayString = "1"
@@ -72,6 +88,9 @@ func GetCronExpression(scheduleType string, data map[string]interface{}) string 
 		}
 		cronExpression = secondString + " " + minuteString + " " + hourString + " ? * " + weekString
 	case "month":
+		if len(numberInterval) != 0{
+			data["month"] = numberInterval
+		}
 		monthString := InterfaceTypeToString(data["month"])
 		if monthString == "" || monthString == "0" {
 			monthString = "1"

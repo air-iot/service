@@ -142,3 +142,8 @@ func Round(val float64, precision int) float64 {
 	p := math.Pow10(precision)
 	return math.Floor(val*p+0.5) / p
 }
+
+func HasNumberExp(data string) string {
+	pattern, _ := regexp.Compile("^\\d+\\.?\\d*")
+	return pattern.FindString(data)
+}
