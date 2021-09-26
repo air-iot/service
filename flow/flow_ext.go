@@ -58,7 +58,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 		"filter": map[string]interface{}{
 			"type":               ExtModify,
 			"settings.eventType": modifyTypeAfterMapping,
-			"settings.ext.name":  tableName,
+			"settings.table.name":  tableName,
 			//"settings.eventRange": "node",
 		},
 		"project": map[string]interface{}{
