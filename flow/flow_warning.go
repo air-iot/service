@@ -1586,7 +1586,7 @@ func TriggerWarningRulesFlowTimeout(ctx context.Context, redisClient redisdb.Cli
 								}
 
 								queryList := make([]map[string]interface{}, 0)
-								if tags, ok := settings["tags"].([]interface{}); ok {
+								if tags, ok := settings["dataPoint"].([]interface{}); ok {
 									for _, tag := range tags {
 										//if tagMap, ok := settings["tags"].(map[string]interface{}); ok {
 										if tagMap, ok := tag.(map[string]interface{}); ok {
@@ -1687,7 +1687,7 @@ func TriggerWarningRulesFlowTimeout(ctx context.Context, redisClient redisdb.Cli
 						}
 					case "node":
 						isNode := true
-						if tags, ok := settings["tags"].([]interface{}); ok {
+						if tags, ok := settings["dataPoint"].([]interface{}); ok {
 							nodeIDList := make([]string, 0)
 							for _, tag := range tags {
 								//if tagMap, ok := settings["tags"].(map[string]interface{}); ok {
