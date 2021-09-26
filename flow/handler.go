@@ -31,7 +31,7 @@ const (
 	Schedule          EventType = "计划事件"
 	Login             EventType = "用户登录"
 	Log               EventType = "日志事件"
-	ExecCmd           EventType = "执行指令"
+	ExecCmd           EventType = "指令事件"
 	DeviceModify      EventType = "模型资产事件"
 	ExtModify         EventType = "工作表事件"
 
