@@ -722,11 +722,11 @@ flowloop:
 						return fmt.Errorf("获取当前资产(%s)所属部门失败:%s", nodeID, err.Error())
 					}
 				}
-				dataMappingType, err := setting.GetByWarnKindID(ctx, redisClient, mongoClient, projectName, data.Type)
-				if err != nil {
-					//logger.Errorf(flowAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
-					continue
-				}
+				//dataMappingType, err := setting.GetByWarnKindID(ctx, redisClient, mongoClient, projectName, data.Type)
+				//if err != nil {
+				//	//logger.Errorf(flowAlarmLog, fmt.Sprintf("获取当前资产(%s)的报警类型中文失败:%s", nodeID, err.Error()))
+				//	continue
+				//}
 
 				deptMap := bson.M{}
 				for _, id := range departmentStringIDList {
@@ -738,7 +738,7 @@ flowloop:
 					"#$model":        bson.M{"id": modelID, "_tableName": "model"},
 					"#$department":   deptMap,
 					"#$node":         bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
-					"type":           dataMappingType,
+					"type":           data.Type,
 					"status":         data.Status,
 					"processed":      data.Processed,
 					"desc":           data.Desc,
@@ -770,6 +770,7 @@ flowloop:
 					logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 					continue
 				}
+				logger.Debugf("流程(%s)推进到下一阶段成功", flowID)
 				hasExecute = true
 			}
 		}
