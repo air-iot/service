@@ -2,12 +2,16 @@ package formatx
 
 import (
 	"github.com/air-iot/service/util/numberx"
+	"strings"
 	"time"
 )
 
 func GetCronExpression(scheduleType string, data map[string]interface{}) string {
 	cronExpression := ""
 	numberInterval := numberx.HasNumberExp(scheduleType)
+	if len(numberInterval) != 0{
+		scheduleType = strings.ReplaceAll(scheduleType,numberInterval,"")
+	}
 	switch scheduleType {
 	case "second":
 		if len(numberInterval) != 0{
