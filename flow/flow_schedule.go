@@ -328,10 +328,6 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 			if scheduleType == "fixed" || scheduleType == "once" {
 				if startTime, ok := settings["startValidTime"].(primitive.DateTime); ok {
 					formatStartTime := time.Unix(int64(startTime/1e3), 0)
-					if err != nil {
-						logger.Errorf("时间转time.Time失败:%s", err.Error())
-						continue
-					}
 					cronExpression = formatx.GetCronExpressionOnce(scheduleType, &formatStartTime)
 				}
 			}else{
@@ -394,10 +390,6 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 							}
 						} else if startTime, ok := settings["startValidTime"].(primitive.DateTime); ok {
 							formatStartTime := time.Unix(int64(startTime/1e3), 0)
-							if err != nil {
-								logger.Errorf("时间转time.Time失败:%s", err.Error())
-								return
-							}
 							yearString := formatx.InterfaceTypeToString(formatStartTime.Year())
 							if time.Now().Format("2006") != yearString {
 								logger.Debugf("流程(%s)的定时任务开始时间未到或已经超过，不执行", flowIDCron)
