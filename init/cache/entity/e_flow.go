@@ -76,7 +76,7 @@ type Logic struct {
 	ID        string              `json:"id"`
 	Name      string              `json:"name"`
 	Relation  string              `json:"relation"`
-	Compare   []GeneralExtCompare `json:"compare"`
+	Compare   GeneralExtCompare `json:"compare"`
 	DataType  string              `json:"dataType"`
 	LogicType string              `json:"logicType"`
 	PropType string              `json:"propType"`

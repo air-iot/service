@@ -56,9 +56,9 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 
 	query := map[string]interface{}{
 		"filter": map[string]interface{}{
-			"type":               ExtModify,
-			"settings.eventType": modifyTypeAfterMapping,
-			"settings.table.name":  tableName,
+			"type":                ExtModify,
+			"settings.eventType":  modifyTypeAfterMapping,
+			"settings.table.name": tableName,
 			//"settings.eventRange": "node",
 		},
 		"project": map[string]interface{}{
@@ -167,47 +167,46 @@ flowloop:
 		counter := 0
 		orCounter := 0
 		for _, logic := range settings.Logic {
-			for i, compare := range logic.Compare {
-				if compare.Value != "" {
-					formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.Value)
-					if err != nil {
-						logger.Errorf("流程(%s)中替换模板Value变量失败:%s", flowID, err.Error())
-						continue
-					}
-					logic.Compare[i].Value = formatVal
+			compare := logic.Compare
+			if compare.Value != "" {
+				formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.Value)
+				if err != nil {
+					logger.Errorf("流程(%s)中替换模板Value变量失败:%s", flowID, err.Error())
+					continue
 				}
-				if compare.StartTime.Value != "" {
-					formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.StartTime.Value)
-					if err != nil {
-						logger.Errorf("流程(%s)中替换模板StartTime变量失败:%s", flowID, err.Error())
-						continue
-					}
-					logic.Compare[i].StartTime.Value = formatVal
+				logic.Compare.Value = formatVal
+			}
+			if compare.StartTime.Value != "" {
+				formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.StartTime.Value)
+				if err != nil {
+					logger.Errorf("流程(%s)中替换模板StartTime变量失败:%s", flowID, err.Error())
+					continue
 				}
-				if compare.EndTime.Value != "" {
-					formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.EndTime.Value)
-					if err != nil {
-						logger.Errorf("流程(%s)中替换模板EndTime变量失败:%s", flowID, err.Error())
-						continue
-					}
-					logic.Compare[i].EndTime.Value = formatVal
+				logic.Compare.StartTime.Value = formatVal
+			}
+			if compare.EndTime.Value != "" {
+				formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.EndTime.Value)
+				if err != nil {
+					logger.Errorf("流程(%s)中替换模板EndTime变量失败:%s", flowID, err.Error())
+					continue
 				}
-				if compare.StartValue.Value != "" {
-					formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.StartValue.Value)
-					if err != nil {
-						logger.Errorf("流程(%s)中替换模板StartValue变量失败:%s", flowID, err.Error())
-						continue
-					}
-					logic.Compare[i].StartValue.Value = formatVal
+				logic.Compare.EndTime.Value = formatVal
+			}
+			if compare.StartValue.Value != "" {
+				formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.StartValue.Value)
+				if err != nil {
+					logger.Errorf("流程(%s)中替换模板StartValue变量失败:%s", flowID, err.Error())
+					continue
 				}
-				if compare.EndValue.Value != "" {
-					formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.EndValue.Value)
-					if err != nil {
-						logger.Errorf("流程(%s)中替换模板EndValue变量失败:%s", flowID, err.Error())
-						continue
-					}
-					logic.Compare[i].EndValue.Value = formatVal
+				logic.Compare.StartValue.Value = formatVal
+			}
+			if compare.EndValue.Value != "" {
+				formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.EndValue.Value)
+				if err != nil {
+					logger.Errorf("流程(%s)中替换模板EndValue变量失败:%s", flowID, err.Error())
+					continue
 				}
+				logic.Compare.EndValue.Value = formatVal
 			}
 		}
 		switch settings.EventType {
@@ -215,8 +214,7 @@ flowloop:
 			//fmt.Println("新增记录时 projectName ;", projectName, "data:", data)
 		logicLoop:
 			for i, logic := range settings.Logic {
-				//fmt.Println("logic.DataType:", logic.DataType)
-				//fmt.Println("i:", i, "counter:", counter, "orCounter:", orCounter)
+				compare := logic.Compare
 				if i%2 == 1 {
 					if settings.Logic[i].LogicType == "或" {
 						orCounter++
@@ -235,132 +233,120 @@ flowloop:
 				case "文本":
 					switch logic.Relation {
 					case "是":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] != data[compare.ID] {
-									counter++
-									continue logicLoop
-								}
-							} else if data[logic.ID] != compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] != data[compare.ID] {
 								counter++
 								continue logicLoop
 							}
+						} else if data[logic.ID] != compare.Value {
+							counter++
+							continue logicLoop
 						}
 					case "不是":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] == data[compare.ID] {
-									counter++
-									continue logicLoop
-								}
-							} else if data[logic.ID] == compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] == data[compare.ID] {
 								counter++
 								continue logicLoop
 							}
+						} else if data[logic.ID] == compare.Value {
+							counter++
+							continue logicLoop
 						}
 					case "包含":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop
+						}
+						if compare.ID != "" {
+							compareVal, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop
 							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop
-								}
-								if !strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop
-								}
-							} else if !strings.Contains(dataVal, compareInValue) {
+							if !strings.Contains(dataVal, compareVal) {
 								counter++
 								continue logicLoop
 							}
+						} else if !strings.Contains(dataVal, compareInValue) {
+							counter++
+							continue logicLoop
 						}
 					case "不包含":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop
+						}
+						if compare.ID != "" {
+							compareVal, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop
 							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop
-								}
-								if strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop
-								}
-							} else if strings.Contains(dataVal, compareInValue) {
+							if strings.Contains(dataVal, compareVal) {
 								counter++
 								continue logicLoop
 							}
+						} else if strings.Contains(dataVal, compareInValue) {
+							counter++
+							continue logicLoop
 						}
 					case "开始为":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop
+						}
+						if compare.ID != "" {
+							compareVal, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop
 							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop
-								}
-								if !strings.HasPrefix(dataVal, compareVal) {
-									counter++
-									continue logicLoop
-								}
-							} else if !strings.HasPrefix(dataVal, compareInValue) {
+							if !strings.HasPrefix(dataVal, compareVal) {
 								counter++
 								continue logicLoop
 							}
+						} else if !strings.HasPrefix(dataVal, compareInValue) {
+							counter++
+							continue logicLoop
 						}
 					case "结尾为":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop
+						}
+						if compare.ID != "" {
+							compareVal, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop
 							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop
-								}
-								if !strings.HasSuffix(dataVal, compareVal) {
-									counter++
-									continue logicLoop
-								}
-							} else if !strings.HasSuffix(dataVal, compareInValue) {
+							if !strings.HasSuffix(dataVal, compareVal) {
 								counter++
 								continue logicLoop
 							}
+						} else if !strings.HasSuffix(dataVal, compareInValue) {
+							counter++
+							continue logicLoop
 						}
 					case "为空":
 						if data[logic.ID] != nil {
@@ -376,28 +362,24 @@ flowloop:
 				case "选择器":
 					switch logic.Relation {
 					case "是", "等于":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] != data[compare.ID] {
-									counter++
-									continue logicLoop
-								}
-							} else if data[logic.ID] != compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] != data[compare.ID] {
 								counter++
 								continue logicLoop
 							}
+						} else if data[logic.ID] != compare.Value {
+							counter++
+							continue logicLoop
 						}
 					case "不是", "不等于":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] == data[compare.ID] {
-									counter++
-									continue logicLoop
-								}
-							} else if data[logic.ID] == compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] == data[compare.ID] {
 								counter++
 								continue logicLoop
 							}
+						} else if data[logic.ID] == compare.Value {
+							counter++
+							continue logicLoop
 						}
 					case "为空":
 						if data[logic.ID] != nil {
@@ -413,224 +395,208 @@ flowloop:
 				case "数值":
 					switch logic.Relation {
 					case "等于":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] != data[compare.ID] {
-									counter++
-									continue logicLoop
-								}
-							} else if data[logic.ID] != compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] != data[compare.ID] {
 								counter++
 								continue logicLoop
 							}
+						} else if data[logic.ID] != compare.Value {
+							counter++
+							continue logicLoop
 						}
 					case "不等于":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] == data[compare.ID] {
-									counter++
-									continue logicLoop
-								}
-							} else if data[logic.ID] == compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] == data[compare.ID] {
 								counter++
 								continue logicLoop
 							}
+						} else if data[logic.ID] == compare.Value {
+							counter++
+							continue logicLoop
 						}
 					case "大于":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop
+						}
+						if compare.ID != "" {
+							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
 							if err != nil {
 								counter++
 								continue logicLoop
 							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								if logicVal <= compareVal {
-									counter++
-									continue logicLoop
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								if logicVal <= compareVal {
-									counter++
-									continue logicLoop
-								}
+							if logicVal <= compareVal {
+								counter++
+								continue logicLoop
+							}
+						} else {
+							compareVal, err := numberx.GetFloatNumber(compare.Value)
+							if err != nil {
+								counter++
+								continue logicLoop
+							}
+							if logicVal <= compareVal {
+								counter++
+								continue logicLoop
 							}
 						}
 					case "小于":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop
+						}
+						if compare.ID != "" {
+							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
 							if err != nil {
 								counter++
 								continue logicLoop
 							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								if logicVal >= compareVal {
-									counter++
-									continue logicLoop
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								if logicVal >= compareVal {
-									counter++
-									continue logicLoop
-								}
+							if logicVal >= compareVal {
+								counter++
+								continue logicLoop
+							}
+						} else {
+							compareVal, err := numberx.GetFloatNumber(compare.Value)
+							if err != nil {
+								counter++
+								continue logicLoop
+							}
+							if logicVal >= compareVal {
+								counter++
+								continue logicLoop
 							}
 						}
 					case "大于等于":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop
+						}
+						if compare.ID != "" {
+							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
 							if err != nil {
 								counter++
 								continue logicLoop
 							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								if logicVal < compareVal {
-									counter++
-									continue logicLoop
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								if logicVal < compareVal {
-									counter++
-									continue logicLoop
-								}
+							if logicVal < compareVal {
+								counter++
+								continue logicLoop
+							}
+						} else {
+							compareVal, err := numberx.GetFloatNumber(compare.Value)
+							if err != nil {
+								counter++
+								continue logicLoop
+							}
+							if logicVal < compareVal {
+								counter++
+								continue logicLoop
 							}
 						}
 					case "小于等于":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop
+						}
+						if compare.ID != "" {
+							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
 							if err != nil {
 								counter++
 								continue logicLoop
 							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								if logicVal > compareVal {
-									counter++
-									continue logicLoop
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								if logicVal > compareVal {
-									counter++
-									continue logicLoop
-								}
+							if logicVal > compareVal {
+								counter++
+								continue logicLoop
+							}
+						} else {
+							compareVal, err := numberx.GetFloatNumber(compare.Value)
+							if err != nil {
+								counter++
+								continue logicLoop
+							}
+							if logicVal > compareVal {
+								counter++
+								continue logicLoop
 							}
 						}
 					case "在范围内":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop
+						}
+						startVal := float64(0)
+						endVal := float64(0)
+						if compare.StartValue.ID != "" {
+							startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
 							if err != nil {
 								counter++
 								continue logicLoop
 							}
-							startVal := float64(0)
-							endVal := float64(0)
-							if compare.StartValue.ID != "" {
-								startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-							} else {
-								startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-							}
-							if compare.EndValue.ID != "" {
-								endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-							} else {
-								endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-							}
-							if logicVal < startVal || logicVal > endVal {
+						} else {
+							startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
+							if err != nil {
 								counter++
 								continue logicLoop
 							}
+						}
+						if compare.EndValue.ID != "" {
+							endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
+							if err != nil {
+								counter++
+								continue logicLoop
+							}
+						} else {
+							endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
+							if err != nil {
+								counter++
+								continue logicLoop
+							}
+						}
+						if logicVal < startVal || logicVal > endVal {
+							counter++
+							continue logicLoop
 						}
 					case "不在范围内":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop
+						}
+						startVal := float64(0)
+						endVal := float64(0)
+						if compare.StartValue.ID != "" {
+							startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
 							if err != nil {
 								counter++
 								continue logicLoop
 							}
-							startVal := float64(0)
-							endVal := float64(0)
-							if compare.StartValue.ID != "" {
-								startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-							} else {
-								startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-							}
-							if compare.EndValue.ID != "" {
-								endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-							} else {
-								endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-							}
-							if logicVal >= startVal && logicVal <= endVal {
+						} else {
+							startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
+							if err != nil {
 								counter++
 								continue logicLoop
 							}
+						}
+						if compare.EndValue.ID != "" {
+							endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
+							if err != nil {
+								counter++
+								continue logicLoop
+							}
+						} else {
+							endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
+							if err != nil {
+								counter++
+								continue logicLoop
+							}
+						}
+						if logicVal >= startVal && logicVal <= endVal {
+							counter++
+							continue logicLoop
 						}
 					case "为空":
 						if data[logic.ID] != nil {
@@ -646,11 +612,65 @@ flowloop:
 				case "时间":
 					switch logic.Relation {
 					case "等于":
-						for _, compare := range logic.Compare {
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+						compareInValue := int64(0)
+						if ele, ok := compare.Value.(string); ok {
+							if ele != "" {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop
+								}
+								compareInValue = eleTime.Unix()
+							}
+						}
+						dataVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop
+									}
+								} else {
+									counter++
+									continue logicLoop
+								}
+							}
+						}
+						if compare.TimeType != "" {
+							switch compare.TimeType {
+							case "今天":
+								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+							case "昨天":
+								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+							case "明天":
+								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+							case "本周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+							case "上周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+							case "今年":
+								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+							case "去年":
+								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+							case "明年":
+								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+							case "指定时间":
+								if compare.SpecificTime != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
 									if err != nil {
 										counter++
 										continue logicLoop
@@ -658,15 +678,20 @@ flowloop:
 									compareInValue = eleTime.Unix()
 								}
 							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
+							if dataVal != compareInValue {
+								counter++
+								continue logicLoop
+							}
+						} else if compare.ID != "" {
+							compareValue := int64(0)
+							eleRaw, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop
 							} else {
 								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+										compareValue, err = TimeConvertExt(extVal, eleRaw)
 										if err != nil {
 											counter++
 											continue logicLoop
@@ -677,84 +702,77 @@ flowloop:
 									}
 								}
 							}
-							if compare.TimeType != "" {
-								switch compare.TimeType {
-								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop
-										}
-										compareInValue = eleTime.Unix()
-									}
-								}
-								if dataVal != compareInValue {
-									counter++
-									continue logicLoop
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop
-											}
-										} else {
-											counter++
-											continue logicLoop
-										}
-									}
-								}
-								if dataVal != compareValue {
-									counter++
-									continue logicLoop
-								}
-							} else if dataVal != compareInValue {
-								counter++
-								continue logicLoop
-							} else if compareInValue == 0 {
+							if dataVal != compareValue {
 								counter++
 								continue logicLoop
 							}
+						} else if dataVal != compareInValue {
+							counter++
+							continue logicLoop
+						} else if compareInValue == 0 {
+							counter++
+							continue logicLoop
 						}
 					case "不等于":
-						for _, compare := range logic.Compare {
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+						compareInValue := int64(0)
+						if ele, ok := compare.Value.(string); ok {
+							if ele != "" {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop
+								}
+								compareInValue = eleTime.Unix()
+							}
+						}
+						dataVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop
+									}
+								} else {
+									counter++
+									continue logicLoop
+								}
+							}
+						}
+						if compare.TimeType != "" {
+							switch compare.TimeType {
+							case "今天":
+								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+							case "昨天":
+								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+							case "明天":
+								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+							case "本周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+							case "上周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+							case "今年":
+								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+							case "去年":
+								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+							case "明年":
+								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+							case "指定时间":
+								if compare.SpecificTime != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
 									if err != nil {
 										counter++
 										continue logicLoop
@@ -762,15 +780,20 @@ flowloop:
 									compareInValue = eleTime.Unix()
 								}
 							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
+							if dataVal == compareInValue {
+								counter++
+								continue logicLoop
+							}
+						} else if compare.ID != "" {
+							compareValue := int64(0)
+							eleRaw, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop
 							} else {
 								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+										compareValue, err = TimeConvertExt(extVal, eleRaw)
 										if err != nil {
 											counter++
 											continue logicLoop
@@ -781,84 +804,77 @@ flowloop:
 									}
 								}
 							}
-							if compare.TimeType != "" {
-								switch compare.TimeType {
-								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop
-										}
-										compareInValue = eleTime.Unix()
-									}
-								}
-								if dataVal == compareInValue {
-									counter++
-									continue logicLoop
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop
-											}
-										} else {
-											counter++
-											continue logicLoop
-										}
-									}
-								}
-								if dataVal == compareValue {
-									counter++
-									continue logicLoop
-								}
-							} else if dataVal == compareInValue {
-								counter++
-								continue logicLoop
-							} else if compareInValue == 0 {
+							if dataVal == compareValue {
 								counter++
 								continue logicLoop
 							}
+						} else if dataVal == compareInValue {
+							counter++
+							continue logicLoop
+						} else if compareInValue == 0 {
+							counter++
+							continue logicLoop
 						}
 					case "早于":
-						for _, compare := range logic.Compare {
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+						compareInValue := int64(0)
+						if ele, ok := compare.Value.(string); ok {
+							if ele != "" {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop
+								}
+								compareInValue = eleTime.Unix()
+							}
+						}
+						dataVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop
+									}
+								} else {
+									counter++
+									continue logicLoop
+								}
+							}
+						}
+						if compare.TimeType != "" {
+							switch compare.TimeType {
+							case "今天":
+								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+							case "昨天":
+								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+							case "明天":
+								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+							case "本周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+							case "上周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+							case "今年":
+								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+							case "去年":
+								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+							case "明年":
+								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+							case "指定时间":
+								if compare.SpecificTime != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
 									if err != nil {
 										counter++
 										continue logicLoop
@@ -866,15 +882,20 @@ flowloop:
 									compareInValue = eleTime.Unix()
 								}
 							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
+							if dataVal >= compareInValue {
+								counter++
+								continue logicLoop
+							}
+						} else if compare.ID != "" {
+							compareValue := int64(0)
+							eleRaw, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop
 							} else {
 								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+										compareValue, err = TimeConvertExt(extVal, eleRaw)
 										if err != nil {
 											counter++
 											continue logicLoop
@@ -885,84 +906,77 @@ flowloop:
 									}
 								}
 							}
-							if compare.TimeType != "" {
-								switch compare.TimeType {
-								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop
-										}
-										compareInValue = eleTime.Unix()
-									}
-								}
-								if dataVal >= compareInValue {
-									counter++
-									continue logicLoop
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop
-											}
-										} else {
-											counter++
-											continue logicLoop
-										}
-									}
-								}
-								if dataVal >= compareValue {
-									counter++
-									continue logicLoop
-								}
-							} else if dataVal >= compareInValue {
-								counter++
-								continue logicLoop
-							} else if compareInValue == 0 {
+							if dataVal >= compareValue {
 								counter++
 								continue logicLoop
 							}
+						} else if dataVal >= compareInValue {
+							counter++
+							continue logicLoop
+						} else if compareInValue == 0 {
+							counter++
+							continue logicLoop
 						}
 					case "晚于":
-						for _, compare := range logic.Compare {
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+						compareInValue := int64(0)
+						if ele, ok := compare.Value.(string); ok {
+							if ele != "" {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop
+								}
+								compareInValue = eleTime.Unix()
+							}
+						}
+						dataVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop
+									}
+								} else {
+									counter++
+									continue logicLoop
+								}
+							}
+						}
+						if compare.TimeType != "" {
+							switch compare.TimeType {
+							case "今天":
+								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+							case "昨天":
+								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+							case "明天":
+								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+							case "本周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+							case "上周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+							case "今年":
+								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+							case "去年":
+								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+							case "明年":
+								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+							case "指定时间":
+								if compare.SpecificTime != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
 									if err != nil {
 										counter++
 										continue logicLoop
@@ -970,15 +984,20 @@ flowloop:
 									compareInValue = eleTime.Unix()
 								}
 							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
+							if dataVal <= compareInValue {
+								counter++
+								continue logicLoop
+							}
+						} else if compare.ID != "" {
+							compareValue := int64(0)
+							eleRaw, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop
 							} else {
 								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+										compareValue, err = TimeConvertExt(extVal, eleRaw)
 										if err != nil {
 											counter++
 											continue logicLoop
@@ -989,221 +1008,156 @@ flowloop:
 									}
 								}
 							}
-							if compare.TimeType != "" {
-								switch compare.TimeType {
-								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop
-										}
-										compareInValue = eleTime.Unix()
-									}
-								}
-								if dataVal <= compareInValue {
-									counter++
-									continue logicLoop
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop
-											}
-										} else {
-											counter++
-											continue logicLoop
-										}
-									}
-								}
-								if dataVal <= compareValue {
-									counter++
-									continue logicLoop
-								}
-							} else if dataVal <= compareInValue {
-								counter++
-								continue logicLoop
-							} else if compareInValue == 0 {
+							if dataVal <= compareValue {
 								counter++
 								continue logicLoop
 							}
+						} else if dataVal <= compareInValue {
+							counter++
+							continue logicLoop
+						} else if compareInValue == 0 {
+							counter++
+							continue logicLoop
 						}
 					case "在范围内":
-						for _, compare := range logic.Compare {
-							logicVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										logicVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop
-										}
-									} else {
-										counter++
-										continue logicLoop
-									}
-								}
-							}
-							startVal := int64(0)
-							endVal := int64(0)
-							if compare.StartTime.ID != "" {
-								if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
-									if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
-										startVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop
-										}
-									} else {
-										counter++
-										continue logicLoop
-									}
-								}
-							} else if compare.StartTime.Value != "" {
-								if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+						logicVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									logicVal, err = TimeConvertExt(extVal, eleRaw)
 									if err != nil {
 										counter++
 										continue logicLoop
 									}
-									startVal = eleTime.Unix()
+								} else {
+									counter++
+									continue logicLoop
 								}
-							}
-							if compare.EndTime.ID != "" {
-								if eleRaw, ok := data[compare.EndTime.ID].(string); ok {
-									if extVal, ok := excelColNameTypeExtMap[compare.EndTime.ID]; ok {
-										endVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop
-										}
-									} else {
-										counter++
-										continue logicLoop
-									}
-								}
-							} else if compare.EndTime.Value != "" {
-								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop
-									}
-									endVal = eleTime.Unix()
-								}
-							}
-							if logicVal < startVal || logicVal > endVal {
-								counter++
-								continue logicLoop
 							}
 						}
+						startVal := int64(0)
+						endVal := int64(0)
+						if compare.StartTime.ID != "" {
+							if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
+								if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
+									startVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop
+									}
+								} else {
+									counter++
+									continue logicLoop
+								}
+							}
+						} else if compare.StartTime.Value != "" {
+							if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop
+								}
+								startVal = eleTime.Unix()
+							}
+						}
+						if compare.EndTime.ID != "" {
+							if eleRaw, ok := data[compare.EndTime.ID].(string); ok {
+								if extVal, ok := excelColNameTypeExtMap[compare.EndTime.ID]; ok {
+									endVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop
+									}
+								} else {
+									counter++
+									continue logicLoop
+								}
+							}
+						} else if compare.EndTime.Value != "" {
+							if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop
+								}
+								endVal = eleTime.Unix()
+							}
+						}
+						if logicVal < startVal || logicVal > endVal {
+							counter++
+							continue logicLoop
+						}
 					case "不在范围内":
-						for _, compare := range logic.Compare {
-							logicVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										logicVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop
-										}
-									} else {
-										counter++
-										continue logicLoop
-									}
-								}
-							}
-							startVal := int64(0)
-							endVal := int64(0)
-							if compare.StartTime.ID != "" {
-								if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
-									if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
-										startVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop
-										}
-									} else {
-										counter++
-										continue logicLoop
-									}
-								}
-							} else if compare.StartTime.Value != "" {
-								if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+						logicVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									logicVal, err = TimeConvertExt(extVal, eleRaw)
 									if err != nil {
 										counter++
 										continue logicLoop
 									}
-									startVal = eleTime.Unix()
+								} else {
+									counter++
+									continue logicLoop
 								}
 							}
-							if compare.EndTime.ID != "" {
-								if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+						}
+						startVal := int64(0)
+						endVal := int64(0)
+						if compare.StartTime.ID != "" {
+							if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
+								if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
+									startVal, err = TimeConvertExt(extVal, eleRaw)
 									if err != nil {
 										counter++
 										continue logicLoop
 									}
-									endVal = eleTime.Unix()
-								}
-							} else if compare.EndTime.Value != "" {
-								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop
-									}
-									endVal = eleTime.Unix()
+								} else {
+									counter++
+									continue logicLoop
 								}
 							}
-							if logicVal < startVal || logicVal > endVal {
-								counter++
-								continue logicLoop
+						} else if compare.StartTime.Value != "" {
+							if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop
+								}
+								startVal = eleTime.Unix()
 							}
+						}
+						if compare.EndTime.ID != "" {
+							if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop
+								}
+								endVal = eleTime.Unix()
+							}
+						} else if compare.EndTime.Value != "" {
+							if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop
+								}
+								endVal = eleTime.Unix()
+							}
+						}
+						if logicVal < startVal || logicVal > endVal {
+							counter++
+							continue logicLoop
 						}
 					case "为空":
 						if data[logic.ID] != nil {
@@ -1232,17 +1186,34 @@ flowloop:
 				case "关联字段":
 					switch logic.Relation {
 					case "是":
-						for _, compare := range logic.Compare {
-							var dataVal interface{}
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
+						var dataVal interface{}
+						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+							eleRaw, ok := data[logic.ID].(map[string]interface{})
+							if !ok {
+								counter++
+								continue logicLoop
+							} else {
+								if eleRaw != nil {
+									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+										dataVal = relateVal
+									} else {
+										counter++
+										continue logicLoop
+									}
+								}
+							}
+						}
+						if compare.ID != "" {
+							var compareValue interface{}
+							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+								eleRaw, ok := data[compare.ID].(map[string]interface{})
 								if !ok {
 									counter++
 									continue logicLoop
 								} else {
 									if eleRaw != nil {
 										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											dataVal = relateVal
+											compareValue = relateVal
 										} else {
 											counter++
 											continue logicLoop
@@ -1250,45 +1221,43 @@ flowloop:
 									}
 								}
 							}
-							if compare.ID != "" {
-								var compareValue interface{}
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
-										counter++
-										continue logicLoop
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												compareValue = relateVal
-											} else {
-												counter++
-												continue logicLoop
-											}
-										}
-									}
-								}
-								if dataVal != compareValue {
-									counter++
-									continue logicLoop
-								}
-							} else if dataVal != compare.Value {
+							if dataVal != compareValue {
 								counter++
 								continue logicLoop
 							}
+						} else if dataVal != compare.Value {
+							counter++
+							continue logicLoop
 						}
 					case "不是":
-						for _, compare := range logic.Compare {
-							var dataVal interface{}
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
+						var dataVal interface{}
+						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+							eleRaw, ok := data[logic.ID].(map[string]interface{})
+							if !ok {
+								counter++
+								continue logicLoop
+							} else {
+								if eleRaw != nil {
+									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+										dataVal = relateVal
+									} else {
+										counter++
+										continue logicLoop
+									}
+								}
+							}
+						}
+						if compare.ID == "" {
+							var compareValue interface{}
+							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+								eleRaw, ok := data[compare.ID].(map[string]interface{})
 								if !ok {
 									counter++
 									continue logicLoop
 								} else {
 									if eleRaw != nil {
 										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											dataVal = relateVal
+											compareValue = relateVal
 										} else {
 											counter++
 											continue logicLoop
@@ -1296,102 +1265,45 @@ flowloop:
 									}
 								}
 							}
-							if compare.ID == "" {
-								var compareValue interface{}
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
-										counter++
-										continue logicLoop
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												compareValue = relateVal
-											} else {
-												counter++
-												continue logicLoop
-											}
-										}
-									}
-								}
-								if dataVal != compareValue {
-									counter++
-									continue logicLoop
-								}
-							} else if dataVal == compare.Value {
+							if dataVal != compareValue {
 								counter++
 								continue logicLoop
 							}
+						} else if dataVal == compare.Value {
+							counter++
+							continue logicLoop
 						}
 					case "包含":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal := ""
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											if relateValString, ok := relateVal.(string); ok {
-												dataVal = relateValString
-											} else {
-												counter++
-												continue logicLoop
-											}
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal := ""
+						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+							eleRaw, ok := data[logic.ID].(map[string]interface{})
+							if !ok {
+								counter++
+								continue logicLoop
+							} else {
+								if eleRaw != nil {
+									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+										if relateValString, ok := relateVal.(string); ok {
+											dataVal = relateValString
 										} else {
 											counter++
 											continue logicLoop
 										}
-									}
-								}
-							}
-							if compare.ID != "" {
-								compareVal := ""
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
+									} else {
 										counter++
 										continue logicLoop
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												if relateValString, ok := relateVal.(string); ok {
-													compareVal = relateValString
-												} else {
-													counter++
-													continue logicLoop
-												}
-											} else {
-												counter++
-												continue logicLoop
-											}
-										}
 									}
 								}
-								if !strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop
-								}
-							} else if !strings.Contains(dataVal, compareInValue) {
-								counter++
-								continue logicLoop
 							}
 						}
-					case "不包含":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal := ""
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
+						if compare.ID != "" {
+							compareVal := ""
+							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+								eleRaw, ok := data[compare.ID].(map[string]interface{})
 								if !ok {
 									counter++
 									continue logicLoop
@@ -1399,7 +1311,7 @@ flowloop:
 									if eleRaw != nil {
 										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
 											if relateValString, ok := relateVal.(string); ok {
-												dataVal = relateValString
+												compareVal = relateValString
 											} else {
 												counter++
 												continue logicLoop
@@ -1411,37 +1323,71 @@ flowloop:
 									}
 								}
 							}
-							if compare.ID != "" {
-								compareVal := ""
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
+							if !strings.Contains(dataVal, compareVal) {
+								counter++
+								continue logicLoop
+							}
+						} else if !strings.Contains(dataVal, compareInValue) {
+							counter++
+							continue logicLoop
+						}
+					case "不包含":
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal := ""
+						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+							eleRaw, ok := data[logic.ID].(map[string]interface{})
+							if !ok {
+								counter++
+								continue logicLoop
+							} else {
+								if eleRaw != nil {
+									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+										if relateValString, ok := relateVal.(string); ok {
+											dataVal = relateValString
+										} else {
+											counter++
+											continue logicLoop
+										}
+									} else {
 										counter++
 										continue logicLoop
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												if relateValString, ok := relateVal.(string); ok {
-													compareVal = relateValString
-												} else {
-													counter++
-													continue logicLoop
-												}
+									}
+								}
+							}
+						}
+						if compare.ID != "" {
+							compareVal := ""
+							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+								eleRaw, ok := data[compare.ID].(map[string]interface{})
+								if !ok {
+									counter++
+									continue logicLoop
+								} else {
+									if eleRaw != nil {
+										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+											if relateValString, ok := relateVal.(string); ok {
+												compareVal = relateValString
 											} else {
 												counter++
 												continue logicLoop
 											}
+										} else {
+											counter++
+											continue logicLoop
 										}
 									}
 								}
-								if strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop
-								}
-							} else if strings.Contains(dataVal, compareInValue) {
+							}
+							if strings.Contains(dataVal, compareVal) {
 								counter++
 								continue logicLoop
 							}
+						} else if strings.Contains(dataVal, compareInValue) {
+							counter++
+							continue logicLoop
 						}
 					case "为空":
 						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
@@ -1511,8 +1457,7 @@ flowloop:
 			counter := 0
 		logicLoop1:
 			for i, logic := range settings.Logic {
-				//fmt.Println("logic.DataType:", logic.DataType, "logic.ID:", logic.ID)
-				//fmt.Println("i:", i, "counter:", counter, "orCounter:", orCounter)
+				compare := logic.Compare
 				if i%2 == 1 {
 					if settings.Logic[i].LogicType == "或" {
 						orCounter++
@@ -1531,132 +1476,120 @@ flowloop:
 				case "文本":
 					switch logic.Relation {
 					case "是":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] != data[compare.ID] {
-									counter++
-									continue logicLoop1
-								}
-							} else if data[logic.ID] != compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] != data[compare.ID] {
 								counter++
 								continue logicLoop1
 							}
+						} else if data[logic.ID] != compare.Value {
+							counter++
+							continue logicLoop1
 						}
 					case "不是":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] == data[compare.ID] {
-									counter++
-									continue logicLoop1
-								}
-							} else if data[logic.ID] == compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] == data[compare.ID] {
 								counter++
 								continue logicLoop1
 							}
+						} else if data[logic.ID] == compare.Value {
+							counter++
+							continue logicLoop1
 						}
 					case "包含":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop1
+						}
+						if compare.ID != "" {
+							compareVal, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop1
 							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop1
-								}
-								if !strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop1
-								}
-							} else if !strings.Contains(dataVal, compareInValue) {
+							if !strings.Contains(dataVal, compareVal) {
 								counter++
 								continue logicLoop1
 							}
+						} else if !strings.Contains(dataVal, compareInValue) {
+							counter++
+							continue logicLoop1
 						}
 					case "不包含":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop1
+						}
+						if compare.ID != "" {
+							compareVal, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop1
 							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop1
-								}
-								if strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop1
-								}
-							} else if strings.Contains(dataVal, compareInValue) {
+							if strings.Contains(dataVal, compareVal) {
 								counter++
 								continue logicLoop1
 							}
+						} else if strings.Contains(dataVal, compareInValue) {
+							counter++
+							continue logicLoop1
 						}
 					case "开始为":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop1
+						}
+						if compare.ID != "" {
+							compareVal, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop1
 							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop1
-								}
-								if !strings.HasPrefix(dataVal, compareVal) {
-									counter++
-									continue logicLoop1
-								}
-							} else if !strings.HasPrefix(dataVal, compareInValue) {
+							if !strings.HasPrefix(dataVal, compareVal) {
 								counter++
 								continue logicLoop1
 							}
+						} else if !strings.HasPrefix(dataVal, compareInValue) {
+							counter++
+							continue logicLoop1
 						}
 					case "结尾为":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop1
+						}
+						if compare.ID != "" {
+							compareVal, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop1
 							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop1
-								}
-								if !strings.HasSuffix(dataVal, compareVal) {
-									counter++
-									continue logicLoop1
-								}
-							} else if !strings.HasSuffix(dataVal, compareInValue) {
+							if !strings.HasSuffix(dataVal, compareVal) {
 								counter++
 								continue logicLoop1
 							}
+						} else if !strings.HasSuffix(dataVal, compareInValue) {
+							counter++
+							continue logicLoop1
 						}
 					case "为空":
 						if data[logic.ID] != nil {
@@ -1672,28 +1605,24 @@ flowloop:
 				case "选择器":
 					switch logic.Relation {
 					case "是", "等于":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] != data[compare.ID] {
-									counter++
-									continue logicLoop1
-								}
-							} else if data[logic.ID] != compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] != data[compare.ID] {
 								counter++
 								continue logicLoop1
 							}
+						} else if data[logic.ID] != compare.Value {
+							counter++
+							continue logicLoop1
 						}
 					case "不是", "不等于":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] == data[compare.ID] {
-									counter++
-									continue logicLoop1
-								}
-							} else if data[logic.ID] == compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] == data[compare.ID] {
 								counter++
 								continue logicLoop1
 							}
+						} else if data[logic.ID] == compare.Value {
+							counter++
+							continue logicLoop1
 						}
 					case "为空":
 						if data[logic.ID] != nil {
@@ -1709,224 +1638,208 @@ flowloop:
 				case "数值":
 					switch logic.Relation {
 					case "等于":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] != data[compare.ID] {
-									counter++
-									continue logicLoop1
-								}
-							} else if data[logic.ID] != compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] != data[compare.ID] {
 								counter++
 								continue logicLoop1
 							}
+						} else if data[logic.ID] != compare.Value {
+							counter++
+							continue logicLoop1
 						}
 					case "不等于":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] == data[compare.ID] {
-									counter++
-									continue logicLoop1
-								}
-							} else if data[logic.ID] == compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] == data[compare.ID] {
 								counter++
 								continue logicLoop1
 							}
+						} else if data[logic.ID] == compare.Value {
+							counter++
+							continue logicLoop1
 						}
 					case "大于":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop1
+						}
+						if compare.ID != "" {
+							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
 							if err != nil {
 								counter++
 								continue logicLoop1
 							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-								if logicVal <= compareVal {
-									counter++
-									continue logicLoop1
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-								if logicVal <= compareVal {
-									counter++
-									continue logicLoop1
-								}
+							if logicVal <= compareVal {
+								counter++
+								continue logicLoop1
+							}
+						} else {
+							compareVal, err := numberx.GetFloatNumber(compare.Value)
+							if err != nil {
+								counter++
+								continue logicLoop1
+							}
+							if logicVal <= compareVal {
+								counter++
+								continue logicLoop1
 							}
 						}
 					case "小于":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop1
+						}
+						if compare.ID != "" {
+							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
 							if err != nil {
 								counter++
 								continue logicLoop1
 							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-								if logicVal >= compareVal {
-									counter++
-									continue logicLoop1
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-								if logicVal >= compareVal {
-									counter++
-									continue logicLoop1
-								}
+							if logicVal >= compareVal {
+								counter++
+								continue logicLoop1
+							}
+						} else {
+							compareVal, err := numberx.GetFloatNumber(compare.Value)
+							if err != nil {
+								counter++
+								continue logicLoop1
+							}
+							if logicVal >= compareVal {
+								counter++
+								continue logicLoop1
 							}
 						}
 					case "大于等于":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop1
+						}
+						if compare.ID != "" {
+							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
 							if err != nil {
 								counter++
 								continue logicLoop1
 							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-								if logicVal < compareVal {
-									counter++
-									continue logicLoop1
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-								if logicVal < compareVal {
-									counter++
-									continue logicLoop1
-								}
+							if logicVal < compareVal {
+								counter++
+								continue logicLoop1
+							}
+						} else {
+							compareVal, err := numberx.GetFloatNumber(compare.Value)
+							if err != nil {
+								counter++
+								continue logicLoop1
+							}
+							if logicVal < compareVal {
+								counter++
+								continue logicLoop1
 							}
 						}
 					case "小于等于":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop1
+						}
+						if compare.ID != "" {
+							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
 							if err != nil {
 								counter++
 								continue logicLoop1
 							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-								if logicVal > compareVal {
-									counter++
-									continue logicLoop1
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-								if logicVal > compareVal {
-									counter++
-									continue logicLoop1
-								}
+							if logicVal > compareVal {
+								counter++
+								continue logicLoop1
+							}
+						} else {
+							compareVal, err := numberx.GetFloatNumber(compare.Value)
+							if err != nil {
+								counter++
+								continue logicLoop1
+							}
+							if logicVal > compareVal {
+								counter++
+								continue logicLoop1
 							}
 						}
 					case "在范围内":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop1
+						}
+						startVal := float64(0)
+						endVal := float64(0)
+						if compare.StartValue.ID != "" {
+							startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
 							if err != nil {
 								counter++
 								continue logicLoop1
 							}
-							startVal := float64(0)
-							endVal := float64(0)
-							if compare.StartValue.ID != "" {
-								startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-							} else {
-								startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-							}
-							if compare.EndValue.ID != "" {
-								endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-							} else {
-								endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-							}
-							if logicVal < startVal || logicVal > endVal {
+						} else {
+							startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
+							if err != nil {
 								counter++
 								continue logicLoop1
 							}
+						}
+						if compare.EndValue.ID != "" {
+							endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
+							if err != nil {
+								counter++
+								continue logicLoop1
+							}
+						} else {
+							endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
+							if err != nil {
+								counter++
+								continue logicLoop1
+							}
+						}
+						if logicVal < startVal || logicVal > endVal {
+							counter++
+							continue logicLoop1
 						}
 					case "不在范围内":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop1
+						}
+						startVal := float64(0)
+						endVal := float64(0)
+						if compare.StartValue.ID != "" {
+							startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
 							if err != nil {
 								counter++
 								continue logicLoop1
 							}
-							startVal := float64(0)
-							endVal := float64(0)
-							if compare.StartValue.ID != "" {
-								startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-							} else {
-								startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-							}
-							if compare.EndValue.ID != "" {
-								endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-							} else {
-								endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-							}
-							if logicVal >= startVal && logicVal <= endVal {
+						} else {
+							startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
+							if err != nil {
 								counter++
 								continue logicLoop1
 							}
+						}
+						if compare.EndValue.ID != "" {
+							endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
+							if err != nil {
+								counter++
+								continue logicLoop1
+							}
+						} else {
+							endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
+							if err != nil {
+								counter++
+								continue logicLoop1
+							}
+						}
+						if logicVal >= startVal && logicVal <= endVal {
+							counter++
+							continue logicLoop1
 						}
 					case "为空":
 						if data[logic.ID] != nil {
@@ -1942,11 +1855,65 @@ flowloop:
 				case "时间":
 					switch logic.Relation {
 					case "等于":
-						for _, compare := range logic.Compare {
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+						compareInValue := int64(0)
+						if ele, ok := compare.Value.(string); ok {
+							if ele != "" {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop1
+								}
+								compareInValue = eleTime.Unix()
+							}
+						}
+						dataVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop1
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop1
+									}
+								} else {
+									counter++
+									continue logicLoop1
+								}
+							}
+						}
+						if compare.TimeType != "" {
+							switch compare.TimeType {
+							case "今天":
+								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+							case "昨天":
+								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+							case "明天":
+								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+							case "本周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+							case "上周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+							case "今年":
+								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+							case "去年":
+								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+							case "明年":
+								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+							case "指定时间":
+								if compare.SpecificTime != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
 									if err != nil {
 										counter++
 										continue logicLoop1
@@ -1954,15 +1921,20 @@ flowloop:
 									compareInValue = eleTime.Unix()
 								}
 							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
+							if dataVal != compareInValue {
+								counter++
+								continue logicLoop1
+							}
+						} else if compare.ID != "" {
+							compareValue := int64(0)
+							eleRaw, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop1
 							} else {
 								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+										compareValue, err = TimeConvertExt(extVal, eleRaw)
 										if err != nil {
 											counter++
 											continue logicLoop1
@@ -1973,84 +1945,77 @@ flowloop:
 									}
 								}
 							}
-							if compare.TimeType != "" {
-								switch compare.TimeType {
-								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-										compareInValue = eleTime.Unix()
-									}
-								}
-								if dataVal != compareInValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop1
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop1
-											}
-										} else {
-											counter++
-											continue logicLoop1
-										}
-									}
-								}
-								if dataVal != compareValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if dataVal != compareInValue {
-								counter++
-								continue logicLoop1
-							} else if compareInValue == 0 {
+							if dataVal != compareValue {
 								counter++
 								continue logicLoop1
 							}
+						} else if dataVal != compareInValue {
+							counter++
+							continue logicLoop1
+						} else if compareInValue == 0 {
+							counter++
+							continue logicLoop1
 						}
 					case "不等于":
-						for _, compare := range logic.Compare {
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+						compareInValue := int64(0)
+						if ele, ok := compare.Value.(string); ok {
+							if ele != "" {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop1
+								}
+								compareInValue = eleTime.Unix()
+							}
+						}
+						dataVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop1
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop1
+									}
+								} else {
+									counter++
+									continue logicLoop1
+								}
+							}
+						}
+						if compare.TimeType != "" {
+							switch compare.TimeType {
+							case "今天":
+								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+							case "昨天":
+								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+							case "明天":
+								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+							case "本周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+							case "上周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+							case "今年":
+								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+							case "去年":
+								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+							case "明年":
+								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+							case "指定时间":
+								if compare.SpecificTime != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
 									if err != nil {
 										counter++
 										continue logicLoop1
@@ -2058,15 +2023,20 @@ flowloop:
 									compareInValue = eleTime.Unix()
 								}
 							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
+							if dataVal == compareInValue {
+								counter++
+								continue logicLoop1
+							}
+						} else if compare.ID != "" {
+							compareValue := int64(0)
+							eleRaw, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop1
 							} else {
 								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+										compareValue, err = TimeConvertExt(extVal, eleRaw)
 										if err != nil {
 											counter++
 											continue logicLoop1
@@ -2077,84 +2047,77 @@ flowloop:
 									}
 								}
 							}
-							if compare.TimeType != "" {
-								switch compare.TimeType {
-								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-										compareInValue = eleTime.Unix()
-									}
-								}
-								if dataVal == compareInValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop1
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop1
-											}
-										} else {
-											counter++
-											continue logicLoop1
-										}
-									}
-								}
-								if dataVal == compareValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if dataVal == compareInValue {
-								counter++
-								continue logicLoop1
-							} else if compareInValue == 0 {
+							if dataVal == compareValue {
 								counter++
 								continue logicLoop1
 							}
+						} else if dataVal == compareInValue {
+							counter++
+							continue logicLoop1
+						} else if compareInValue == 0 {
+							counter++
+							continue logicLoop1
 						}
 					case "早于":
-						for _, compare := range logic.Compare {
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+						compareInValue := int64(0)
+						if ele, ok := compare.Value.(string); ok {
+							if ele != "" {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop1
+								}
+								compareInValue = eleTime.Unix()
+							}
+						}
+						dataVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop1
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop1
+									}
+								} else {
+									counter++
+									continue logicLoop1
+								}
+							}
+						}
+						if compare.TimeType != "" {
+							switch compare.TimeType {
+							case "今天":
+								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+							case "昨天":
+								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+							case "明天":
+								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+							case "本周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+							case "上周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+							case "今年":
+								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+							case "去年":
+								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+							case "明年":
+								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+							case "指定时间":
+								if compare.SpecificTime != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
 									if err != nil {
 										counter++
 										continue logicLoop1
@@ -2162,15 +2125,20 @@ flowloop:
 									compareInValue = eleTime.Unix()
 								}
 							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
+							if dataVal >= compareInValue {
+								counter++
+								continue logicLoop1
+							}
+						} else if compare.ID != "" {
+							compareValue := int64(0)
+							eleRaw, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop1
 							} else {
 								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+										compareValue, err = TimeConvertExt(extVal, eleRaw)
 										if err != nil {
 											counter++
 											continue logicLoop1
@@ -2181,84 +2149,77 @@ flowloop:
 									}
 								}
 							}
-							if compare.TimeType != "" {
-								switch compare.TimeType {
-								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-										compareInValue = eleTime.Unix()
-									}
-								}
-								if dataVal >= compareInValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop1
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop1
-											}
-										} else {
-											counter++
-											continue logicLoop1
-										}
-									}
-								}
-								if dataVal >= compareValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if dataVal >= compareInValue {
-								counter++
-								continue logicLoop1
-							} else if compareInValue == 0 {
+							if dataVal >= compareValue {
 								counter++
 								continue logicLoop1
 							}
+						} else if dataVal >= compareInValue {
+							counter++
+							continue logicLoop1
+						} else if compareInValue == 0 {
+							counter++
+							continue logicLoop1
 						}
 					case "晚于":
-						for _, compare := range logic.Compare {
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+						compareInValue := int64(0)
+						if ele, ok := compare.Value.(string); ok {
+							if ele != "" {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop1
+								}
+								compareInValue = eleTime.Unix()
+							}
+						}
+						dataVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop1
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop1
+									}
+								} else {
+									counter++
+									continue logicLoop1
+								}
+							}
+						}
+						if compare.TimeType != "" {
+							switch compare.TimeType {
+							case "今天":
+								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+							case "昨天":
+								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+							case "明天":
+								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+							case "本周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+							case "上周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+							case "今年":
+								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+							case "去年":
+								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+							case "明年":
+								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+							case "指定时间":
+								if compare.SpecificTime != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
 									if err != nil {
 										counter++
 										continue logicLoop1
@@ -2266,15 +2227,20 @@ flowloop:
 									compareInValue = eleTime.Unix()
 								}
 							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
+							if dataVal <= compareInValue {
+								counter++
+								continue logicLoop1
+							}
+						} else if compare.ID != "" {
+							compareValue := int64(0)
+							eleRaw, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop1
 							} else {
 								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+										compareValue, err = TimeConvertExt(extVal, eleRaw)
 										if err != nil {
 											counter++
 											continue logicLoop1
@@ -2285,221 +2251,156 @@ flowloop:
 									}
 								}
 							}
-							if compare.TimeType != "" {
-								switch compare.TimeType {
-								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-										compareInValue = eleTime.Unix()
-									}
-								}
-								if dataVal <= compareInValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop1
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop1
-											}
-										} else {
-											counter++
-											continue logicLoop1
-										}
-									}
-								}
-								if dataVal <= compareValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if dataVal <= compareInValue {
-								counter++
-								continue logicLoop1
-							} else if compareInValue == 0 {
+							if dataVal <= compareValue {
 								counter++
 								continue logicLoop1
 							}
+						} else if dataVal <= compareInValue {
+							counter++
+							continue logicLoop1
+						} else if compareInValue == 0 {
+							counter++
+							continue logicLoop1
 						}
 					case "在范围内":
-						for _, compare := range logic.Compare {
-							logicVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop1
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										logicVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-									} else {
-										counter++
-										continue logicLoop1
-									}
-								}
-							}
-							startVal := int64(0)
-							endVal := int64(0)
-							if compare.StartTime.ID != "" {
-								if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
-									if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
-										startVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-									} else {
-										counter++
-										continue logicLoop1
-									}
-								}
-							} else if compare.StartTime.Value != "" {
-								if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+						logicVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop1
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									logicVal, err = TimeConvertExt(extVal, eleRaw)
 									if err != nil {
 										counter++
 										continue logicLoop1
 									}
-									startVal = eleTime.Unix()
+								} else {
+									counter++
+									continue logicLoop1
 								}
-							}
-							if compare.EndTime.ID != "" {
-								if eleRaw, ok := data[compare.EndTime.ID].(string); ok {
-									if extVal, ok := excelColNameTypeExtMap[compare.EndTime.ID]; ok {
-										endVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-									} else {
-										counter++
-										continue logicLoop1
-									}
-								}
-							} else if compare.EndTime.Value != "" {
-								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop1
-									}
-									endVal = eleTime.Unix()
-								}
-							}
-							if logicVal < startVal || logicVal > endVal {
-								counter++
-								continue logicLoop1
 							}
 						}
+						startVal := int64(0)
+						endVal := int64(0)
+						if compare.StartTime.ID != "" {
+							if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
+								if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
+									startVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop1
+									}
+								} else {
+									counter++
+									continue logicLoop1
+								}
+							}
+						} else if compare.StartTime.Value != "" {
+							if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop1
+								}
+								startVal = eleTime.Unix()
+							}
+						}
+						if compare.EndTime.ID != "" {
+							if eleRaw, ok := data[compare.EndTime.ID].(string); ok {
+								if extVal, ok := excelColNameTypeExtMap[compare.EndTime.ID]; ok {
+									endVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop1
+									}
+								} else {
+									counter++
+									continue logicLoop1
+								}
+							}
+						} else if compare.EndTime.Value != "" {
+							if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop1
+								}
+								endVal = eleTime.Unix()
+							}
+						}
+						if logicVal < startVal || logicVal > endVal {
+							counter++
+							continue logicLoop1
+						}
 					case "不在范围内":
-						for _, compare := range logic.Compare {
-							logicVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop1
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										logicVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-									} else {
-										counter++
-										continue logicLoop1
-									}
-								}
-							}
-							startVal := int64(0)
-							endVal := int64(0)
-							if compare.StartTime.ID != "" {
-								if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
-									if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
-										startVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-									} else {
-										counter++
-										continue logicLoop1
-									}
-								}
-							} else if compare.StartTime.Value != "" {
-								if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+						logicVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop1
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									logicVal, err = TimeConvertExt(extVal, eleRaw)
 									if err != nil {
 										counter++
 										continue logicLoop1
 									}
-									startVal = eleTime.Unix()
+								} else {
+									counter++
+									continue logicLoop1
 								}
 							}
-							if compare.EndTime.ID != "" {
-								if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+						}
+						startVal := int64(0)
+						endVal := int64(0)
+						if compare.StartTime.ID != "" {
+							if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
+								if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
+									startVal, err = TimeConvertExt(extVal, eleRaw)
 									if err != nil {
 										counter++
 										continue logicLoop1
 									}
-									endVal = eleTime.Unix()
-								}
-							} else if compare.EndTime.Value != "" {
-								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop1
-									}
-									endVal = eleTime.Unix()
+								} else {
+									counter++
+									continue logicLoop1
 								}
 							}
-							if logicVal < startVal || logicVal > endVal {
-								counter++
-								continue logicLoop1
+						} else if compare.StartTime.Value != "" {
+							if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop1
+								}
+								startVal = eleTime.Unix()
 							}
+						}
+						if compare.EndTime.ID != "" {
+							if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop1
+								}
+								endVal = eleTime.Unix()
+							}
+						} else if compare.EndTime.Value != "" {
+							if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop1
+								}
+								endVal = eleTime.Unix()
+							}
+						}
+						if logicVal < startVal || logicVal > endVal {
+							counter++
+							continue logicLoop1
 						}
 					case "为空":
 						if data[logic.ID] != nil {
@@ -2528,17 +2429,34 @@ flowloop:
 				case "关联字段":
 					switch logic.Relation {
 					case "是":
-						for _, compare := range logic.Compare {
-							var dataVal interface{}
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
+						var dataVal interface{}
+						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+							eleRaw, ok := data[logic.ID].(map[string]interface{})
+							if !ok {
+								counter++
+								continue logicLoop1
+							} else {
+								if eleRaw != nil {
+									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+										dataVal = relateVal
+									} else {
+										counter++
+										continue logicLoop1
+									}
+								}
+							}
+						}
+						if compare.ID != "" {
+							var compareValue interface{}
+							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+								eleRaw, ok := data[compare.ID].(map[string]interface{})
 								if !ok {
 									counter++
 									continue logicLoop1
 								} else {
 									if eleRaw != nil {
 										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											dataVal = relateVal
+											compareValue = relateVal
 										} else {
 											counter++
 											continue logicLoop1
@@ -2546,45 +2464,43 @@ flowloop:
 									}
 								}
 							}
-							if compare.ID != "" {
-								var compareValue interface{}
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
-										counter++
-										continue logicLoop1
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												compareValue = relateVal
-											} else {
-												counter++
-												continue logicLoop1
-											}
-										}
-									}
-								}
-								if dataVal != compareValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if dataVal != compare.Value {
+							if dataVal != compareValue {
 								counter++
 								continue logicLoop1
 							}
+						} else if dataVal != compare.Value {
+							counter++
+							continue logicLoop1
 						}
 					case "不是":
-						for _, compare := range logic.Compare {
-							var dataVal interface{}
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
+						var dataVal interface{}
+						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+							eleRaw, ok := data[logic.ID].(map[string]interface{})
+							if !ok {
+								counter++
+								continue logicLoop1
+							} else {
+								if eleRaw != nil {
+									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+										dataVal = relateVal
+									} else {
+										counter++
+										continue logicLoop1
+									}
+								}
+							}
+						}
+						if compare.ID == "" {
+							var compareValue interface{}
+							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+								eleRaw, ok := data[compare.ID].(map[string]interface{})
 								if !ok {
 									counter++
 									continue logicLoop1
 								} else {
 									if eleRaw != nil {
 										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											dataVal = relateVal
+											compareValue = relateVal
 										} else {
 											counter++
 											continue logicLoop1
@@ -2592,102 +2508,45 @@ flowloop:
 									}
 								}
 							}
-							if compare.ID == "" {
-								var compareValue interface{}
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
-										counter++
-										continue logicLoop1
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												compareValue = relateVal
-											} else {
-												counter++
-												continue logicLoop1
-											}
-										}
-									}
-								}
-								if dataVal != compareValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if dataVal == compare.Value {
+							if dataVal != compareValue {
 								counter++
 								continue logicLoop1
 							}
+						} else if dataVal == compare.Value {
+							counter++
+							continue logicLoop1
 						}
 					case "包含":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal := ""
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop1
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											if relateValString, ok := relateVal.(string); ok {
-												dataVal = relateValString
-											} else {
-												counter++
-												continue logicLoop1
-											}
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal := ""
+						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+							eleRaw, ok := data[logic.ID].(map[string]interface{})
+							if !ok {
+								counter++
+								continue logicLoop1
+							} else {
+								if eleRaw != nil {
+									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+										if relateValString, ok := relateVal.(string); ok {
+											dataVal = relateValString
 										} else {
 											counter++
 											continue logicLoop1
 										}
-									}
-								}
-							}
-							if compare.ID != "" {
-								compareVal := ""
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
+									} else {
 										counter++
 										continue logicLoop1
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												if relateValString, ok := relateVal.(string); ok {
-													compareVal = relateValString
-												} else {
-													counter++
-													continue logicLoop1
-												}
-											} else {
-												counter++
-												continue logicLoop1
-											}
-										}
 									}
 								}
-								if !strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop1
-								}
-							} else if !strings.Contains(dataVal, compareInValue) {
-								counter++
-								continue logicLoop1
 							}
 						}
-					case "不包含":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal := ""
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
+						if compare.ID != "" {
+							compareVal := ""
+							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+								eleRaw, ok := data[compare.ID].(map[string]interface{})
 								if !ok {
 									counter++
 									continue logicLoop1
@@ -2695,7 +2554,7 @@ flowloop:
 									if eleRaw != nil {
 										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
 											if relateValString, ok := relateVal.(string); ok {
-												dataVal = relateValString
+												compareVal = relateValString
 											} else {
 												counter++
 												continue logicLoop1
@@ -2707,37 +2566,71 @@ flowloop:
 									}
 								}
 							}
-							if compare.ID != "" {
-								compareVal := ""
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
+							if !strings.Contains(dataVal, compareVal) {
+								counter++
+								continue logicLoop1
+							}
+						} else if !strings.Contains(dataVal, compareInValue) {
+							counter++
+							continue logicLoop1
+						}
+					case "不包含":
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal := ""
+						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+							eleRaw, ok := data[logic.ID].(map[string]interface{})
+							if !ok {
+								counter++
+								continue logicLoop1
+							} else {
+								if eleRaw != nil {
+									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+										if relateValString, ok := relateVal.(string); ok {
+											dataVal = relateValString
+										} else {
+											counter++
+											continue logicLoop1
+										}
+									} else {
 										counter++
 										continue logicLoop1
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												if relateValString, ok := relateVal.(string); ok {
-													compareVal = relateValString
-												} else {
-													counter++
-													continue logicLoop1
-												}
+									}
+								}
+							}
+						}
+						if compare.ID != "" {
+							compareVal := ""
+							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+								eleRaw, ok := data[compare.ID].(map[string]interface{})
+								if !ok {
+									counter++
+									continue logicLoop1
+								} else {
+									if eleRaw != nil {
+										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+											if relateValString, ok := relateVal.(string); ok {
+												compareVal = relateValString
 											} else {
 												counter++
 												continue logicLoop1
 											}
+										} else {
+											counter++
+											continue logicLoop1
 										}
 									}
 								}
-								if strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop1
-								}
-							} else if strings.Contains(dataVal, compareInValue) {
+							}
+							if strings.Contains(dataVal, compareVal) {
 								counter++
 								continue logicLoop1
 							}
+						} else if strings.Contains(dataVal, compareInValue) {
+							counter++
+							continue logicLoop1
 						}
 					case "为空":
 						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
@@ -2820,8 +2713,7 @@ flowloop:
 			case "范围定义":
 			logicLoop2:
 				for i, logic := range settings.Logic {
-					//fmt.Println("按字段值 logic.DataType:", logic.DataType)
-					//fmt.Println("i:", i, "counter:", counter, "orCounter:", orCounter)
+					compare := logic.Compare
 					if i%2 == 1 {
 						if settings.Logic[i].LogicType == "或" {
 							orCounter++
@@ -2840,132 +2732,120 @@ flowloop:
 					case "文本":
 						switch logic.Relation {
 						case "是":
-							for _, compare := range logic.Compare {
-								if compare.ID != "" {
-									if data[logic.ID] != data[compare.ID] {
-										counter++
-										continue logicLoop2
-									}
-								} else if data[logic.ID] != compare.Value {
+							if compare.ID != "" {
+								if data[logic.ID] != data[compare.ID] {
 									counter++
 									continue logicLoop2
 								}
+							} else if data[logic.ID] != compare.Value {
+								counter++
+								continue logicLoop2
 							}
 						case "不是":
-							for _, compare := range logic.Compare {
-								if compare.ID != "" {
-									if data[logic.ID] == data[compare.ID] {
-										counter++
-										continue logicLoop2
-									}
-								} else if data[logic.ID] == compare.Value {
+							if compare.ID != "" {
+								if data[logic.ID] == data[compare.ID] {
 									counter++
 									continue logicLoop2
 								}
+							} else if data[logic.ID] == compare.Value {
+								counter++
+								continue logicLoop2
 							}
 						case "包含":
-							for _, compare := range logic.Compare {
-								compareInValue := ""
-								if ele, ok := compare.Value.(string); ok {
-									compareInValue = ele
-								}
-								dataVal, ok := data[logic.ID].(string)
+							compareInValue := ""
+							if ele, ok := compare.Value.(string); ok {
+								compareInValue = ele
+							}
+							dataVal, ok := data[logic.ID].(string)
+							if !ok {
+								counter++
+								continue logicLoop2
+							}
+							if compare.ID != "" {
+								compareVal, ok := data[compare.ID].(string)
 								if !ok {
 									counter++
 									continue logicLoop2
 								}
-								if compare.ID != "" {
-									compareVal, ok := data[compare.ID].(string)
-									if !ok {
-										counter++
-										continue logicLoop2
-									}
-									if !strings.Contains(dataVal, compareVal) {
-										counter++
-										continue logicLoop2
-									}
-								} else if !strings.Contains(dataVal, compareInValue) {
+								if !strings.Contains(dataVal, compareVal) {
 									counter++
 									continue logicLoop2
 								}
+							} else if !strings.Contains(dataVal, compareInValue) {
+								counter++
+								continue logicLoop2
 							}
 						case "不包含":
-							for _, compare := range logic.Compare {
-								compareInValue := ""
-								if ele, ok := compare.Value.(string); ok {
-									compareInValue = ele
-								}
-								dataVal, ok := data[logic.ID].(string)
+							compareInValue := ""
+							if ele, ok := compare.Value.(string); ok {
+								compareInValue = ele
+							}
+							dataVal, ok := data[logic.ID].(string)
+							if !ok {
+								counter++
+								continue logicLoop2
+							}
+							if compare.ID != "" {
+								compareVal, ok := data[compare.ID].(string)
 								if !ok {
 									counter++
 									continue logicLoop2
 								}
-								if compare.ID != "" {
-									compareVal, ok := data[compare.ID].(string)
-									if !ok {
-										counter++
-										continue logicLoop2
-									}
-									if strings.Contains(dataVal, compareVal) {
-										counter++
-										continue logicLoop2
-									}
-								} else if strings.Contains(dataVal, compareInValue) {
+								if strings.Contains(dataVal, compareVal) {
 									counter++
 									continue logicLoop2
 								}
+							} else if strings.Contains(dataVal, compareInValue) {
+								counter++
+								continue logicLoop2
 							}
 						case "开始为":
-							for _, compare := range logic.Compare {
-								compareInValue := ""
-								if ele, ok := compare.Value.(string); ok {
-									compareInValue = ele
-								}
-								dataVal, ok := data[logic.ID].(string)
+							compareInValue := ""
+							if ele, ok := compare.Value.(string); ok {
+								compareInValue = ele
+							}
+							dataVal, ok := data[logic.ID].(string)
+							if !ok {
+								counter++
+								continue logicLoop2
+							}
+							if compare.ID != "" {
+								compareVal, ok := data[compare.ID].(string)
 								if !ok {
 									counter++
 									continue logicLoop2
 								}
-								if compare.ID != "" {
-									compareVal, ok := data[compare.ID].(string)
-									if !ok {
-										counter++
-										continue logicLoop2
-									}
-									if !strings.HasPrefix(dataVal, compareVal) {
-										counter++
-										continue logicLoop2
-									}
-								} else if !strings.HasPrefix(dataVal, compareInValue) {
+								if !strings.HasPrefix(dataVal, compareVal) {
 									counter++
 									continue logicLoop2
 								}
+							} else if !strings.HasPrefix(dataVal, compareInValue) {
+								counter++
+								continue logicLoop2
 							}
 						case "结尾为":
-							for _, compare := range logic.Compare {
-								compareInValue := ""
-								if ele, ok := compare.Value.(string); ok {
-									compareInValue = ele
-								}
-								dataVal, ok := data[logic.ID].(string)
+							compareInValue := ""
+							if ele, ok := compare.Value.(string); ok {
+								compareInValue = ele
+							}
+							dataVal, ok := data[logic.ID].(string)
+							if !ok {
+								counter++
+								continue logicLoop2
+							}
+							if compare.ID != "" {
+								compareVal, ok := data[compare.ID].(string)
 								if !ok {
 									counter++
 									continue logicLoop2
 								}
-								if compare.ID != "" {
-									compareVal, ok := data[compare.ID].(string)
-									if !ok {
-										counter++
-										continue logicLoop2
-									}
-									if !strings.HasSuffix(dataVal, compareVal) {
-										counter++
-										continue logicLoop2
-									}
-								} else if !strings.HasSuffix(dataVal, compareInValue) {
+								if !strings.HasSuffix(dataVal, compareVal) {
 									counter++
 									continue logicLoop2
 								}
+							} else if !strings.HasSuffix(dataVal, compareInValue) {
+								counter++
+								continue logicLoop2
 							}
 						case "为空":
 							if data[logic.ID] != nil {
@@ -2981,28 +2861,24 @@ flowloop:
 					case "选择器":
 						switch logic.Relation {
 						case "是", "等于":
-							for _, compare := range logic.Compare {
-								if compare.ID != "" {
-									if data[logic.ID] != data[compare.ID] {
-										counter++
-										continue logicLoop2
-									}
-								} else if data[logic.ID] != compare.Value {
+							if compare.ID != "" {
+								if data[logic.ID] != data[compare.ID] {
 									counter++
 									continue logicLoop2
 								}
+							} else if data[logic.ID] != compare.Value {
+								counter++
+								continue logicLoop2
 							}
 						case "不是", "不等于":
-							for _, compare := range logic.Compare {
-								if compare.ID != "" {
-									if data[logic.ID] == data[compare.ID] {
-										counter++
-										continue logicLoop2
-									}
-								} else if data[logic.ID] == compare.Value {
+							if compare.ID != "" {
+								if data[logic.ID] == data[compare.ID] {
 									counter++
 									continue logicLoop2
 								}
+							} else if data[logic.ID] == compare.Value {
+								counter++
+								continue logicLoop2
 							}
 						case "为空":
 							if data[logic.ID] != nil {
@@ -3018,225 +2894,209 @@ flowloop:
 					case "数值":
 						switch logic.Relation {
 						case "等于":
-							for _, compare := range logic.Compare {
-								if compare.ID != "" {
-									if data[logic.ID] != data[compare.ID] {
-										counter++
-										continue logicLoop2
-									}
-								} else if data[logic.ID] != compare.Value {
+							if compare.ID != "" {
+								if data[logic.ID] != data[compare.ID] {
 									counter++
 									continue logicLoop2
 								}
+							} else if data[logic.ID] != compare.Value {
+								counter++
+								continue logicLoop2
 							}
 						case "不等于":
-							for _, compare := range logic.Compare {
-								if compare.ID != "" {
-									if data[logic.ID] == data[compare.ID] {
-										counter++
-										continue logicLoop2
-									}
-								} else if data[logic.ID] == compare.Value {
+							if compare.ID != "" {
+								if data[logic.ID] == data[compare.ID] {
 									counter++
 									continue logicLoop2
 								}
+							} else if data[logic.ID] == compare.Value {
+								counter++
+								continue logicLoop2
 							}
 						case "大于":
-							for _, compare := range logic.Compare {
-								logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+							if err != nil {
+								counter++
+								continue logicLoop2
+							}
+							if compare.ID != "" {
+								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
 								if err != nil {
 									counter++
 									continue logicLoop2
 								}
-								if compare.ID != "" {
-									compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									if logicVal <= compareVal {
-										counter++
-										continue logicLoop2
-									}
-								} else {
-									compareVal, err := numberx.GetFloatNumber(compare.Value)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									if logicVal <= compareVal {
-										counter++
-										continue logicLoop2
-									}
+								if logicVal <= compareVal {
+									counter++
+									continue logicLoop2
+								}
+							} else {
+								compareVal, err := numberx.GetFloatNumber(compare.Value)
+								if err != nil {
+									counter++
+									continue logicLoop2
+								}
+								if logicVal <= compareVal {
+									counter++
+									continue logicLoop2
 								}
 							}
 						case "小于":
-							for _, compare := range logic.Compare {
-								logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+							if err != nil {
+								counter++
+								continue logicLoop2
+							}
+							if compare.ID != "" {
+								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
 								if err != nil {
 									counter++
 									continue logicLoop2
 								}
-								if compare.ID != "" {
-									compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									if logicVal >= compareVal {
-										counter++
-										continue logicLoop2
-									}
-								} else {
-									compareVal, err := numberx.GetFloatNumber(compare.Value)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									if logicVal >= compareVal {
-										counter++
-										continue logicLoop2
-									}
+								if logicVal >= compareVal {
+									counter++
+									continue logicLoop2
+								}
+							} else {
+								compareVal, err := numberx.GetFloatNumber(compare.Value)
+								if err != nil {
+									counter++
+									continue logicLoop2
+								}
+								if logicVal >= compareVal {
+									counter++
+									continue logicLoop2
 								}
 							}
 						case "大于等于":
-							for _, compare := range logic.Compare {
-								logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+							if err != nil {
+								counter++
+								continue logicLoop2
+							}
+							if compare.ID != "" {
+								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
 								if err != nil {
 									counter++
 									continue logicLoop2
 								}
-								if compare.ID != "" {
-									compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									if logicVal < compareVal {
-										counter++
-										continue logicLoop2
-									}
-								} else {
-									compareVal, err := numberx.GetFloatNumber(compare.Value)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									if logicVal < compareVal {
-										counter++
-										continue logicLoop2
-									}
+								if logicVal < compareVal {
+									counter++
+									continue logicLoop2
+								}
+							} else {
+								compareVal, err := numberx.GetFloatNumber(compare.Value)
+								if err != nil {
+									counter++
+									continue logicLoop2
+								}
+								if logicVal < compareVal {
+									counter++
+									continue logicLoop2
 								}
 							}
 						case "小于等于":
-							for _, compare := range logic.Compare {
-								logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+							if err != nil {
+								counter++
+								continue logicLoop2
+							}
+							if compare.ID != "" {
+								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
 								if err != nil {
 									counter++
 									continue logicLoop2
 								}
-								if compare.ID != "" {
-									compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									if logicVal > compareVal {
-										counter++
-										continue logicLoop2
-									}
-								} else {
-									compareVal, err := numberx.GetFloatNumber(compare.Value)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									if logicVal > compareVal {
-										counter++
-										continue logicLoop2
-									}
+								if logicVal > compareVal {
+									counter++
+									continue logicLoop2
+								}
+							} else {
+								compareVal, err := numberx.GetFloatNumber(compare.Value)
+								if err != nil {
+									counter++
+									continue logicLoop2
+								}
+								if logicVal > compareVal {
+									counter++
+									continue logicLoop2
 								}
 							}
 						case "在范围内":
-							for _, compare := range logic.Compare {
-								logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+							if err != nil {
+								counter++
+								continue logicLoop2
+							}
+							startVal := float64(0)
+							endVal := float64(0)
+							if compare.StartValue.ID != "" {
+								startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
 								if err != nil {
 									counter++
 									continue logicLoop2
 								}
-								startVal := float64(0)
-								endVal := float64(0)
-								if compare.StartValue.ID != "" {
-									startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-								} else {
-									startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-								}
-								if compare.EndValue.ID != "" {
-									endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-								} else {
-									endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-								}
-								//fmt.Println("logicVal:",logicVal,"startVal:",startVal,"endVal:",endVal)
-								if logicVal < startVal || logicVal > endVal {
+							} else {
+								startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
+								if err != nil {
 									counter++
 									continue logicLoop2
 								}
+							}
+							if compare.EndValue.ID != "" {
+								endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
+								if err != nil {
+									counter++
+									continue logicLoop2
+								}
+							} else {
+								endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
+								if err != nil {
+									counter++
+									continue logicLoop2
+								}
+							}
+							//fmt.Println("logicVal:",logicVal,"startVal:",startVal,"endVal:",endVal)
+							if logicVal < startVal || logicVal > endVal {
+								counter++
+								continue logicLoop2
 							}
 						case "不在范围内":
-							for _, compare := range logic.Compare {
-								logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+							if err != nil {
+								counter++
+								continue logicLoop2
+							}
+							startVal := float64(0)
+							endVal := float64(0)
+							if compare.StartValue.ID != "" {
+								startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
 								if err != nil {
 									counter++
 									continue logicLoop2
 								}
-								startVal := float64(0)
-								endVal := float64(0)
-								if compare.StartValue.ID != "" {
-									startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-								} else {
-									startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-								}
-								if compare.EndValue.ID != "" {
-									endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-								} else {
-									endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-								}
-								if logicVal >= startVal && logicVal <= endVal {
+							} else {
+								startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
+								if err != nil {
 									counter++
 									continue logicLoop2
 								}
+							}
+							if compare.EndValue.ID != "" {
+								endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
+								if err != nil {
+									counter++
+									continue logicLoop2
+								}
+							} else {
+								endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
+								if err != nil {
+									counter++
+									continue logicLoop2
+								}
+							}
+							if logicVal >= startVal && logicVal <= endVal {
+								counter++
+								continue logicLoop2
 							}
 						case "为空":
 							if data[logic.ID] != nil {
@@ -3252,11 +3112,61 @@ flowloop:
 					case "时间":
 						switch logic.Relation {
 						case "等于":
-							for _, compare := range logic.Compare {
-								compareInValue := int64(0)
-								if ele, ok := compare.Value.(string); ok {
-									if ele != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+							compareInValue := int64(0)
+							if ele, ok := compare.Value.(string); ok {
+								if ele != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop2
+									}
+									compareInValue = eleTime.Unix()
+								}
+							}
+							dataVal := int64(0)
+							eleRaw, ok := data[logic.ID].(string)
+							if !ok {
+								counter++
+								continue logicLoop2
+							} else {
+								if eleRaw != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleRaw), eleRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop2
+									}
+									dataVal = eleTime.Unix()
+								}
+							}
+							if compare.TimeType != "" {
+								switch compare.TimeType {
+								case "今天":
+									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+								case "昨天":
+									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+								case "明天":
+									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+								case "本周":
+									week := int(time.Now().Weekday())
+									if week == 0 {
+										week = 7
+									}
+									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+								case "上周":
+									week := int(time.Now().Weekday())
+									if week == 0 {
+										week = 7
+									}
+									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+								case "今年":
+									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+								case "去年":
+									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+								case "明年":
+									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+								case "指定时间":
+									if compare.SpecificTime != "" {
+										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
 										if err != nil {
 											counter++
 											continue logicLoop2
@@ -3264,8 +3174,13 @@ flowloop:
 										compareInValue = eleTime.Unix()
 									}
 								}
-								dataVal := int64(0)
-								eleRaw, ok := data[logic.ID].(string)
+								if dataVal != compareInValue {
+									counter++
+									continue logicLoop2
+								}
+							} else if compare.ID != "" {
+								compareValue := int64(0)
+								eleRaw, ok := data[compare.ID].(string)
 								if !ok {
 									counter++
 									continue logicLoop2
@@ -3276,83 +3191,80 @@ flowloop:
 											counter++
 											continue logicLoop2
 										}
-										dataVal = eleTime.Unix()
+										compareValue = eleTime.Unix()
 									}
 								}
-								if compare.TimeType != "" {
-									switch compare.TimeType {
-									case "今天":
-										compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-									case "昨天":
-										compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-									case "明天":
-										compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-									case "本周":
-										week := int(time.Now().Weekday())
-										if week == 0 {
-											week = 7
-										}
-										compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-									case "上周":
-										week := int(time.Now().Weekday())
-										if week == 0 {
-											week = 7
-										}
-										compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-									case "今年":
-										compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-									case "去年":
-										compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-									case "明年":
-										compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-									case "指定时间":
-										if compare.SpecificTime != "" {
-											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-											if err != nil {
-												counter++
-												continue logicLoop2
-											}
-											compareInValue = eleTime.Unix()
-										}
-									}
-									if dataVal != compareInValue {
-										counter++
-										continue logicLoop2
-									}
-								} else if compare.ID != "" {
-									compareValue := int64(0)
-									eleRaw, ok := data[compare.ID].(string)
-									if !ok {
-										counter++
-										continue logicLoop2
-									} else {
-										if eleRaw != "" {
-											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleRaw), eleRaw, time.Local)
-											if err != nil {
-												counter++
-												continue logicLoop2
-											}
-											compareValue = eleTime.Unix()
-										}
-									}
-									if dataVal != compareValue {
-										counter++
-										continue logicLoop2
-									}
-								} else if dataVal != compareInValue {
-									counter++
-									continue logicLoop2
-								} else if compareInValue == 0 {
+								if dataVal != compareValue {
 									counter++
 									continue logicLoop2
 								}
+							} else if dataVal != compareInValue {
+								counter++
+								continue logicLoop2
+							} else if compareInValue == 0 {
+								counter++
+								continue logicLoop2
 							}
 						case "不等于":
-							for _, compare := range logic.Compare {
-								compareInValue := int64(0)
-								if ele, ok := compare.Value.(string); ok {
-									if ele != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+							compareInValue := int64(0)
+							if ele, ok := compare.Value.(string); ok {
+								if ele != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop2
+									}
+									compareInValue = eleTime.Unix()
+								}
+							}
+							dataVal := int64(0)
+							eleRaw, ok := data[logic.ID].(string)
+							if !ok {
+								counter++
+								continue logicLoop2
+							} else {
+								if eleRaw != "" {
+									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+										dataVal, err = TimeConvertExt(extVal, eleRaw)
+										if err != nil {
+											counter++
+											continue logicLoop2
+										}
+									} else {
+										counter++
+										continue logicLoop2
+									}
+								}
+							}
+							if compare.TimeType != "" {
+								switch compare.TimeType {
+								case "今天":
+									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+								case "昨天":
+									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+								case "明天":
+									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+								case "本周":
+									week := int(time.Now().Weekday())
+									if week == 0 {
+										week = 7
+									}
+									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+								case "上周":
+									week := int(time.Now().Weekday())
+									if week == 0 {
+										week = 7
+									}
+									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+								case "今年":
+									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+								case "去年":
+									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+								case "明年":
+									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+								case "指定时间":
+									if compare.SpecificTime != "" {
+										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
 										if err != nil {
 											counter++
 											continue logicLoop2
@@ -3360,15 +3272,20 @@ flowloop:
 										compareInValue = eleTime.Unix()
 									}
 								}
-								dataVal := int64(0)
-								eleRaw, ok := data[logic.ID].(string)
+								if dataVal == compareInValue {
+									counter++
+									continue logicLoop2
+								}
+							} else if compare.ID != "" {
+								compareValue := int64(0)
+								eleRaw, ok := data[compare.ID].(string)
 								if !ok {
 									counter++
 									continue logicLoop2
 								} else {
 									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-											dataVal, err = TimeConvertExt(extVal, eleRaw)
+										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+											compareValue, err = TimeConvertExt(extVal, eleRaw)
 											if err != nil {
 												counter++
 												continue logicLoop2
@@ -3379,84 +3296,77 @@ flowloop:
 										}
 									}
 								}
-								if compare.TimeType != "" {
-									switch compare.TimeType {
-									case "今天":
-										compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-									case "昨天":
-										compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-									case "明天":
-										compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-									case "本周":
-										week := int(time.Now().Weekday())
-										if week == 0 {
-											week = 7
-										}
-										compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-									case "上周":
-										week := int(time.Now().Weekday())
-										if week == 0 {
-											week = 7
-										}
-										compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-									case "今年":
-										compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-									case "去年":
-										compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-									case "明年":
-										compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-									case "指定时间":
-										if compare.SpecificTime != "" {
-											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-											if err != nil {
-												counter++
-												continue logicLoop2
-											}
-											compareInValue = eleTime.Unix()
-										}
-									}
-									if dataVal == compareInValue {
-										counter++
-										continue logicLoop2
-									}
-								} else if compare.ID != "" {
-									compareValue := int64(0)
-									eleRaw, ok := data[compare.ID].(string)
-									if !ok {
-										counter++
-										continue logicLoop2
-									} else {
-										if eleRaw != "" {
-											if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-												compareValue, err = TimeConvertExt(extVal, eleRaw)
-												if err != nil {
-													counter++
-													continue logicLoop2
-												}
-											} else {
-												counter++
-												continue logicLoop2
-											}
-										}
-									}
-									if dataVal == compareValue {
-										counter++
-										continue logicLoop2
-									}
-								} else if dataVal == compareInValue {
-									counter++
-									continue logicLoop2
-								} else if compareInValue == 0 {
+								if dataVal == compareValue {
 									counter++
 									continue logicLoop2
 								}
+							} else if dataVal == compareInValue {
+								counter++
+								continue logicLoop2
+							} else if compareInValue == 0 {
+								counter++
+								continue logicLoop2
 							}
 						case "早于":
-							for _, compare := range logic.Compare {
-								compareInValue := int64(0)
-								if ele, ok := compare.Value.(string); ok {
-									if ele != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+							compareInValue := int64(0)
+							if ele, ok := compare.Value.(string); ok {
+								if ele != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop2
+									}
+									compareInValue = eleTime.Unix()
+								}
+							}
+							dataVal := int64(0)
+							eleRaw, ok := data[logic.ID].(string)
+							if !ok {
+								counter++
+								continue logicLoop2
+							} else {
+								if eleRaw != "" {
+									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+										dataVal, err = TimeConvertExt(extVal, eleRaw)
+										if err != nil {
+											counter++
+											continue logicLoop2
+										}
+									} else {
+										counter++
+										continue logicLoop2
+									}
+								}
+							}
+							if compare.TimeType != "" {
+								switch compare.TimeType {
+								case "今天":
+									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+								case "昨天":
+									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+								case "明天":
+									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+								case "本周":
+									week := int(time.Now().Weekday())
+									if week == 0 {
+										week = 7
+									}
+									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+								case "上周":
+									week := int(time.Now().Weekday())
+									if week == 0 {
+										week = 7
+									}
+									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+								case "今年":
+									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+								case "去年":
+									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+								case "明年":
+									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+								case "指定时间":
+									if compare.SpecificTime != "" {
+										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
 										if err != nil {
 											counter++
 											continue logicLoop2
@@ -3464,15 +3374,20 @@ flowloop:
 										compareInValue = eleTime.Unix()
 									}
 								}
-								dataVal := int64(0)
-								eleRaw, ok := data[logic.ID].(string)
+								if dataVal >= compareInValue {
+									counter++
+									continue logicLoop2
+								}
+							} else if compare.ID != "" {
+								compareValue := int64(0)
+								eleRaw, ok := data[compare.ID].(string)
 								if !ok {
 									counter++
 									continue logicLoop2
 								} else {
 									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-											dataVal, err = TimeConvertExt(extVal, eleRaw)
+										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+											compareValue, err = TimeConvertExt(extVal, eleRaw)
 											if err != nil {
 												counter++
 												continue logicLoop2
@@ -3483,84 +3398,77 @@ flowloop:
 										}
 									}
 								}
-								if compare.TimeType != "" {
-									switch compare.TimeType {
-									case "今天":
-										compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-									case "昨天":
-										compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-									case "明天":
-										compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-									case "本周":
-										week := int(time.Now().Weekday())
-										if week == 0 {
-											week = 7
-										}
-										compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-									case "上周":
-										week := int(time.Now().Weekday())
-										if week == 0 {
-											week = 7
-										}
-										compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-									case "今年":
-										compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-									case "去年":
-										compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-									case "明年":
-										compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-									case "指定时间":
-										if compare.SpecificTime != "" {
-											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-											if err != nil {
-												counter++
-												continue logicLoop2
-											}
-											compareInValue = eleTime.Unix()
-										}
-									}
-									if dataVal >= compareInValue {
-										counter++
-										continue logicLoop2
-									}
-								} else if compare.ID != "" {
-									compareValue := int64(0)
-									eleRaw, ok := data[compare.ID].(string)
-									if !ok {
-										counter++
-										continue logicLoop2
-									} else {
-										if eleRaw != "" {
-											if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-												compareValue, err = TimeConvertExt(extVal, eleRaw)
-												if err != nil {
-													counter++
-													continue logicLoop2
-												}
-											} else {
-												counter++
-												continue logicLoop2
-											}
-										}
-									}
-									if dataVal >= compareValue {
-										counter++
-										continue logicLoop2
-									}
-								} else if dataVal >= compareInValue {
-									counter++
-									continue logicLoop2
-								} else if compareInValue == 0 {
+								if dataVal >= compareValue {
 									counter++
 									continue logicLoop2
 								}
+							} else if dataVal >= compareInValue {
+								counter++
+								continue logicLoop2
+							} else if compareInValue == 0 {
+								counter++
+								continue logicLoop2
 							}
 						case "晚于":
-							for _, compare := range logic.Compare {
-								compareInValue := int64(0)
-								if ele, ok := compare.Value.(string); ok {
-									if ele != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+							compareInValue := int64(0)
+							if ele, ok := compare.Value.(string); ok {
+								if ele != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop2
+									}
+									compareInValue = eleTime.Unix()
+								}
+							}
+							dataVal := int64(0)
+							eleRaw, ok := data[logic.ID].(string)
+							if !ok {
+								counter++
+								continue logicLoop2
+							} else {
+								if eleRaw != "" {
+									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+										dataVal, err = TimeConvertExt(extVal, eleRaw)
+										if err != nil {
+											counter++
+											continue logicLoop2
+										}
+									} else {
+										counter++
+										continue logicLoop2
+									}
+								}
+							}
+							if compare.TimeType != "" {
+								switch compare.TimeType {
+								case "今天":
+									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+								case "昨天":
+									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+								case "明天":
+									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+								case "本周":
+									week := int(time.Now().Weekday())
+									if week == 0 {
+										week = 7
+									}
+									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+								case "上周":
+									week := int(time.Now().Weekday())
+									if week == 0 {
+										week = 7
+									}
+									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+								case "今年":
+									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+								case "去年":
+									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+								case "明年":
+									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+								case "指定时间":
+									if compare.SpecificTime != "" {
+										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
 										if err != nil {
 											counter++
 											continue logicLoop2
@@ -3568,15 +3476,20 @@ flowloop:
 										compareInValue = eleTime.Unix()
 									}
 								}
-								dataVal := int64(0)
-								eleRaw, ok := data[logic.ID].(string)
+								if dataVal <= compareInValue {
+									counter++
+									continue logicLoop2
+								}
+							} else if compare.ID != "" {
+								compareValue := int64(0)
+								eleRaw, ok := data[compare.ID].(string)
 								if !ok {
 									counter++
 									continue logicLoop2
 								} else {
 									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-											dataVal, err = TimeConvertExt(extVal, eleRaw)
+										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+											compareValue, err = TimeConvertExt(extVal, eleRaw)
 											if err != nil {
 												counter++
 												continue logicLoop2
@@ -3587,201 +3500,136 @@ flowloop:
 										}
 									}
 								}
-								if compare.TimeType != "" {
-									switch compare.TimeType {
-									case "今天":
-										compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-									case "昨天":
-										compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-									case "明天":
-										compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-									case "本周":
-										week := int(time.Now().Weekday())
-										if week == 0 {
-											week = 7
-										}
-										compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-									case "上周":
-										week := int(time.Now().Weekday())
-										if week == 0 {
-											week = 7
-										}
-										compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-									case "今年":
-										compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-									case "去年":
-										compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-									case "明年":
-										compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-									case "指定时间":
-										if compare.SpecificTime != "" {
-											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-											if err != nil {
-												counter++
-												continue logicLoop2
-											}
-											compareInValue = eleTime.Unix()
-										}
-									}
-									if dataVal <= compareInValue {
-										counter++
-										continue logicLoop2
-									}
-								} else if compare.ID != "" {
-									compareValue := int64(0)
-									eleRaw, ok := data[compare.ID].(string)
-									if !ok {
-										counter++
-										continue logicLoop2
-									} else {
-										if eleRaw != "" {
-											if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-												compareValue, err = TimeConvertExt(extVal, eleRaw)
-												if err != nil {
-													counter++
-													continue logicLoop2
-												}
-											} else {
-												counter++
-												continue logicLoop2
-											}
-										}
-									}
-									if dataVal <= compareValue {
-										counter++
-										continue logicLoop2
-									}
-								} else if dataVal <= compareInValue {
-									counter++
-									continue logicLoop2
-								} else if compareInValue == 0 {
+								if dataVal <= compareValue {
 									counter++
 									continue logicLoop2
 								}
+							} else if dataVal <= compareInValue {
+								counter++
+								continue logicLoop2
+							} else if compareInValue == 0 {
+								counter++
+								continue logicLoop2
 							}
 						case "在范围内":
-							for _, compare := range logic.Compare {
-								logicVal := int64(0)
-								eleRaw, ok := data[logic.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop2
-								} else {
-									if eleRaw != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleRaw), eleRaw, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-										logicVal = eleTime.Unix()
+							logicVal := int64(0)
+							eleRaw, ok := data[logic.ID].(string)
+							if !ok {
+								counter++
+								continue logicLoop2
+							} else {
+								if eleRaw != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleRaw), eleRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop2
 									}
-								}
-								startVal := int64(0)
-								endVal := int64(0)
-								if compare.StartTime.ID != "" {
-									if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-										startVal = eleTime.Unix()
-									}
-								} else if compare.StartTime.Value != "" {
-									if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-										startVal = eleTime.Unix()
-									}
-								}
-								if compare.EndTime.ID != "" {
-									if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-										startVal = eleTime.Unix()
-									}
-								} else if compare.EndTime.Value != "" {
-									if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-										endVal = eleTime.Unix()
-									}
-								}
-								if logicVal < startVal || logicVal > endVal {
-									counter++
-									continue logicLoop2
+									logicVal = eleTime.Unix()
 								}
 							}
+							startVal := int64(0)
+							endVal := int64(0)
+							if compare.StartTime.ID != "" {
+								if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop2
+									}
+									startVal = eleTime.Unix()
+								}
+							} else if compare.StartTime.Value != "" {
+								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop2
+									}
+									startVal = eleTime.Unix()
+								}
+							}
+							if compare.EndTime.ID != "" {
+								if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop2
+									}
+									startVal = eleTime.Unix()
+								}
+							} else if compare.EndTime.Value != "" {
+								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop2
+									}
+									endVal = eleTime.Unix()
+								}
+							}
+							if logicVal < startVal || logicVal > endVal {
+								counter++
+								continue logicLoop2
+							}
 						case "不在范围内":
-							for _, compare := range logic.Compare {
-								logicVal := int64(0)
-								eleRaw, ok := data[logic.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop2
-								} else {
-									if eleRaw != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleRaw), eleRaw, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-										logicVal = eleTime.Unix()
+							logicVal := int64(0)
+							eleRaw, ok := data[logic.ID].(string)
+							if !ok {
+								counter++
+								continue logicLoop2
+							} else {
+								if eleRaw != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleRaw), eleRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop2
 									}
+									logicVal = eleTime.Unix()
 								}
-								startVal := int64(0)
-								endVal := int64(0)
-								if compare.StartTime.ID != "" {
-									if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-										startVal = eleTime.Unix()
+							}
+							startVal := int64(0)
+							endVal := int64(0)
+							if compare.StartTime.ID != "" {
+								if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop2
 									}
-								} else if compare.StartTime.Value != "" {
-									if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-										startVal = eleTime.Unix()
-									}
+									startVal = eleTime.Unix()
 								}
-								if compare.EndTime.ID != "" {
-									if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-										startVal = eleTime.Unix()
+							} else if compare.StartTime.Value != "" {
+								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop2
 									}
-								} else if compare.EndTime.Value != "" {
-									if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-										endVal = eleTime.Unix()
+									startVal = eleTime.Unix()
+								}
+							}
+							if compare.EndTime.ID != "" {
+								if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop2
 									}
+									startVal = eleTime.Unix()
 								}
-								if logicVal < startVal || logicVal > endVal {
-									counter++
-									continue logicLoop2
+							} else if compare.EndTime.Value != "" {
+								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+									if err != nil {
+										counter++
+										continue logicLoop2
+									}
+									endVal = eleTime.Unix()
 								}
+							}
+							if logicVal < startVal || logicVal > endVal {
+								counter++
+								continue logicLoop2
 							}
 						case "为空":
 							if data[logic.ID] != nil {
@@ -3810,17 +3658,34 @@ flowloop:
 					case "关联字段":
 						switch logic.Relation {
 						case "是":
-							for _, compare := range logic.Compare {
-								var dataVal interface{}
-								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-									eleRaw, ok := data[logic.ID].(map[string]interface{})
+							var dataVal interface{}
+							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+								eleRaw, ok := data[logic.ID].(map[string]interface{})
+								if !ok {
+									counter++
+									continue logicLoop2
+								} else {
+									if eleRaw != nil {
+										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+											dataVal = relateVal
+										} else {
+											counter++
+											continue logicLoop2
+										}
+									}
+								}
+							}
+							if compare.ID != "" {
+								var compareValue interface{}
+								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+									eleRaw, ok := data[compare.ID].(map[string]interface{})
 									if !ok {
 										counter++
 										continue logicLoop2
 									} else {
 										if eleRaw != nil {
 											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												dataVal = relateVal
+												compareValue = relateVal
 											} else {
 												counter++
 												continue logicLoop2
@@ -3828,45 +3693,43 @@ flowloop:
 										}
 									}
 								}
-								if compare.ID != "" {
-									var compareValue interface{}
-									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-										eleRaw, ok := data[compare.ID].(map[string]interface{})
-										if !ok {
-											counter++
-											continue logicLoop2
-										} else {
-											if eleRaw != nil {
-												if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-													compareValue = relateVal
-												} else {
-													counter++
-													continue logicLoop2
-												}
-											}
-										}
-									}
-									if dataVal != compareValue {
-										counter++
-										continue logicLoop2
-									}
-								} else if dataVal != compare.Value {
+								if dataVal != compareValue {
 									counter++
 									continue logicLoop2
 								}
+							} else if dataVal != compare.Value {
+								counter++
+								continue logicLoop2
 							}
 						case "不是":
-							for _, compare := range logic.Compare {
-								var dataVal interface{}
-								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-									eleRaw, ok := data[logic.ID].(map[string]interface{})
+							var dataVal interface{}
+							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+								eleRaw, ok := data[logic.ID].(map[string]interface{})
+								if !ok {
+									counter++
+									continue logicLoop2
+								} else {
+									if eleRaw != nil {
+										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+											dataVal = relateVal
+										} else {
+											counter++
+											continue logicLoop2
+										}
+									}
+								}
+							}
+							if compare.ID == "" {
+								var compareValue interface{}
+								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+									eleRaw, ok := data[compare.ID].(map[string]interface{})
 									if !ok {
 										counter++
 										continue logicLoop2
 									} else {
 										if eleRaw != nil {
 											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												dataVal = relateVal
+												compareValue = relateVal
 											} else {
 												counter++
 												continue logicLoop2
@@ -3874,102 +3737,45 @@ flowloop:
 										}
 									}
 								}
-								if compare.ID == "" {
-									var compareValue interface{}
-									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-										eleRaw, ok := data[compare.ID].(map[string]interface{})
-										if !ok {
-											counter++
-											continue logicLoop2
-										} else {
-											if eleRaw != nil {
-												if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-													compareValue = relateVal
-												} else {
-													counter++
-													continue logicLoop2
-												}
-											}
-										}
-									}
-									if dataVal != compareValue {
-										counter++
-										continue logicLoop2
-									}
-								} else if dataVal == compare.Value {
+								if dataVal != compareValue {
 									counter++
 									continue logicLoop2
 								}
+							} else if dataVal == compare.Value {
+								counter++
+								continue logicLoop2
 							}
 						case "包含":
-							for _, compare := range logic.Compare {
-								compareInValue := ""
-								if ele, ok := compare.Value.(string); ok {
-									compareInValue = ele
-								}
-								dataVal := ""
-								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-									eleRaw, ok := data[logic.ID].(map[string]interface{})
-									if !ok {
-										counter++
-										continue logicLoop2
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												if relateValString, ok := relateVal.(string); ok {
-													dataVal = relateValString
-												} else {
-													counter++
-													continue logicLoop2
-												}
+							compareInValue := ""
+							if ele, ok := compare.Value.(string); ok {
+								compareInValue = ele
+							}
+							dataVal := ""
+							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+								eleRaw, ok := data[logic.ID].(map[string]interface{})
+								if !ok {
+									counter++
+									continue logicLoop2
+								} else {
+									if eleRaw != nil {
+										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+											if relateValString, ok := relateVal.(string); ok {
+												dataVal = relateValString
 											} else {
 												counter++
 												continue logicLoop2
 											}
-										}
-									}
-								}
-								if compare.ID != "" {
-									compareVal := ""
-									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-										eleRaw, ok := data[compare.ID].(map[string]interface{})
-										if !ok {
+										} else {
 											counter++
 											continue logicLoop2
-										} else {
-											if eleRaw != nil {
-												if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-													if relateValString, ok := relateVal.(string); ok {
-														compareVal = relateValString
-													} else {
-														counter++
-														continue logicLoop2
-													}
-												} else {
-													counter++
-													continue logicLoop2
-												}
-											}
 										}
 									}
-									if !strings.Contains(dataVal, compareVal) {
-										counter++
-										continue logicLoop2
-									}
-								} else if !strings.Contains(dataVal, compareInValue) {
-									counter++
-									continue logicLoop2
 								}
 							}
-						case "不包含":
-							for _, compare := range logic.Compare {
-								compareInValue := ""
-								if ele, ok := compare.Value.(string); ok {
-									compareInValue = ele
-								}
-								dataVal := ""
-								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-									eleRaw, ok := data[logic.ID].(map[string]interface{})
+							if compare.ID != "" {
+								compareVal := ""
+								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+									eleRaw, ok := data[compare.ID].(map[string]interface{})
 									if !ok {
 										counter++
 										continue logicLoop2
@@ -3977,7 +3783,7 @@ flowloop:
 										if eleRaw != nil {
 											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
 												if relateValString, ok := relateVal.(string); ok {
-													dataVal = relateValString
+													compareVal = relateValString
 												} else {
 													counter++
 													continue logicLoop2
@@ -3989,37 +3795,71 @@ flowloop:
 										}
 									}
 								}
-								if compare.ID != "" {
-									compareVal := ""
-									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-										eleRaw, ok := data[compare.ID].(map[string]interface{})
-										if !ok {
+								if !strings.Contains(dataVal, compareVal) {
+									counter++
+									continue logicLoop2
+								}
+							} else if !strings.Contains(dataVal, compareInValue) {
+								counter++
+								continue logicLoop2
+							}
+						case "不包含":
+							compareInValue := ""
+							if ele, ok := compare.Value.(string); ok {
+								compareInValue = ele
+							}
+							dataVal := ""
+							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+								eleRaw, ok := data[logic.ID].(map[string]interface{})
+								if !ok {
+									counter++
+									continue logicLoop2
+								} else {
+									if eleRaw != nil {
+										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+											if relateValString, ok := relateVal.(string); ok {
+												dataVal = relateValString
+											} else {
+												counter++
+												continue logicLoop2
+											}
+										} else {
 											counter++
 											continue logicLoop2
-										} else {
-											if eleRaw != nil {
-												if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-													if relateValString, ok := relateVal.(string); ok {
-														compareVal = relateValString
-													} else {
-														counter++
-														continue logicLoop2
-													}
+										}
+									}
+								}
+							}
+							if compare.ID != "" {
+								compareVal := ""
+								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+									eleRaw, ok := data[compare.ID].(map[string]interface{})
+									if !ok {
+										counter++
+										continue logicLoop2
+									} else {
+										if eleRaw != nil {
+											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+												if relateValString, ok := relateVal.(string); ok {
+													compareVal = relateValString
 												} else {
 													counter++
 													continue logicLoop2
 												}
+											} else {
+												counter++
+												continue logicLoop2
 											}
 										}
 									}
-									if strings.Contains(dataVal, compareVal) {
-										counter++
-										continue logicLoop2
-									}
-								} else if strings.Contains(dataVal, compareInValue) {
+								}
+								if strings.Contains(dataVal, compareVal) {
 									counter++
 									continue logicLoop2
 								}
+							} else if strings.Contains(dataVal, compareInValue) {
+								counter++
+								continue logicLoop2
 							}
 						case "为空":
 							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
@@ -6017,8 +5857,7 @@ flowloop:
 			counter := 0
 		logicLoop5:
 			for i, logic := range settings.Logic {
-				//fmt.Println("logic.DataType:", logic.DataType)
-				//fmt.Println("i:", i, "counter:", counter, "orCounter:", orCounter)
+				compare := logic.Compare
 				if i%2 == 1 {
 					if settings.Logic[i].LogicType == "或" {
 						orCounter++
@@ -6037,132 +5876,120 @@ flowloop:
 				case "文本":
 					switch logic.Relation {
 					case "是":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] != data[compare.ID] {
-									counter++
-									continue logicLoop5
-								}
-							} else if data[logic.ID] != compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] != data[compare.ID] {
 								counter++
 								continue logicLoop5
 							}
+						} else if data[logic.ID] != compare.Value {
+							counter++
+							continue logicLoop5
 						}
 					case "不是":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] == data[compare.ID] {
-									counter++
-									continue logicLoop5
-								}
-							} else if data[logic.ID] == compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] == data[compare.ID] {
 								counter++
 								continue logicLoop5
 							}
+						} else if data[logic.ID] == compare.Value {
+							counter++
+							continue logicLoop5
 						}
 					case "包含":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop5
+						}
+						if compare.ID != "" {
+							compareVal, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop5
 							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop5
-								}
-								if !strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop5
-								}
-							} else if !strings.Contains(dataVal, compareInValue) {
+							if !strings.Contains(dataVal, compareVal) {
 								counter++
 								continue logicLoop5
 							}
+						} else if !strings.Contains(dataVal, compareInValue) {
+							counter++
+							continue logicLoop5
 						}
 					case "不包含":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop5
+						}
+						if compare.ID != "" {
+							compareVal, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop5
 							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop5
-								}
-								if strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop5
-								}
-							} else if strings.Contains(dataVal, compareInValue) {
+							if strings.Contains(dataVal, compareVal) {
 								counter++
 								continue logicLoop5
 							}
+						} else if strings.Contains(dataVal, compareInValue) {
+							counter++
+							continue logicLoop5
 						}
 					case "开始为":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop5
+						}
+						if compare.ID != "" {
+							compareVal, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop5
 							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop5
-								}
-								if !strings.HasPrefix(dataVal, compareVal) {
-									counter++
-									continue logicLoop5
-								}
-							} else if !strings.HasPrefix(dataVal, compareInValue) {
+							if !strings.HasPrefix(dataVal, compareVal) {
 								counter++
 								continue logicLoop5
 							}
+						} else if !strings.HasPrefix(dataVal, compareInValue) {
+							counter++
+							continue logicLoop5
 						}
 					case "结尾为":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop5
+						}
+						if compare.ID != "" {
+							compareVal, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop5
 							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop5
-								}
-								if !strings.HasSuffix(dataVal, compareVal) {
-									counter++
-									continue logicLoop5
-								}
-							} else if !strings.HasSuffix(dataVal, compareInValue) {
+							if !strings.HasSuffix(dataVal, compareVal) {
 								counter++
 								continue logicLoop5
 							}
+						} else if !strings.HasSuffix(dataVal, compareInValue) {
+							counter++
+							continue logicLoop5
 						}
 					case "为空":
 						if data[logic.ID] != nil {
@@ -6178,28 +6005,24 @@ flowloop:
 				case "选择器":
 					switch logic.Relation {
 					case "是", "等于":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] != data[compare.ID] {
-									counter++
-									continue logicLoop5
-								}
-							} else if data[logic.ID] != compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] != data[compare.ID] {
 								counter++
 								continue logicLoop5
 							}
+						} else if data[logic.ID] != compare.Value {
+							counter++
+							continue logicLoop5
 						}
 					case "不是", "不等于":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] == data[compare.ID] {
-									counter++
-									continue logicLoop5
-								}
-							} else if data[logic.ID] == compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] == data[compare.ID] {
 								counter++
 								continue logicLoop5
 							}
+						} else if data[logic.ID] == compare.Value {
+							counter++
+							continue logicLoop5
 						}
 					case "为空":
 						if data[logic.ID] != nil {
@@ -6215,224 +6038,208 @@ flowloop:
 				case "数值":
 					switch logic.Relation {
 					case "等于":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] != data[compare.ID] {
-									counter++
-									continue logicLoop5
-								}
-							} else if data[logic.ID] != compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] != data[compare.ID] {
 								counter++
 								continue logicLoop5
 							}
+						} else if data[logic.ID] != compare.Value {
+							counter++
+							continue logicLoop5
 						}
 					case "不等于":
-						for _, compare := range logic.Compare {
-							if compare.ID != "" {
-								if data[logic.ID] == data[compare.ID] {
-									counter++
-									continue logicLoop5
-								}
-							} else if data[logic.ID] == compare.Value {
+						if compare.ID != "" {
+							if data[logic.ID] == data[compare.ID] {
 								counter++
 								continue logicLoop5
 							}
+						} else if data[logic.ID] == compare.Value {
+							counter++
+							continue logicLoop5
 						}
 					case "大于":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop5
+						}
+						if compare.ID != "" {
+							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
 							if err != nil {
 								counter++
 								continue logicLoop5
 							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								if logicVal <= compareVal {
-									counter++
-									continue logicLoop5
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								if logicVal <= compareVal {
-									counter++
-									continue logicLoop5
-								}
+							if logicVal <= compareVal {
+								counter++
+								continue logicLoop5
+							}
+						} else {
+							compareVal, err := numberx.GetFloatNumber(compare.Value)
+							if err != nil {
+								counter++
+								continue logicLoop5
+							}
+							if logicVal <= compareVal {
+								counter++
+								continue logicLoop5
 							}
 						}
 					case "小于":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop5
+						}
+						if compare.ID != "" {
+							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
 							if err != nil {
 								counter++
 								continue logicLoop5
 							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								if logicVal >= compareVal {
-									counter++
-									continue logicLoop5
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								if logicVal >= compareVal {
-									counter++
-									continue logicLoop5
-								}
+							if logicVal >= compareVal {
+								counter++
+								continue logicLoop5
+							}
+						} else {
+							compareVal, err := numberx.GetFloatNumber(compare.Value)
+							if err != nil {
+								counter++
+								continue logicLoop5
+							}
+							if logicVal >= compareVal {
+								counter++
+								continue logicLoop5
 							}
 						}
 					case "大于等于":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop5
+						}
+						if compare.ID != "" {
+							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
 							if err != nil {
 								counter++
 								continue logicLoop5
 							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								if logicVal < compareVal {
-									counter++
-									continue logicLoop5
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								if logicVal < compareVal {
-									counter++
-									continue logicLoop5
-								}
+							if logicVal < compareVal {
+								counter++
+								continue logicLoop5
+							}
+						} else {
+							compareVal, err := numberx.GetFloatNumber(compare.Value)
+							if err != nil {
+								counter++
+								continue logicLoop5
+							}
+							if logicVal < compareVal {
+								counter++
+								continue logicLoop5
 							}
 						}
 					case "小于等于":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop5
+						}
+						if compare.ID != "" {
+							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
 							if err != nil {
 								counter++
 								continue logicLoop5
 							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								if logicVal > compareVal {
-									counter++
-									continue logicLoop5
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								if logicVal > compareVal {
-									counter++
-									continue logicLoop5
-								}
+							if logicVal > compareVal {
+								counter++
+								continue logicLoop5
+							}
+						} else {
+							compareVal, err := numberx.GetFloatNumber(compare.Value)
+							if err != nil {
+								counter++
+								continue logicLoop5
+							}
+							if logicVal > compareVal {
+								counter++
+								continue logicLoop5
 							}
 						}
 					case "在范围内":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop5
+						}
+						startVal := float64(0)
+						endVal := float64(0)
+						if compare.StartValue.ID != "" {
+							startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
 							if err != nil {
 								counter++
 								continue logicLoop5
 							}
-							startVal := float64(0)
-							endVal := float64(0)
-							if compare.StartValue.ID != "" {
-								startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-							} else {
-								startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-							}
-							if compare.EndValue.ID != "" {
-								endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-							} else {
-								endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-							}
-							if logicVal < startVal || logicVal > endVal {
+						} else {
+							startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
+							if err != nil {
 								counter++
 								continue logicLoop5
 							}
+						}
+						if compare.EndValue.ID != "" {
+							endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
+							if err != nil {
+								counter++
+								continue logicLoop5
+							}
+						} else {
+							endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
+							if err != nil {
+								counter++
+								continue logicLoop5
+							}
+						}
+						if logicVal < startVal || logicVal > endVal {
+							counter++
+							continue logicLoop5
 						}
 					case "不在范围内":
-						for _, compare := range logic.Compare {
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
+						if err != nil {
+							counter++
+							continue logicLoop5
+						}
+						startVal := float64(0)
+						endVal := float64(0)
+						if compare.StartValue.ID != "" {
+							startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
 							if err != nil {
 								counter++
 								continue logicLoop5
 							}
-							startVal := float64(0)
-							endVal := float64(0)
-							if compare.StartValue.ID != "" {
-								startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-							} else {
-								startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-							}
-							if compare.EndValue.ID != "" {
-								endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-							} else {
-								endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-							}
-							if logicVal >= startVal && logicVal <= endVal {
+						} else {
+							startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
+							if err != nil {
 								counter++
 								continue logicLoop5
 							}
+						}
+						if compare.EndValue.ID != "" {
+							endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
+							if err != nil {
+								counter++
+								continue logicLoop5
+							}
+						} else {
+							endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
+							if err != nil {
+								counter++
+								continue logicLoop5
+							}
+						}
+						if logicVal >= startVal && logicVal <= endVal {
+							counter++
+							continue logicLoop5
 						}
 					case "为空":
 						if data[logic.ID] != nil {
@@ -6448,11 +6255,65 @@ flowloop:
 				case "时间":
 					switch logic.Relation {
 					case "等于":
-						for _, compare := range logic.Compare {
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+						compareInValue := int64(0)
+						if ele, ok := compare.Value.(string); ok {
+							if ele != "" {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop5
+								}
+								compareInValue = eleTime.Unix()
+							}
+						}
+						dataVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop5
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop5
+									}
+								} else {
+									counter++
+									continue logicLoop5
+								}
+							}
+						}
+						if compare.TimeType != "" {
+							switch compare.TimeType {
+							case "今天":
+								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+							case "昨天":
+								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+							case "明天":
+								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+							case "本周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+							case "上周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+							case "今年":
+								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+							case "去年":
+								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+							case "明年":
+								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+							case "指定时间":
+								if compare.SpecificTime != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
 									if err != nil {
 										counter++
 										continue logicLoop5
@@ -6460,15 +6321,20 @@ flowloop:
 									compareInValue = eleTime.Unix()
 								}
 							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
+							if dataVal != compareInValue {
+								counter++
+								continue logicLoop5
+							}
+						} else if compare.ID != "" {
+							compareValue := int64(0)
+							eleRaw, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop5
 							} else {
 								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+										compareValue, err = TimeConvertExt(extVal, eleRaw)
 										if err != nil {
 											counter++
 											continue logicLoop5
@@ -6479,84 +6345,77 @@ flowloop:
 									}
 								}
 							}
-							if compare.TimeType != "" {
-								switch compare.TimeType {
-								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop5
-										}
-										compareInValue = eleTime.Unix()
-									}
-								}
-								if dataVal != compareInValue {
-									counter++
-									continue logicLoop5
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop5
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop5
-											}
-										} else {
-											counter++
-											continue logicLoop5
-										}
-									}
-								}
-								if dataVal != compareValue {
-									counter++
-									continue logicLoop5
-								}
-							} else if dataVal != compareInValue {
-								counter++
-								continue logicLoop5
-							} else if compareInValue == 0 {
+							if dataVal != compareValue {
 								counter++
 								continue logicLoop5
 							}
+						} else if dataVal != compareInValue {
+							counter++
+							continue logicLoop5
+						} else if compareInValue == 0 {
+							counter++
+							continue logicLoop5
 						}
 					case "不等于":
-						for _, compare := range logic.Compare {
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+						compareInValue := int64(0)
+						if ele, ok := compare.Value.(string); ok {
+							if ele != "" {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop5
+								}
+								compareInValue = eleTime.Unix()
+							}
+						}
+						dataVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop5
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop5
+									}
+								} else {
+									counter++
+									continue logicLoop5
+								}
+							}
+						}
+						if compare.TimeType != "" {
+							switch compare.TimeType {
+							case "今天":
+								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+							case "昨天":
+								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+							case "明天":
+								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+							case "本周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+							case "上周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+							case "今年":
+								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+							case "去年":
+								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+							case "明年":
+								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+							case "指定时间":
+								if compare.SpecificTime != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
 									if err != nil {
 										counter++
 										continue logicLoop5
@@ -6564,15 +6423,20 @@ flowloop:
 									compareInValue = eleTime.Unix()
 								}
 							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
+							if dataVal == compareInValue {
+								counter++
+								continue logicLoop5
+							}
+						} else if compare.ID != "" {
+							compareValue := int64(0)
+							eleRaw, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop5
 							} else {
 								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+										compareValue, err = TimeConvertExt(extVal, eleRaw)
 										if err != nil {
 											counter++
 											continue logicLoop5
@@ -6583,84 +6447,77 @@ flowloop:
 									}
 								}
 							}
-							if compare.TimeType != "" {
-								switch compare.TimeType {
-								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop5
-										}
-										compareInValue = eleTime.Unix()
-									}
-								}
-								if dataVal == compareInValue {
-									counter++
-									continue logicLoop5
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop5
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop5
-											}
-										} else {
-											counter++
-											continue logicLoop5
-										}
-									}
-								}
-								if dataVal == compareValue {
-									counter++
-									continue logicLoop5
-								}
-							} else if dataVal == compareInValue {
-								counter++
-								continue logicLoop5
-							} else if compareInValue == 0 {
+							if dataVal == compareValue {
 								counter++
 								continue logicLoop5
 							}
+						} else if dataVal == compareInValue {
+							counter++
+							continue logicLoop5
+						} else if compareInValue == 0 {
+							counter++
+							continue logicLoop5
 						}
 					case "早于":
-						for _, compare := range logic.Compare {
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+						compareInValue := int64(0)
+						if ele, ok := compare.Value.(string); ok {
+							if ele != "" {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop5
+								}
+								compareInValue = eleTime.Unix()
+							}
+						}
+						dataVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop5
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop5
+									}
+								} else {
+									counter++
+									continue logicLoop5
+								}
+							}
+						}
+						if compare.TimeType != "" {
+							switch compare.TimeType {
+							case "今天":
+								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+							case "昨天":
+								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+							case "明天":
+								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+							case "本周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+							case "上周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+							case "今年":
+								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+							case "去年":
+								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+							case "明年":
+								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+							case "指定时间":
+								if compare.SpecificTime != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
 									if err != nil {
 										counter++
 										continue logicLoop5
@@ -6668,15 +6525,20 @@ flowloop:
 									compareInValue = eleTime.Unix()
 								}
 							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
+							if dataVal >= compareInValue {
+								counter++
+								continue logicLoop5
+							}
+						} else if compare.ID != "" {
+							compareValue := int64(0)
+							eleRaw, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop5
 							} else {
 								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+										compareValue, err = TimeConvertExt(extVal, eleRaw)
 										if err != nil {
 											counter++
 											continue logicLoop5
@@ -6687,84 +6549,77 @@ flowloop:
 									}
 								}
 							}
-							if compare.TimeType != "" {
-								switch compare.TimeType {
-								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop5
-										}
-										compareInValue = eleTime.Unix()
-									}
-								}
-								if dataVal >= compareInValue {
-									counter++
-									continue logicLoop5
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop5
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop5
-											}
-										} else {
-											counter++
-											continue logicLoop5
-										}
-									}
-								}
-								if dataVal >= compareValue {
-									counter++
-									continue logicLoop5
-								}
-							} else if dataVal >= compareInValue {
-								counter++
-								continue logicLoop5
-							} else if compareInValue == 0 {
+							if dataVal >= compareValue {
 								counter++
 								continue logicLoop5
 							}
+						} else if dataVal >= compareInValue {
+							counter++
+							continue logicLoop5
+						} else if compareInValue == 0 {
+							counter++
+							continue logicLoop5
 						}
 					case "晚于":
-						for _, compare := range logic.Compare {
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+						compareInValue := int64(0)
+						if ele, ok := compare.Value.(string); ok {
+							if ele != "" {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop5
+								}
+								compareInValue = eleTime.Unix()
+							}
+						}
+						dataVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop5
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop5
+									}
+								} else {
+									counter++
+									continue logicLoop5
+								}
+							}
+						}
+						if compare.TimeType != "" {
+							switch compare.TimeType {
+							case "今天":
+								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+							case "昨天":
+								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+							case "明天":
+								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+							case "本周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+							case "上周":
+								week := int(time.Now().Weekday())
+								if week == 0 {
+									week = 7
+								}
+								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+							case "今年":
+								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+							case "去年":
+								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+							case "明年":
+								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+							case "指定时间":
+								if compare.SpecificTime != "" {
+									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
 									if err != nil {
 										counter++
 										continue logicLoop5
@@ -6772,15 +6627,20 @@ flowloop:
 									compareInValue = eleTime.Unix()
 								}
 							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
+							if dataVal <= compareInValue {
+								counter++
+								continue logicLoop5
+							}
+						} else if compare.ID != "" {
+							compareValue := int64(0)
+							eleRaw, ok := data[compare.ID].(string)
 							if !ok {
 								counter++
 								continue logicLoop5
 							} else {
 								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
+									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+										compareValue, err = TimeConvertExt(extVal, eleRaw)
 										if err != nil {
 											counter++
 											continue logicLoop5
@@ -6791,221 +6651,156 @@ flowloop:
 									}
 								}
 							}
-							if compare.TimeType != "" {
-								switch compare.TimeType {
-								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop5
-										}
-										compareInValue = eleTime.Unix()
-									}
-								}
-								if dataVal <= compareInValue {
-									counter++
-									continue logicLoop5
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop5
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop5
-											}
-										} else {
-											counter++
-											continue logicLoop5
-										}
-									}
-								}
-								if dataVal <= compareValue {
-									counter++
-									continue logicLoop5
-								}
-							} else if dataVal <= compareInValue {
-								counter++
-								continue logicLoop5
-							} else if compareInValue == 0 {
+							if dataVal <= compareValue {
 								counter++
 								continue logicLoop5
 							}
+						} else if dataVal <= compareInValue {
+							counter++
+							continue logicLoop5
+						} else if compareInValue == 0 {
+							counter++
+							continue logicLoop5
 						}
 					case "在范围内":
-						for _, compare := range logic.Compare {
-							logicVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop5
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										logicVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop5
-										}
-									} else {
-										counter++
-										continue logicLoop5
-									}
-								}
-							}
-							startVal := int64(0)
-							endVal := int64(0)
-							if compare.StartTime.ID != "" {
-								if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
-									if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
-										startVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop5
-										}
-									} else {
-										counter++
-										continue logicLoop5
-									}
-								}
-							} else if compare.StartTime.Value != "" {
-								if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+						logicVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop5
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									logicVal, err = TimeConvertExt(extVal, eleRaw)
 									if err != nil {
 										counter++
 										continue logicLoop5
 									}
-									startVal = eleTime.Unix()
+								} else {
+									counter++
+									continue logicLoop5
 								}
-							}
-							if compare.EndTime.ID != "" {
-								if eleRaw, ok := data[compare.EndTime.ID].(string); ok {
-									if extVal, ok := excelColNameTypeExtMap[compare.EndTime.ID]; ok {
-										endVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop5
-										}
-									} else {
-										counter++
-										continue logicLoop5
-									}
-								}
-							} else if compare.EndTime.Value != "" {
-								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop5
-									}
-									endVal = eleTime.Unix()
-								}
-							}
-							if logicVal < startVal || logicVal > endVal {
-								counter++
-								continue logicLoop5
 							}
 						}
+						startVal := int64(0)
+						endVal := int64(0)
+						if compare.StartTime.ID != "" {
+							if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
+								if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
+									startVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop5
+									}
+								} else {
+									counter++
+									continue logicLoop5
+								}
+							}
+						} else if compare.StartTime.Value != "" {
+							if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop5
+								}
+								startVal = eleTime.Unix()
+							}
+						}
+						if compare.EndTime.ID != "" {
+							if eleRaw, ok := data[compare.EndTime.ID].(string); ok {
+								if extVal, ok := excelColNameTypeExtMap[compare.EndTime.ID]; ok {
+									endVal, err = TimeConvertExt(extVal, eleRaw)
+									if err != nil {
+										counter++
+										continue logicLoop5
+									}
+								} else {
+									counter++
+									continue logicLoop5
+								}
+							}
+						} else if compare.EndTime.Value != "" {
+							if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop5
+								}
+								endVal = eleTime.Unix()
+							}
+						}
+						if logicVal < startVal || logicVal > endVal {
+							counter++
+							continue logicLoop5
+						}
 					case "不在范围内":
-						for _, compare := range logic.Compare {
-							logicVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop5
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										logicVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop5
-										}
-									} else {
-										counter++
-										continue logicLoop5
-									}
-								}
-							}
-							startVal := int64(0)
-							endVal := int64(0)
-							if compare.StartTime.ID != "" {
-								if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
-									if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
-										startVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop5
-										}
-									} else {
-										counter++
-										continue logicLoop5
-									}
-								}
-							} else if compare.StartTime.Value != "" {
-								if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+						logicVal := int64(0)
+						eleRaw, ok := data[logic.ID].(string)
+						if !ok {
+							counter++
+							continue logicLoop5
+						} else {
+							if eleRaw != "" {
+								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+									logicVal, err = TimeConvertExt(extVal, eleRaw)
 									if err != nil {
 										counter++
 										continue logicLoop5
 									}
-									startVal = eleTime.Unix()
+								} else {
+									counter++
+									continue logicLoop5
 								}
 							}
-							if compare.EndTime.ID != "" {
-								if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+						}
+						startVal := int64(0)
+						endVal := int64(0)
+						if compare.StartTime.ID != "" {
+							if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
+								if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
+									startVal, err = TimeConvertExt(extVal, eleRaw)
 									if err != nil {
 										counter++
 										continue logicLoop5
 									}
-									endVal = eleTime.Unix()
-								}
-							} else if compare.EndTime.Value != "" {
-								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop5
-									}
-									endVal = eleTime.Unix()
+								} else {
+									counter++
+									continue logicLoop5
 								}
 							}
-							if logicVal < startVal || logicVal > endVal {
-								counter++
-								continue logicLoop5
+						} else if compare.StartTime.Value != "" {
+							if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop5
+								}
+								startVal = eleTime.Unix()
 							}
+						}
+						if compare.EndTime.ID != "" {
+							if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop5
+								}
+								endVal = eleTime.Unix()
+							}
+						} else if compare.EndTime.Value != "" {
+							if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
+								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
+								if err != nil {
+									counter++
+									continue logicLoop5
+								}
+								endVal = eleTime.Unix()
+							}
+						}
+						if logicVal < startVal || logicVal > endVal {
+							counter++
+							continue logicLoop5
 						}
 					case "为空":
 						if data[logic.ID] != nil {
@@ -7034,17 +6829,34 @@ flowloop:
 				case "关联字段":
 					switch logic.Relation {
 					case "是":
-						for _, compare := range logic.Compare {
-							var dataVal interface{}
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
+						var dataVal interface{}
+						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+							eleRaw, ok := data[logic.ID].(map[string]interface{})
+							if !ok {
+								counter++
+								continue logicLoop5
+							} else {
+								if eleRaw != nil {
+									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+										dataVal = relateVal
+									} else {
+										counter++
+										continue logicLoop5
+									}
+								}
+							}
+						}
+						if compare.ID != "" {
+							var compareValue interface{}
+							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+								eleRaw, ok := data[compare.ID].(map[string]interface{})
 								if !ok {
 									counter++
 									continue logicLoop5
 								} else {
 									if eleRaw != nil {
 										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											dataVal = relateVal
+											compareValue = relateVal
 										} else {
 											counter++
 											continue logicLoop5
@@ -7052,45 +6864,43 @@ flowloop:
 									}
 								}
 							}
-							if compare.ID != "" {
-								var compareValue interface{}
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
-										counter++
-										continue logicLoop5
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												compareValue = relateVal
-											} else {
-												counter++
-												continue logicLoop5
-											}
-										}
-									}
-								}
-								if dataVal != compareValue {
-									counter++
-									continue logicLoop5
-								}
-							} else if dataVal != compare.Value {
+							if dataVal != compareValue {
 								counter++
 								continue logicLoop5
 							}
+						} else if dataVal != compare.Value {
+							counter++
+							continue logicLoop5
 						}
 					case "不是":
-						for _, compare := range logic.Compare {
-							var dataVal interface{}
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
+						var dataVal interface{}
+						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+							eleRaw, ok := data[logic.ID].(map[string]interface{})
+							if !ok {
+								counter++
+								continue logicLoop5
+							} else {
+								if eleRaw != nil {
+									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+										dataVal = relateVal
+									} else {
+										counter++
+										continue logicLoop5
+									}
+								}
+							}
+						}
+						if compare.ID == "" {
+							var compareValue interface{}
+							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+								eleRaw, ok := data[compare.ID].(map[string]interface{})
 								if !ok {
 									counter++
 									continue logicLoop5
 								} else {
 									if eleRaw != nil {
 										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											dataVal = relateVal
+											compareValue = relateVal
 										} else {
 											counter++
 											continue logicLoop5
@@ -7098,102 +6908,45 @@ flowloop:
 									}
 								}
 							}
-							if compare.ID == "" {
-								var compareValue interface{}
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
-										counter++
-										continue logicLoop5
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												compareValue = relateVal
-											} else {
-												counter++
-												continue logicLoop5
-											}
-										}
-									}
-								}
-								if dataVal != compareValue {
-									counter++
-									continue logicLoop5
-								}
-							} else if dataVal == compare.Value {
+							if dataVal != compareValue {
 								counter++
 								continue logicLoop5
 							}
+						} else if dataVal == compare.Value {
+							counter++
+							continue logicLoop5
 						}
 					case "包含":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal := ""
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop5
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											if relateValString, ok := relateVal.(string); ok {
-												dataVal = relateValString
-											} else {
-												counter++
-												continue logicLoop5
-											}
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal := ""
+						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+							eleRaw, ok := data[logic.ID].(map[string]interface{})
+							if !ok {
+								counter++
+								continue logicLoop5
+							} else {
+								if eleRaw != nil {
+									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+										if relateValString, ok := relateVal.(string); ok {
+											dataVal = relateValString
 										} else {
 											counter++
 											continue logicLoop5
 										}
-									}
-								}
-							}
-							if compare.ID != "" {
-								compareVal := ""
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
+									} else {
 										counter++
 										continue logicLoop5
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												if relateValString, ok := relateVal.(string); ok {
-													compareVal = relateValString
-												} else {
-													counter++
-													continue logicLoop5
-												}
-											} else {
-												counter++
-												continue logicLoop5
-											}
-										}
 									}
 								}
-								if !strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop5
-								}
-							} else if !strings.Contains(dataVal, compareInValue) {
-								counter++
-								continue logicLoop5
 							}
 						}
-					case "不包含":
-						for _, compare := range logic.Compare {
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal := ""
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
+						if compare.ID != "" {
+							compareVal := ""
+							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+								eleRaw, ok := data[compare.ID].(map[string]interface{})
 								if !ok {
 									counter++
 									continue logicLoop5
@@ -7201,7 +6954,7 @@ flowloop:
 									if eleRaw != nil {
 										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
 											if relateValString, ok := relateVal.(string); ok {
-												dataVal = relateValString
+												compareVal = relateValString
 											} else {
 												counter++
 												continue logicLoop5
@@ -7213,37 +6966,71 @@ flowloop:
 									}
 								}
 							}
-							if compare.ID != "" {
-								compareVal := ""
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
+							if !strings.Contains(dataVal, compareVal) {
+								counter++
+								continue logicLoop5
+							}
+						} else if !strings.Contains(dataVal, compareInValue) {
+							counter++
+							continue logicLoop5
+						}
+					case "不包含":
+						compareInValue := ""
+						if ele, ok := compare.Value.(string); ok {
+							compareInValue = ele
+						}
+						dataVal := ""
+						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
+							eleRaw, ok := data[logic.ID].(map[string]interface{})
+							if !ok {
+								counter++
+								continue logicLoop5
+							} else {
+								if eleRaw != nil {
+									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+										if relateValString, ok := relateVal.(string); ok {
+											dataVal = relateValString
+										} else {
+											counter++
+											continue logicLoop5
+										}
+									} else {
 										counter++
 										continue logicLoop5
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												if relateValString, ok := relateVal.(string); ok {
-													compareVal = relateValString
-												} else {
-													counter++
-													continue logicLoop5
-												}
+									}
+								}
+							}
+						}
+						if compare.ID != "" {
+							compareVal := ""
+							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
+								eleRaw, ok := data[compare.ID].(map[string]interface{})
+								if !ok {
+									counter++
+									continue logicLoop5
+								} else {
+									if eleRaw != nil {
+										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
+											if relateValString, ok := relateVal.(string); ok {
+												compareVal = relateValString
 											} else {
 												counter++
 												continue logicLoop5
 											}
+										} else {
+											counter++
+											continue logicLoop5
 										}
 									}
 								}
-								if strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop5
-								}
-							} else if strings.Contains(dataVal, compareInValue) {
+							}
+							if strings.Contains(dataVal, compareVal) {
 								counter++
 								continue logicLoop5
 							}
+						} else if strings.Contains(dataVal, compareInValue) {
+							counter++
+							continue logicLoop5
 						}
 					case "为空":
 						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
@@ -7326,13 +7113,13 @@ flowloop:
 			//	//}
 			//}
 
-			if loginTimeRaw, ok := data["time"].(string); ok {
-				loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
-				if err != nil {
-					continue
-				}
-				data["time"] = loginTime.UnixNano() / 1e6
-			}
+			//if loginTimeRaw, ok := data["time"].(string); ok {
+			//	loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
+			//	if err != nil {
+			//		continue
+			//	}
+			//	data["time"] = loginTime.UnixNano() / 1e6
+			//}
 			//fmt.Println("projectName ;", projectName, "data:", data)
 			err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, data)
 			if err != nil {

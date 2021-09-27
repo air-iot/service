@@ -32,7 +32,7 @@ const (
 	Login             EventType = "用户登录"
 	Log               EventType = "日志事件"
 	ExecCmd           EventType = "指令事件"
-	DeviceModify      EventType = "模型资产事件"
+	DeviceModify      EventType = "资产或模型事件"
 	ExtModify         EventType = "工作表事件"
 
 	//HandlerEmail     EventHandlerType = "email"
@@ -127,13 +127,13 @@ func TriggerFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *m
 		//判断流程是否已经触发
 		hasExecute := false
 
-		if loginTimeRaw, ok := data["time"].(string); ok {
-			loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
-			if err != nil {
-				continue
-			}
-			data["time"] = loginTime.UnixNano() / 1e6
-		}
+		//if loginTimeRaw, ok := data["time"].(string); ok {
+		//	loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
+		//	if err != nil {
+		//		continue
+		//	}
+		//	data["time"] = loginTime.UnixNano() / 1e6
+		//}
 
 		err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, data)
 		if err != nil {

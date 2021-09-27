@@ -271,13 +271,13 @@ func TriggerLoginFlow(ctx context.Context, redisClient redisdb.Client, mongoClie
 		data["#$department"] = deptMap
 		data["#$role"] = roleMap
 		data["#$user"] = bson.M{userID: bson.M{"id": userID, "_tableName": "user"}}
-		if loginTimeRaw, ok := data["time"].(string); ok {
-			loginTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(loginTimeRaw), loginTimeRaw, time.Local)
-			if err != nil {
-				continue
-			}
-			data["time"] = loginTime.UnixNano() / 1e6
-		}
+		//if loginTimeRaw, ok := data["time"].(string); ok {
+		//	loginTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(loginTimeRaw), loginTimeRaw, time.Local)
+		//	if err != nil {
+		//		continue
+		//	}
+		//	data["time"] = loginTime.UnixNano() / 1e6
+		//}
 
 		err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, data)
 		if err != nil {

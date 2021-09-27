@@ -69,7 +69,7 @@ func TriggerDeviceModifyFlow(ctx context.Context, redisClient redisdb.Client, mo
 
 	modifyTypeMapping := map[string]string{
 		"资产增加":   "增加资产",
-		"资产修改":   "修改资产属性",
+		"资产修改":   "编辑资产属性",
 		"资产删除":   "删除资产",
 		"编辑资产画面": "编辑资产画面",
 		"删除资产画面": "删除资产画面",
@@ -101,6 +101,11 @@ func TriggerDeviceModifyFlow(ctx context.Context, redisClient redisdb.Client, mo
 	}
 
 	////logger.Debugf(eventDeviceModifyLog, "开始遍历流程列表")
+	variables := map[string]interface{}{"#project": projectName}
+	variablesBytes, err := json.Marshal(variables)
+	if err != nil {
+		return err
+	}
 flowloop:
 	for _, flowInfo := range flowInfoList {
 
@@ -184,7 +189,7 @@ flowloop:
 					switch rangType {
 					case "node":
 						departmentListInSettings := make([]string, 0)
-						modelListInSettings := make([]string, 0)
+						modelIDInSettings := ""
 						//判断该流程是否指定了特定资产
 						if nodeList, ok := settings["node"].(primitive.A); ok {
 							for _, nodeEle := range nodeList {
@@ -253,13 +258,13 @@ flowloop:
 											data["#$department"] = deptMap
 											data["#$model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
 											data["#$node"] = bson.M{nodeID: bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID}}
-											if loginTimeRaw, ok := data["time"].(string); ok {
-												loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
-												if err != nil {
-													continue
-												}
-												data["time"] = loginTime.UnixNano() / 1e6
-											}
+											//if loginTimeRaw, ok := data["time"].(string); ok {
+											//	loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
+											//	if err != nil {
+											//		continue
+											//	}
+											//	data["time"] = loginTime.UnixNano() / 1e6
+											//}
 
 											if contentInSettings, ok := settings["content"].(string); ok {
 												b, err := json.Marshal(data)
@@ -297,34 +302,40 @@ flowloop:
 							//logger.Warnln(eventDeviceModifyLog, "流程配置的部门对象中id字段不存在或类型错误")
 							continue
 						}
-						err = formatx.FormatObjectIDPrimitiveList(&settings, "model", "id")
-						if err != nil {
-							//logger.Warnln(eventDeviceModifyLog, "流程配置的部门对象中id字段不存在或类型错误")
-							continue
+						if ele, ok := settings["customModel"].(primitive.M); ok {
+							if len(ele) != 0 {
+								err = formatx.FormatObjectIDPrimitiveList(&settings, "customModel", "id")
+								if err != nil {
+									logger.Warnln("流程配置的部门对象中id字段不存在或类型错误")
+									continue
+								}
+							}
 						}
 						departmentListInSettings, ok = settings["department"].([]string)
 						if !ok {
 							departmentListInSettings = make([]string, 0)
 						}
-						modelListInSettings, ok = settings["model"].([]string)
+						modelIDInSettings, ok = settings["customModel"].(string)
 						if !ok {
-							modelListInSettings = make([]string, 0)
+							modelIDInSettings = ""
 						}
-						if len(departmentListInSettings) != 0 && len(modelListInSettings) != 0 {
-						loop1:
-							for _, modelIDInSettings := range modelListInSettings {
-								if modelObjectID == modelIDInSettings {
-									for _, departmentIDInSettings := range departmentListInSettings {
-										for _, departmentID := range departmentObjectIDList {
-											if departmentIDInSettings == departmentID {
-												isValid = true
-												break loop1
-											}
+						//modelListInSettings, ok = settings["model"].([]string)
+						//if !ok {
+						//	modelListInSettings = make([]string, 0)
+						//}
+						if len(departmentListInSettings) != 0 && len(modelIDInSettings) != 0 {
+							if modelObjectID == modelIDInSettings {
+							loop1:
+								for _, departmentIDInSettings := range departmentListInSettings {
+									for _, departmentID := range departmentObjectIDList {
+										if departmentIDInSettings == departmentID {
+											isValid = true
+											break loop1
 										}
 									}
 								}
 							}
-						} else if len(departmentListInSettings) != 0 && len(modelListInSettings) == 0 {
+						} else if len(departmentListInSettings) != 0 && len(modelIDInSettings) == 0 {
 						loop2:
 							for _, departmentIDInSettings := range departmentListInSettings {
 								for _, departmentID := range departmentObjectIDList {
@@ -334,17 +345,13 @@ flowloop:
 									}
 								}
 							}
-						} else if len(departmentListInSettings) == 0 && len(modelListInSettings) != 0 {
-							for _, modelIDInSettings := range modelListInSettings {
-								if modelObjectID == modelIDInSettings {
-									isValid = true
-									break
-								}
+						} else if len(departmentListInSettings) == 0 && len(modelIDInSettings) != 0 {
+							if modelObjectID == modelIDInSettings {
+								isValid = true
 							}
 						} else {
 							continue
 						}
-
 					default:
 						//logger.Errorf(eventDeviceModifyLog, "流程(%s)的流程范围字段值(%s)未匹配到", eventID, rangType)
 						continue
@@ -366,6 +373,48 @@ flowloop:
 										if err != nil {
 											continue
 										}
+										compare := logic.Compare
+										if compare.Value != "" {
+											formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.Value)
+											if err != nil {
+												logger.Errorf("流程(%s)中替换模板Value变量失败:%s", flowID, err.Error())
+												continue
+											}
+											logic.Compare.Value = formatVal
+										}
+										if compare.StartTime.Value != "" {
+											formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.StartTime.Value)
+											if err != nil {
+												logger.Errorf("流程(%s)中替换模板StartTime变量失败:%s", flowID, err.Error())
+												continue
+											}
+											logic.Compare.StartTime.Value = formatVal
+										}
+										if compare.EndTime.Value != "" {
+											formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.EndTime.Value)
+											if err != nil {
+												logger.Errorf("流程(%s)中替换模板EndTime变量失败:%s", flowID, err.Error())
+												continue
+											}
+											logic.Compare.EndTime.Value = formatVal
+										}
+										if compare.StartValue.Value != "" {
+											formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.StartValue.Value)
+											if err != nil {
+												logger.Errorf("流程(%s)中替换模板StartValue变量失败:%s", flowID, err.Error())
+												continue
+											}
+											logic.Compare.StartValue.Value = formatVal
+										}
+										if compare.EndValue.Value != "" {
+											formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.EndValue.Value)
+											if err != nil {
+												logger.Errorf("流程(%s)中替换模板EndValue变量失败:%s", flowID, err.Error())
+												continue
+											}
+											logic.Compare.EndValue.Value = formatVal
+										}
+										compare = logic.Compare
 										switch logic.PropType {
 										case "自定义属性":
 											if custom, ok := dataMap["custom"].(primitive.M); ok {
@@ -373,19 +422,14 @@ flowloop:
 												case "文本":
 													switch logic.Relation {
 													case "是":
-														for _, compare := range logic.Compare {
-															if custom[logic.ID] == compare.Value {
-																counter++
-															}
+														if custom[logic.ID] == compare.Value {
+															counter++
 														}
 													case "不是":
-														for _, compare := range logic.Compare {
-															if custom[logic.ID] != compare.Value {
-																counter++
-															}
+														if custom[logic.ID] != compare.Value {
+															counter++
 														}
 													case "包含":
-														for _, compare := range logic.Compare {
 															compareInValue := ""
 															if ele, ok := compare.Value.(string); ok {
 																compareInValue = ele
@@ -397,9 +441,7 @@ flowloop:
 															if strings.Contains(dataVal, compareInValue) {
 																counter++
 															}
-														}
 													case "不包含":
-														for _, compare := range logic.Compare {
 															compareInValue := ""
 															if ele, ok := compare.Value.(string); ok {
 																compareInValue = ele
@@ -411,9 +453,7 @@ flowloop:
 															if !strings.Contains(dataVal, compareInValue) {
 																counter++
 															}
-														}
 													case "开始为":
-														for _, compare := range logic.Compare {
 															compareInValue := ""
 															if ele, ok := compare.Value.(string); ok {
 																compareInValue = ele
@@ -425,9 +465,7 @@ flowloop:
 															if strings.HasPrefix(dataVal, compareInValue) {
 																counter++
 															}
-														}
 													case "结尾为":
-														for _, compare := range logic.Compare {
 															compareInValue := ""
 															if ele, ok := compare.Value.(string); ok {
 																compareInValue = ele
@@ -439,7 +477,6 @@ flowloop:
 															if strings.HasSuffix(dataVal, compareInValue) {
 																counter++
 															}
-														}
 													case "为空":
 														if data[logic.ID] == nil {
 															counter++
@@ -452,17 +489,13 @@ flowloop:
 												case "选择器":
 													switch logic.Relation {
 													case "是", "等于":
-														for _, compare := range logic.Compare {
 															if custom[logic.ID] == compare.Value {
 																counter++
 															}
-														}
 													case "不是", "不等于":
-														for _, compare := range logic.Compare {
 															if custom[logic.ID] != compare.Value {
 																counter++
 															}
-														}
 													case "为空":
 														if data[logic.ID] == nil {
 															counter++
@@ -475,19 +508,14 @@ flowloop:
 												case "数值":
 													switch logic.Relation {
 													case "等于":
-														for _, compare := range logic.Compare {
 															if custom[logic.ID] == compare.Value {
 																counter++
 															}
-														}
 													case "不等于":
-														for _, compare := range logic.Compare {
 															if custom[logic.ID] != compare.Value {
 																counter++
 															}
-														}
 													case "大于":
-														for _, compare := range logic.Compare {
 															logicVal, err := numberx.GetFloatNumber(data[logic.ID])
 															if err != nil {
 																continue
@@ -499,9 +527,7 @@ flowloop:
 															if logicVal > compareVal {
 																counter++
 															}
-														}
 													case "小于":
-														for _, compare := range logic.Compare {
 															logicVal, err := numberx.GetFloatNumber(data[logic.ID])
 															if err != nil {
 																continue
@@ -513,9 +539,7 @@ flowloop:
 															if logicVal < compareVal {
 																counter++
 															}
-														}
 													case "大于等于":
-														for _, compare := range logic.Compare {
 															logicVal, err := numberx.GetFloatNumber(data[logic.ID])
 															if err != nil {
 																continue
@@ -527,9 +551,7 @@ flowloop:
 															if logicVal >= compareVal {
 																counter++
 															}
-														}
 													case "小于等于":
-														for _, compare := range logic.Compare {
 															logicVal, err := numberx.GetFloatNumber(data[logic.ID])
 															if err != nil {
 																continue
@@ -541,9 +563,7 @@ flowloop:
 															if logicVal <= compareVal {
 																counter++
 															}
-														}
 													case "在范围内":
-														for _, compare := range logic.Compare {
 															logicVal, err := numberx.GetFloatNumber(data[logic.ID])
 															if err != nil {
 																continue
@@ -561,9 +581,7 @@ flowloop:
 															if logicVal >= startVal && logicVal <= endVal {
 																counter++
 															}
-														}
 													case "不在范围内":
-														for _, compare := range logic.Compare {
 															logicVal, err := numberx.GetFloatNumber(data[logic.ID])
 															if err != nil {
 																continue
@@ -581,7 +599,6 @@ flowloop:
 															if logicVal < startVal || logicVal > endVal {
 																counter++
 															}
-														}
 													case "为空":
 														if data[logic.ID] == nil {
 															counter++
@@ -594,7 +611,6 @@ flowloop:
 												case "时间":
 													switch logic.Relation {
 													case "等于":
-														for _, compare := range logic.Compare {
 															compareInValue := int64(0)
 															if ele, ok := compare.Value.(string); ok {
 																if ele != "" {
@@ -659,9 +675,7 @@ flowloop:
 																	counter++
 																}
 															}
-														}
 													case "不等于":
-														for _, compare := range logic.Compare {
 															compareInValue := int64(0)
 															if ele, ok := compare.Value.(string); ok {
 																if ele != "" {
@@ -726,9 +740,7 @@ flowloop:
 																	counter++
 																}
 															}
-														}
 													case "早于":
-														for _, compare := range logic.Compare {
 															compareInValue := int64(0)
 															if ele, ok := compare.Value.(string); ok {
 																if ele != "" {
@@ -793,9 +805,7 @@ flowloop:
 																	counter++
 																}
 															}
-														}
 													case "晚于":
-														for _, compare := range logic.Compare {
 															compareInValue := int64(0)
 															if ele, ok := compare.Value.(string); ok {
 																if ele != "" {
@@ -860,9 +870,7 @@ flowloop:
 																	counter++
 																}
 															}
-														}
 													case "在范围内":
-														for _, compare := range logic.Compare {
 															logicVal := int64(0)
 															eleRaw, ok := data[logic.ID].(string)
 															if !ok {
@@ -901,9 +909,7 @@ flowloop:
 															if logicVal >= startVal && logicVal <= endVal {
 																counter++
 															}
-														}
 													case "不在范围内":
-														for _, compare := range logic.Compare {
 															logicVal := int64(0)
 															eleRaw, ok := data[logic.ID].(string)
 															if !ok {
@@ -942,7 +948,6 @@ flowloop:
 															if logicVal < startVal || logicVal > endVal {
 																counter++
 															}
-														}
 													case "为空":
 														if data[logic.ID] == nil {
 															counter++
@@ -955,17 +960,13 @@ flowloop:
 												case "布尔值", "附件", "定位":
 													switch logic.Relation {
 													case "是", "等于":
-														for _, compare := range logic.Compare {
 															if custom[logic.ID] == compare.Value {
 																counter++
 															}
-														}
 													case "不是", "不等于":
-														for _, compare := range logic.Compare {
 															if custom[logic.ID] != compare.Value {
 																counter++
 															}
-														}
 													case "为空":
 														if data[logic.ID] == nil {
 															counter++
@@ -982,19 +983,14 @@ flowloop:
 											case "文本":
 												switch logic.Relation {
 												case "是":
-													for _, compare := range logic.Compare {
 														if dataMap[logic.ID] == compare.Value {
 															counter++
 														}
-													}
 												case "不是":
-													for _, compare := range logic.Compare {
 														if dataMap[logic.ID] != compare.Value {
 															counter++
 														}
-													}
 												case "包含":
-													for _, compare := range logic.Compare {
 														compareInValue := ""
 														if ele, ok := compare.Value.(string); ok {
 															compareInValue = ele
@@ -1006,9 +1002,7 @@ flowloop:
 														if strings.Contains(dataVal, compareInValue) {
 															counter++
 														}
-													}
 												case "不包含":
-													for _, compare := range logic.Compare {
 														compareInValue := ""
 														if ele, ok := compare.Value.(string); ok {
 															compareInValue = ele
@@ -1020,9 +1014,7 @@ flowloop:
 														if !strings.Contains(dataVal, compareInValue) {
 															counter++
 														}
-													}
 												case "开始为":
-													for _, compare := range logic.Compare {
 														compareInValue := ""
 														if ele, ok := compare.Value.(string); ok {
 															compareInValue = ele
@@ -1034,9 +1026,7 @@ flowloop:
 														if strings.HasPrefix(dataVal, compareInValue) {
 															counter++
 														}
-													}
 												case "结尾为":
-													for _, compare := range logic.Compare {
 														compareInValue := ""
 														if ele, ok := compare.Value.(string); ok {
 															compareInValue = ele
@@ -1048,7 +1038,6 @@ flowloop:
 														if strings.HasSuffix(dataVal, compareInValue) {
 															counter++
 														}
-													}
 												case "为空":
 													if data[logic.ID] == nil {
 														counter++
@@ -1061,17 +1050,13 @@ flowloop:
 											case "选择器":
 												switch logic.Relation {
 												case "是", "等于":
-													for _, compare := range logic.Compare {
 														if dataMap[logic.ID] == compare.Value {
 															counter++
 														}
-													}
 												case "不是", "不等于":
-													for _, compare := range logic.Compare {
 														if dataMap[logic.ID] != compare.Value {
 															counter++
 														}
-													}
 												case "为空":
 													if data[logic.ID] == nil {
 														counter++
@@ -1084,19 +1069,14 @@ flowloop:
 											case "数值":
 												switch logic.Relation {
 												case "等于":
-													for _, compare := range logic.Compare {
 														if dataMap[logic.ID] == compare.Value {
 															counter++
 														}
-													}
 												case "不等于":
-													for _, compare := range logic.Compare {
 														if dataMap[logic.ID] != compare.Value {
 															counter++
 														}
-													}
 												case "大于":
-													for _, compare := range logic.Compare {
 														logicVal, err := numberx.GetFloatNumber(data[logic.ID])
 														if err != nil {
 															continue
@@ -1108,9 +1088,7 @@ flowloop:
 														if logicVal > compareVal {
 															counter++
 														}
-													}
 												case "小于":
-													for _, compare := range logic.Compare {
 														logicVal, err := numberx.GetFloatNumber(data[logic.ID])
 														if err != nil {
 															continue
@@ -1122,9 +1100,7 @@ flowloop:
 														if logicVal < compareVal {
 															counter++
 														}
-													}
 												case "大于等于":
-													for _, compare := range logic.Compare {
 														logicVal, err := numberx.GetFloatNumber(data[logic.ID])
 														if err != nil {
 															continue
@@ -1136,43 +1112,37 @@ flowloop:
 														if logicVal >= compareVal {
 															counter++
 														}
-													}
 												case "小于等于":
-													for _, compare := range logic.Compare {
 														logicVal, err := numberx.GetFloatNumber(data[logic.ID])
 														if err != nil {
 															continue
 														}
-															compareVal, err := numberx.GetFloatNumber(compare.Value)
-															if err != nil {
-																continue
-															}
-															if logicVal <= compareVal {
-																counter++
-															}
-													}
+														compareVal, err := numberx.GetFloatNumber(compare.Value)
+														if err != nil {
+															continue
+														}
+														if logicVal <= compareVal {
+															counter++
+														}
 												case "在范围内":
-													for _, compare := range logic.Compare {
 														logicVal, err := numberx.GetFloatNumber(data[logic.ID])
 														if err != nil {
 															continue
 														}
 														startVal := float64(0)
 														endVal := float64(0)
-															startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-															if err != nil {
-																continue
-															}
-															endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-															if err != nil {
-																continue
-															}
+														startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
+														if err != nil {
+															continue
+														}
+														endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
+														if err != nil {
+															continue
+														}
 														if logicVal >= startVal && logicVal <= endVal {
 															counter++
 														}
-													}
 												case "不在范围内":
-													for _, compare := range logic.Compare {
 														logicVal, err := numberx.GetFloatNumber(data[logic.ID])
 														if err != nil {
 															continue
@@ -1190,7 +1160,6 @@ flowloop:
 														if logicVal < startVal || logicVal > endVal {
 															counter++
 														}
-													}
 												case "为空":
 													if data[logic.ID] == nil {
 														counter++
@@ -1203,7 +1172,6 @@ flowloop:
 											case "时间":
 												switch logic.Relation {
 												case "等于":
-													for _, compare := range logic.Compare {
 														compareInValue := int64(0)
 														if ele, ok := compare.Value.(string); ok {
 															if ele != "" {
@@ -1268,9 +1236,7 @@ flowloop:
 																counter++
 															}
 														}
-													}
 												case "不等于":
-													for _, compare := range logic.Compare {
 														compareInValue := int64(0)
 														if ele, ok := compare.Value.(string); ok {
 															if ele != "" {
@@ -1335,9 +1301,7 @@ flowloop:
 																counter++
 															}
 														}
-													}
 												case "早于":
-													for _, compare := range logic.Compare {
 														compareInValue := int64(0)
 														if ele, ok := compare.Value.(string); ok {
 															if ele != "" {
@@ -1402,9 +1366,7 @@ flowloop:
 																counter++
 															}
 														}
-													}
 												case "晚于":
-													for _, compare := range logic.Compare {
 														compareInValue := int64(0)
 														if ele, ok := compare.Value.(string); ok {
 															if ele != "" {
@@ -1469,9 +1431,7 @@ flowloop:
 																counter++
 															}
 														}
-													}
 												case "在范围内":
-													for _, compare := range logic.Compare {
 														logicVal := int64(0)
 														eleRaw, ok := data[logic.ID].(string)
 														if !ok {
@@ -1510,9 +1470,7 @@ flowloop:
 														if logicVal >= startVal && logicVal <= endVal {
 															counter++
 														}
-													}
 												case "不在范围内":
-													for _, compare := range logic.Compare {
 														logicVal := int64(0)
 														eleRaw, ok := data[logic.ID].(string)
 														if !ok {
@@ -1551,7 +1509,6 @@ flowloop:
 														if logicVal < startVal || logicVal > endVal {
 															counter++
 														}
-													}
 												case "为空":
 													if data[logic.ID] == nil {
 														counter++
@@ -1564,17 +1521,13 @@ flowloop:
 											case "布尔值", "附件", "定位":
 												switch logic.Relation {
 												case "是", "等于":
-													for _, compare := range logic.Compare {
 														if dataMap[logic.ID] == compare.Value {
 															counter++
 														}
-													}
 												case "不是", "不等于":
-													for _, compare := range logic.Compare {
 														if dataMap[logic.ID] != compare.Value {
 															counter++
 														}
-													}
 												case "为空":
 													if data[logic.ID] == nil {
 														counter++
@@ -1673,13 +1626,13 @@ flowloop:
 					data["#$department"] = deptMap
 					data["#$model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
 					data["#$node"] = bson.M{nodeID: bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID}}
-					if loginTimeRaw, ok := data["time"].(string); ok {
-						loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
-						if err != nil {
-							continue
-						}
-						data["time"] = loginTime.UnixNano() / 1e6
-					}
+					//if loginTimeRaw, ok := data["time"].(string); ok {
+					//	loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
+					//	if err != nil {
+					//		continue
+					//	}
+					//	data["time"] = loginTime.UnixNano() / 1e6
+					//}
 
 					if flowXml, ok := flowInfo["flowXml"].(string); ok {
 						err = flowx.StartFlow(zbClient, flowXml, projectName, data)
@@ -1919,7 +1872,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 						//没有指定特定资产时，结合部门与模型进行判断
 						err = formatx.FormatObjectIDPrimitiveList(&settings, "model", "id")
 						if err != nil {
-							//logger.Warnln(eventDeviceModifyLog, "流程配置的模型对象中id字段不存在或类型错误")
+							logger.Warnln("流程配置的模型对象中id字段不存在或类型错误")
 							continue
 						}
 						modelListInSettings, ok = settings["model"].([]string)
@@ -1989,13 +1942,13 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 					}
 					data["#$department"] = deptMap
 					data["#$model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
-					if loginTimeRaw, ok := data["time"].(string); ok {
-						loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
-						if err != nil {
-							continue
-						}
-						data["time"] = loginTime.UnixNano() / 1e6
-					}
+					//if loginTimeRaw, ok := data["time"].(string); ok {
+					//	loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
+					//	if err != nil {
+					//		continue
+					//	}
+					//	data["time"] = loginTime.UnixNano() / 1e6
+					//}
 
 					if flowXml, ok := flowInfo["flowXml"].(string); ok {
 						err = flowx.StartFlow(zbClient, flowXml, projectName, data)

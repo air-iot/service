@@ -205,7 +205,7 @@ func TriggerAddScheduleFlow(ctx context.Context, redisClient redisdb.Client, mon
 			"once":   "仅一次",
 		}
 		sendMap := map[string]interface{}{
-			"time":     timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+			"time":     timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
 			"interval": scheduleTypeMap[strings.ReplaceAll(scheduleType,numberx.HasNumberExp(scheduleType),"")],
 			"flowName": flowName,
 		}
@@ -479,7 +479,7 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 				"once":   "仅一次",
 			}
 			sendMap := map[string]interface{}{
-				"time":     timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+				"time":     timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
 				"interval": scheduleTypeMap[strings.ReplaceAll(scheduleType,numberx.HasNumberExp(scheduleType),"")],
 				"flowName": flowName,
 			}

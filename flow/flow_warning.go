@@ -344,7 +344,7 @@ flowloop:
 					}
 					//生成报警对象并发送
 					sendMapInner := bson.M{
-						"time":           timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+						"time":           timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
 						"#$model":        bson.M{"id": modelID, "_tableName": "model"},
 						"#$department":   deptMap,
 						"#$node":         bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
@@ -443,7 +443,7 @@ flowloop:
 			//								}
 			//								//生成报警对象并发送
 			//								sendMapInner := bson.M{
-			//									"time":           timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+			//									"time":           timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
 			//									"#$model":        bson.M{"id": modelID, "_tableName": "model"},
 			//									"#$department":   deptMap,
 			//									"#$node":         bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
@@ -547,7 +547,7 @@ flowloop:
 			//					}
 			//					//生成报警对象并发送
 			//					sendMapInner := bson.M{
-			//						"time":           timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+			//						"time":           timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
 			//						"#$model":        bson.M{"id": modelID, "_tableName": "model"},
 			//						"#$department":   deptMap,
 			//						"#$node":         bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
@@ -734,7 +734,7 @@ flowloop:
 				}
 				//生成报警对象并发送
 				sendMapInner := bson.M{
-					"time":           timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+					"time":           timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
 					"#$model":        bson.M{"id": modelID, "_tableName": "model"},
 					"#$department":   deptMap,
 					"#$node":         bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
@@ -1085,7 +1085,7 @@ flowloop:
 			}
 			//生成报警对象并发送
 			sendMapInner := bson.M{
-				"time":    timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+				"time":    timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
 				"#$model": bson.M{"id": modelID, "_tableName": "model"},
 				"type":    dataMappingType,
 				//"status":         data.Status,
@@ -1436,7 +1436,7 @@ flowloop:
 			}
 			//生成报警对象并发送
 			sendMapInner := bson.M{
-				"time":         timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+				"time":         timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
 				"#$model":      bson.M{"id": modelID, "_tableName": "model"},
 				"#$department": deptMap,
 				"#$node":       bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
@@ -1645,7 +1645,7 @@ func TriggerWarningRulesFlowTimeout(ctx context.Context, redisClient redisdb.Cli
 										}
 										//生成报警对象并发送
 										sendMapInner := bson.M{
-											"time":         timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+											"time":         timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
 											"#$model":      bson.M{"id": modelIDInSettings, "_tableName": "model"},
 											"#$department": deptMap,
 											"#$node":       bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
@@ -1776,7 +1776,7 @@ func TriggerWarningRulesFlowTimeout(ctx context.Context, redisClient redisdb.Cli
 									}
 									//生成报警对象并发送
 									sendMapInner := bson.M{
-										"time":         timex.GetLocalTimeNow(time.Now()).UnixNano() / 1e6,
+										"time":         timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
 										"#$model":      bson.M{"id": modelIDInSettings, "_tableName": "model"},
 										"#$department": deptMap,
 										"#$node":       bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
