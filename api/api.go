@@ -42,6 +42,7 @@ type Client interface {
 
 	FindUserQuery(headers map[string]string, query, result interface{}) error
 	FindUserById(headers map[string]string, id string, result interface{}) error
+
 	SaveUser(headers map[string]string, data, result interface{}) error
 	DelUserById(headers map[string]string, id string, result interface{}) error
 	UpdateUserById(headers map[string]string, id string, data, result interface{}) error
@@ -128,4 +129,6 @@ type Client interface {
 	DelSystemVariableById(headers map[string]string, id string, result interface{}) error
 	UpdateSystemVariableById(headers map[string]string, id string, data, result interface{}) error
 	ReplaceSystemVariableById(headers map[string]string, id string, data, result interface{}) error
+
+	FindDepartmentById(headers map[string]string, id string, result interface{}) error
 }
