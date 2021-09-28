@@ -18,7 +18,7 @@ import (
 
 const (
 	TableNotExistMsg        = "Table does not exist" // 表不存在
-	InvalidColumnNameMsg    = "invalid column"
+	InvalidColumnNameMsg    = "invalid column name"
 	InvalidColumnTagNameMsg = "invalid column/tag name"
 	DatabaseNotAvailableMsg = "Database not specified or available"
 )
@@ -51,6 +51,24 @@ func (a *Taos) Write(ctx context.Context, database string, rows []Row) (err erro
 	}
 	wg.Wait()
 	return nil
+}
+
+func (a *Taos) insertControl(ctx context.Context, database string, row Row) {
+	done := make(chan struct{}, 1)
+	go func(ctx context.Context, database string, row Row) {
+		if err := a.insert(ctx, database, row); err != nil {
+			logger.Errorf(err.Error())
+		}
+		done <- struct{}{}
+	}(ctx, database, row)
+	select {
+	case <-done:
+		logger.Debugf("执行插入 [%+v] 完成", row)
+		return
+	case <-time.Tick(time.Second * 10):
+		logger.Errorf("执行插入 [%+v] 超时", row)
+		return
+	}
 }
 
 func (a *Taos) insert(ctx context.Context, database string, row Row) (err error) {
@@ -110,7 +128,7 @@ func (a *Taos) insert(ctx context.Context, database string, row Row) (err error)
 		strings.Join(tagValues, ","),
 		strings.Join(values, ","),
 	)
-	querySql := fmt.Sprintf(`select * from %s.m_%s limit 1`, database, row.TableName)
+	querySql := fmt.Sprintf(`select last_row(*) from %s.m_%s`, database, row.TableName)
 
 	//logger.Infof("插入数据sql: %s", insertSql)
 	_, err = db.ExecContext(ctx, insertSql)
@@ -181,6 +199,45 @@ func (a *Taos) insert(ctx context.Context, database string, row Row) (err error)
 			return fmt.Errorf("插入 [%s] 数据错误: %s", insertSql, err.Error())
 		}
 	}
+
+	queryTags := fmt.Sprintf(`select id,department from %s.n_%s`, database, row.SubTableName)
+	res, err := db.QueryContext(ctx, queryTags)
+	if err != nil {
+		return fmt.Errorf("查询 [%s] 表tag数据错误: %s", queryTags, err.Error())
+	}
+	var id, department string
+	for res.Next() {
+		if err := res.Scan(&id, &department); err != nil {
+			return fmt.Errorf("解析查询 [%s] 表tag数据值错误: %s", queryTags, err.Error())
+		}
+	}
+
+	for name, value := range row.Tags {
+		switch name {
+		case "id":
+			if id != value {
+				alterSql := fmt.Sprintf("alter table %s.n_%s SET TAG %s='%s'", database, row.SubTableName, name, value)
+				_, err := db.ExecContext(ctx, alterSql)
+				if err != nil {
+					logger.Errorf("修改表tag值 [%s] 执行错误: %s,", alterSql, err.Error())
+				} else {
+					logger.Debugf("修改表tag值 [%s] 执行成功", alterSql)
+				}
+			}
+		case "department":
+			if department != value {
+				alterSql := fmt.Sprintf("alter table %s.n_%s SET TAG %s='%s'", database, row.SubTableName, name, value)
+				_, err := db.ExecContext(ctx, alterSql)
+				if err != nil {
+					logger.Errorf("修改表tag值 [%s] 执行错误: %s,", alterSql, err.Error())
+				} else {
+					logger.Debugf("修改表tag值 [%s] 执行成功", alterSql)
+				}
+			}
+		}
+
+	}
+
 	return nil
 }
 
