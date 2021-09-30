@@ -643,31 +643,42 @@ flowloop:
 							}
 						}
 						if compare.TimeType != "" {
+							startPoint := int64(0)
+							endPoint := int64(0)
 							switch compare.TimeType {
 							case "今天":
-								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(0).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(1).Unix()
 							case "昨天":
-								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(0).Unix()
 							case "明天":
-								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(1).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(2).Unix()
 							case "本周":
 								week := int(time.Now().Weekday())
 								if week == 0 {
 									week = 7
 								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
 							case "上周":
 								week := int(time.Now().Weekday())
 								if week == 0 {
 									week = 7
 								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
 							case "今年":
-								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+								startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
 							case "去年":
-								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+								startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
 							case "明年":
-								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+
+								startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
 							case "指定时间":
 								if compare.SpecificTime != "" {
 									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
@@ -677,8 +688,13 @@ flowloop:
 									}
 									compareInValue = eleTime.Unix()
 								}
+								if dataVal != compareInValue {
+									counter++
+									continue logicLoop
+								}
+								continue
 							}
-							if dataVal != compareInValue {
+							if dataVal < startPoint || dataVal >= endPoint {
 								counter++
 								continue logicLoop
 							}
@@ -745,31 +761,42 @@ flowloop:
 							}
 						}
 						if compare.TimeType != "" {
+							startPoint := int64(0)
+							endPoint := int64(0)
 							switch compare.TimeType {
 							case "今天":
-								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(0).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(1).Unix()
 							case "昨天":
-								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(0).Unix()
 							case "明天":
-								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(1).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(2).Unix()
 							case "本周":
 								week := int(time.Now().Weekday())
 								if week == 0 {
 									week = 7
 								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
 							case "上周":
 								week := int(time.Now().Weekday())
 								if week == 0 {
 									week = 7
 								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
 							case "今年":
-								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+								startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
 							case "去年":
-								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+								startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
 							case "明年":
-								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+
+								startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
 							case "指定时间":
 								if compare.SpecificTime != "" {
 									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
@@ -779,8 +806,13 @@ flowloop:
 									}
 									compareInValue = eleTime.Unix()
 								}
+								if dataVal == compareInValue {
+									counter++
+									continue logicLoop
+								}
+								continue
 							}
-							if dataVal == compareInValue {
+							if dataVal >= startPoint && dataVal < endPoint {
 								counter++
 								continue logicLoop
 							}
@@ -1886,31 +1918,42 @@ flowloop:
 							}
 						}
 						if compare.TimeType != "" {
+							startPoint := int64(0)
+							endPoint := int64(0)
 							switch compare.TimeType {
 							case "今天":
-								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(0).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(1).Unix()
 							case "昨天":
-								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(0).Unix()
 							case "明天":
-								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(1).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(2).Unix()
 							case "本周":
 								week := int(time.Now().Weekday())
 								if week == 0 {
 									week = 7
 								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
 							case "上周":
 								week := int(time.Now().Weekday())
 								if week == 0 {
 									week = 7
 								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
 							case "今年":
-								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+								startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
 							case "去年":
-								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+								startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
 							case "明年":
-								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+
+								startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
 							case "指定时间":
 								if compare.SpecificTime != "" {
 									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
@@ -1920,8 +1963,13 @@ flowloop:
 									}
 									compareInValue = eleTime.Unix()
 								}
+								if dataVal != compareInValue {
+									counter++
+									continue logicLoop1
+								}
+								continue
 							}
-							if dataVal != compareInValue {
+							if dataVal < startPoint || dataVal >= endPoint {
 								counter++
 								continue logicLoop1
 							}
@@ -1988,31 +2036,42 @@ flowloop:
 							}
 						}
 						if compare.TimeType != "" {
+							startPoint := int64(0)
+							endPoint := int64(0)
 							switch compare.TimeType {
 							case "今天":
-								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(0).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(1).Unix()
 							case "昨天":
-								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(0).Unix()
 							case "明天":
-								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(1).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(2).Unix()
 							case "本周":
 								week := int(time.Now().Weekday())
 								if week == 0 {
 									week = 7
 								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
 							case "上周":
 								week := int(time.Now().Weekday())
 								if week == 0 {
 									week = 7
 								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
 							case "今年":
-								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+								startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
 							case "去年":
-								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+								startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
 							case "明年":
-								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+
+								startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
 							case "指定时间":
 								if compare.SpecificTime != "" {
 									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
@@ -2022,12 +2081,17 @@ flowloop:
 									}
 									compareInValue = eleTime.Unix()
 								}
+								if dataVal == compareInValue {
+									counter++
+									continue logicLoop1
+								}
+								continue
 							}
-							if dataVal == compareInValue {
+							if dataVal >= startPoint && dataVal < endPoint {
 								counter++
 								continue logicLoop1
 							}
-						} else if compare.ID != "" {
+						}  else if compare.ID != "" {
 							compareValue := int64(0)
 							eleRaw, ok := data[compare.ID].(string)
 							if !ok {
@@ -3139,31 +3203,41 @@ flowloop:
 								}
 							}
 							if compare.TimeType != "" {
+								startPoint := int64(0)
+								endPoint := int64(0)
 								switch compare.TimeType {
 								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+									startPoint = timex.GetUnixToNewTimeDay(0).Unix()
+									endPoint = timex.GetUnixToNewTimeDay(1).Unix()
 								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+									startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
+									endPoint = timex.GetUnixToNewTimeDay(0).Unix()
 								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+									startPoint = timex.GetUnixToNewTimeDay(1).Unix()
+									endPoint = timex.GetUnixToNewTimeDay(2).Unix()
 								case "本周":
 									week := int(time.Now().Weekday())
 									if week == 0 {
 										week = 7
 									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+									startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+									endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
 								case "上周":
 									week := int(time.Now().Weekday())
 									if week == 0 {
 										week = 7
 									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+									startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+									endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
 								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+									startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
+									endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
 								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+									startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
+									endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
 								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+									startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
+									endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
 								case "指定时间":
 									if compare.SpecificTime != "" {
 										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
@@ -3173,8 +3247,13 @@ flowloop:
 										}
 										compareInValue = eleTime.Unix()
 									}
+									if dataVal != compareInValue {
+										counter++
+										continue logicLoop2
+									}
+									continue
 								}
-								if dataVal != compareInValue {
+								if dataVal < startPoint || dataVal >= endPoint {
 									counter++
 									continue logicLoop2
 								}
@@ -3237,31 +3316,42 @@ flowloop:
 								}
 							}
 							if compare.TimeType != "" {
+								startPoint := int64(0)
+								endPoint := int64(0)
 								switch compare.TimeType {
 								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+									startPoint = timex.GetUnixToNewTimeDay(0).Unix()
+									endPoint = timex.GetUnixToNewTimeDay(1).Unix()
 								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+									startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
+									endPoint = timex.GetUnixToNewTimeDay(0).Unix()
 								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+									startPoint = timex.GetUnixToNewTimeDay(1).Unix()
+									endPoint = timex.GetUnixToNewTimeDay(2).Unix()
 								case "本周":
 									week := int(time.Now().Weekday())
 									if week == 0 {
 										week = 7
 									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+									startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+									endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
 								case "上周":
 									week := int(time.Now().Weekday())
 									if week == 0 {
 										week = 7
 									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+									startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+									endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
 								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+									startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
+									endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
 								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+									startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
+									endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
 								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+
+									startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
+									endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
 								case "指定时间":
 									if compare.SpecificTime != "" {
 										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
@@ -3271,8 +3361,13 @@ flowloop:
 										}
 										compareInValue = eleTime.Unix()
 									}
+									if dataVal == compareInValue {
+										counter++
+										continue logicLoop2
+									}
+									continue
 								}
-								if dataVal == compareInValue {
+								if dataVal >= startPoint && dataVal < endPoint {
 									counter++
 									continue logicLoop2
 								}
@@ -6286,31 +6381,42 @@ flowloop:
 							}
 						}
 						if compare.TimeType != "" {
+							startPoint := int64(0)
+							endPoint := int64(0)
 							switch compare.TimeType {
 							case "今天":
-								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(0).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(1).Unix()
 							case "昨天":
-								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(0).Unix()
 							case "明天":
-								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(1).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(2).Unix()
 							case "本周":
 								week := int(time.Now().Weekday())
 								if week == 0 {
 									week = 7
 								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
 							case "上周":
 								week := int(time.Now().Weekday())
 								if week == 0 {
 									week = 7
 								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
 							case "今年":
-								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+								startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
 							case "去年":
-								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+								startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
 							case "明年":
-								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+
+								startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
 							case "指定时间":
 								if compare.SpecificTime != "" {
 									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
@@ -6320,12 +6426,17 @@ flowloop:
 									}
 									compareInValue = eleTime.Unix()
 								}
+								if dataVal != compareInValue {
+									counter++
+									continue logicLoop5
+								}
+								continue
 							}
-							if dataVal != compareInValue {
+							if dataVal < startPoint || dataVal >= endPoint {
 								counter++
 								continue logicLoop5
 							}
-						} else if compare.ID != "" {
+						}else if compare.ID != "" {
 							compareValue := int64(0)
 							eleRaw, ok := data[compare.ID].(string)
 							if !ok {
@@ -6388,31 +6499,42 @@ flowloop:
 							}
 						}
 						if compare.TimeType != "" {
+							startPoint := int64(0)
+							endPoint := int64(0)
 							switch compare.TimeType {
 							case "今天":
-								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(0).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(1).Unix()
 							case "昨天":
-								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(0).Unix()
 							case "明天":
-								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(1).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(2).Unix()
 							case "本周":
 								week := int(time.Now().Weekday())
 								if week == 0 {
 									week = 7
 								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
 							case "上周":
 								week := int(time.Now().Weekday())
 								if week == 0 {
 									week = 7
 								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+								startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+								endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
 							case "今年":
-								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
+								startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
 							case "去年":
-								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
+								startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
 							case "明年":
-								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
+
+								startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
+								endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
 							case "指定时间":
 								if compare.SpecificTime != "" {
 									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
@@ -6422,8 +6544,13 @@ flowloop:
 									}
 									compareInValue = eleTime.Unix()
 								}
+								if dataVal == compareInValue {
+									counter++
+									continue logicLoop5
+								}
+								continue
 							}
-							if dataVal == compareInValue {
+							if dataVal >= startPoint && dataVal < endPoint {
 								counter++
 								continue logicLoop5
 							}
