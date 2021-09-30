@@ -646,7 +646,7 @@ flowloop:
 											logger.Errorf("流程(%s)推进到下一阶段成功",flowID)
 											continue flowloop
 										} else {
-											logger.Warnf("流程(%s)中未匹配到要修改的资产:%s",flowID, err.Error())
+											logger.Warnf("流程(%s)中未匹配到要修改的资产",flowID)
 											continue
 										}
 									}
@@ -707,7 +707,7 @@ flowloop:
 								isValid = true
 							}
 						} else {
-							logger.Warnf("流程(%s)中未匹配到要修改的资产(根据部门模型过滤):%s",flowID, err.Error())
+							logger.Warnf("流程(%s)中未匹配到要修改的资产(根据部门模型过滤):%s",flowID)
 							continue
 						}
 					default:
