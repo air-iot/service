@@ -91,6 +91,7 @@ func TriggerDeviceModifyFlow(ctx context.Context, redisClient redisdb.Client, mo
 			"settings.eventType":  modifyTypeAfterMapping,
 			"settings.eventRange": "node",
 		},
+		"project": map[string]interface{}{"flowXml":1,"settings": 1, "invalid": 1, "disable": 1, "startTime": 1, "endTime": 1},
 	}
 	err := apiClient.FindFlowQuery(headerMap, query, &flowInfoList)
 
@@ -98,7 +99,7 @@ func TriggerDeviceModifyFlow(ctx context.Context, redisClient redisdb.Client, mo
 		return fmt.Errorf("获取当前资产修改内容类型(%s)的资产修改逻辑流程失败:%s", modelID, err.Error())
 	}
 
-	////logger.Debugf(eventDeviceModifyLog, "开始遍历流程列表")
+	logger.Debugf("开始遍历流程列表:%d",len(flowInfoList))
 	variables := map[string]interface{}{"#project": projectName}
 	variablesBytes, err := json.Marshal(variables)
 	if err != nil {
@@ -109,12 +110,12 @@ flowloop:
 
 		//logger.Debugf(eventDeviceModifyLog, "开始分析流程")
 		if flowID, ok := flowInfo["id"].(string); ok {
-			if settings, ok := flowInfo["settings"].(primitive.M); ok {
+			if settings, ok := flowInfo["settings"].(map[string]interface{}); ok {
 
 				//判断是否已经失效
 				if invalid, ok := flowInfo["invalid"].(bool); ok {
 					if invalid {
-						//logger.Warnln(eventLog, "流程(%s)已经失效", eventID)
+						logger.Warnln( "流程(%s)已经失效", flowID)
 						continue
 					}
 				}
@@ -122,7 +123,7 @@ flowloop:
 				//判断禁用
 				if disable, ok := flowInfo["disable"].(bool); ok {
 					if disable {
-						//logger.Warnln(eventDeviceModifyLog, "流程(%s)已经被禁用", eventID)
+						logger.Warnln("流程(%s)已经被禁用", flowID)
 						continue
 					}
 				}
@@ -137,7 +138,7 @@ flowloop:
 				if startTime, ok := flowInfo["startTime"].(primitive.DateTime); ok {
 					startTimeInt := int64(startTime / 1e3)
 					if timex.GetLocalTimeNow(time.Now()).Unix() < startTimeInt {
-						//logger.Debugf(eventDeviceModifyLog, "流程(%s)的定时任务开始时间未到，不执行", eventID)
+						logger.Debugf( "流程(%s)的定时任务开始时间未到，不执行", flowID)
 						continue
 					}
 				}
@@ -145,14 +146,14 @@ flowloop:
 				if endTime, ok := flowInfo["endTime"].(primitive.DateTime); ok {
 					endTimeInt := int64(endTime / 1e3)
 					if timex.GetLocalTimeNow(time.Now()).Unix() >= endTimeInt {
-						//logger.Debugf(eventDeviceModifyLog, "流程(%s)的定时任务结束时间已到，不执行", eventID)
+						logger.Debugf("流程(%s)的定时任务结束时间已到，不执行", flowID)
 						//修改流程为失效
 						updateMap := bson.M{"invalid": true}
-						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), flowID, updateMap)
 						var r = make(map[string]interface{})
 						err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
 						if err != nil {
-							//logger.Errorf(eventDeviceModifyLog, "失效流程(%s)失败:%s", eventID, err.Error())
+							logger.Errorf("失效流程(%s)失败:%s", flowID, err.Error())
 							continue
 						}
 						continue
@@ -174,7 +175,7 @@ flowloop:
 				//		}
 				//	}
 				//	if !isValidModifyProp {
-				//		//logger.Warnln(eventDeviceModifyLog, "流程(%s)修改属性不是触发流程需要的:%+v", eventID, operateDataMap)
+				//		//logger.Warnln(eventDeviceModifyLog, "流程(%s)修改属性不是触发流程需要的:%+v", flowID, operateDataMap)
 				//		continue
 				//	}
 				//}
@@ -189,18 +190,373 @@ flowloop:
 						departmentListInSettings := make([]string, 0)
 						modelIDInSettings := ""
 						//判断该流程是否指定了特定资产
-						if nodeList, ok := settings["node"].(primitive.A); ok {
+						if nodeList, ok := settings["node"].([]interface{}); ok {
 							for _, nodeEle := range nodeList {
-								if nodeMap, ok := nodeEle.(primitive.M); ok {
+								if nodeMap, ok := nodeEle.(map[string]interface{}); ok {
 									if nodeIDInSettings, ok := nodeMap["id"].(string); ok {
 										if nodeID == nodeIDInSettings {
+											if modifyTypeAfterMapping == "编辑资产属性" {
+												if props, ok := settings["prop"].([]interface{}); ok {
+													if len(props) != 0 {
+														counter := 0
+														if dataMap, ok := data["data"].(map[string]interface{}); ok {
+															for _, prop := range props {
+																b, err := json.Marshal(prop)
+																if err != nil {
+																	logger.Errorf("流程(%s)的资产属性配置数组序列化失败:%s", flowID, err.Error())
+																	continue
+																}
+																logic := entity.Logic{}
+																err = json.Unmarshal(b, &logic)
+																if err != nil {
+																	logger.Errorf("流程(%s)的资产属性配置数组解序列化失败:%s", flowID, err.Error())
+																	continue
+																}
+																compare := logic.Compare
+																if compare.Value != "" {
+																	formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.Value)
+																	if err != nil {
+																		logger.Errorf("流程(%s)中替换模板Value变量失败:%s", flowID, err.Error())
+																		continue
+																	}
+																	logic.Compare.Value = formatVal
+																}
+																if compare.StartTime.Value != "" {
+																	formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.StartTime.Value)
+																	if err != nil {
+																		logger.Errorf("流程(%s)中替换模板StartTime变量失败:%s", flowID, err.Error())
+																		continue
+																	}
+																	logic.Compare.StartTime.Value = formatVal
+																}
+																if compare.EndTime.Value != "" {
+																	formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.EndTime.Value)
+																	if err != nil {
+																		logger.Errorf("流程(%s)中替换模板EndTime变量失败:%s", flowID, err.Error())
+																		continue
+																	}
+																	logic.Compare.EndTime.Value = formatVal
+																}
+																if compare.StartValue.Value != "" {
+																	formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.StartValue.Value)
+																	if err != nil {
+																		logger.Errorf("流程(%s)中替换模板StartValue变量失败:%s", flowID, err.Error())
+																		continue
+																	}
+																	logic.Compare.StartValue.Value = formatVal
+																}
+																if compare.EndValue.Value != "" {
+																	formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.EndValue.Value)
+																	if err != nil {
+																		logger.Errorf("流程(%s)中替换模板EndValue变量失败:%s", flowID, err.Error())
+																		continue
+																	}
+																	logic.Compare.EndValue.Value = formatVal
+																}
+																compare = logic.Compare
+																switch logic.PropType {
+																case "自定义属性":
+																	if custom, ok := dataMap["custom"].(map[string]interface{}); ok {
+																		switch logic.DataType {
+																		case "文本":
+																			if custom[logic.ID] == compare.Value {
+																				counter++
+																			}
+																		case "选择器":
+																			if custom[logic.ID] == compare.Value {
+																				counter++
+																			}
+																		case "数值":
+																			if custom[logic.ID] == compare.Value {
+																				counter++
+																			}
+																		case "时间":
+																			compareInValue := int64(0)
+																			if ele, ok := compare.Value.(string); ok {
+																				if ele != "" {
+																					eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+																					if err != nil {
+																						continue
+																					}
+																					compareInValue = eleTime.Unix()
+																				}
+																			}
+																			dataVal := int64(0)
+																			eleRaw, ok := custom[logic.ID].(string)
+																			if !ok {
+																				continue
+																			} else {
+																				if eleRaw != "" {
+																					formatLayout := timex.FormatTimeFormat(eleRaw)
+																					timeConvert, err := timex.ConvertStringToTime(formatLayout, eleRaw, time.Local)
+																					if err != nil {
+																						logger.Errorf("传入的时间转换失败:%s", err.Error())
+																						continue
+																					}
+																					dataVal = timeConvert.Unix()
+																				}
+																			}
+																			if compare.TimeType != "" {
+																				startPoint := int64(0)
+																				endPoint := int64(0)
+																				switch compare.TimeType {
+																				case "今天":
+																					startPoint = timex.GetUnixToNewTimeDay(0).Unix()
+																					endPoint = timex.GetUnixToNewTimeDay(1).Unix()
+																				case "昨天":
+																					startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
+																					endPoint = timex.GetUnixToNewTimeDay(0).Unix()
+																				case "明天":
+																					startPoint = timex.GetUnixToNewTimeDay(1).Unix()
+																					endPoint = timex.GetUnixToNewTimeDay(2).Unix()
+																				case "本周":
+																					week := int(time.Now().Weekday())
+																					if week == 0 {
+																						week = 7
+																					}
+																					startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+																					endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
+																				case "上周":
+																					week := int(time.Now().Weekday())
+																					if week == 0 {
+																						week = 7
+																					}
+																					startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+																					endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+																				case "今年":
+																					startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
+																					endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
+																				case "去年":
+																					startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
+																					endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
+																				case "明年":
+
+																					startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
+																					endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
+																				case "指定时间":
+																					if compare.SpecificTime != "" {
+																						eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
+																						if err != nil {
+																							continue
+																						}
+																						compareInValue = eleTime.Unix()
+																					}
+																					if dataVal == compareInValue {
+																						counter++
+																					}
+																					continue
+																				}
+																				if dataVal >= startPoint && dataVal < endPoint {
+																					counter++
+																				}
+																			}
+																		case "布尔值", "附件", "定位":
+																			if custom[logic.ID] == compare.Value {
+																				counter++
+																			}
+																		case "数组":
+																			if valueList, ok := compare.Value.([]interface{}); ok {
+																				valueStringList := formatx.InterfaceListToStringList(valueList)
+																				if dataVal, ok := custom[logic.ID]; ok {
+																					if _, ok := dataVal.([]interface{}); ok {
+																						err := formatx.FormatObjectToIDListMap(&custom, logic.ID, "id")
+																						if err != nil {
+																							return fmt.Errorf("传入参数(%s)对象中没有id字段:%s", logic.ID, err.Error())
+																						}
+																						if dataValStringList, ok := custom[logic.ID].([]string); ok {
+																							if len(valueStringList) != len(dataValStringList) {
+																								continue
+																							} else {
+																								matchMap := map[string]int{}
+																								for _, ele := range valueStringList {
+																									matchMap[ele] = 1
+																								}
+																								for _, ele := range dataValStringList {
+																									if _, ok := matchMap[ele]; ok {
+																										delete(matchMap, ele)
+																									} else {
+																										matchMap[ele] = -1
+																									}
+																								}
+																								if len(matchMap) == 0 {
+																									counter++
+																								}
+																							}
+																						}
+																					}
+																				}
+																			}
+																		}
+																	}
+																case "内置属性":
+																	switch logic.DataType {
+																	case "文本":
+																		if dataMap[logic.ID] == compare.Value {
+																			counter++
+																		}
+																	case "选择器":
+																		if dataMap[logic.ID] == compare.Value {
+																			counter++
+																		}
+																	case "数值":
+																		if dataMap[logic.ID] == compare.Value {
+																			counter++
+																		}
+																	case "时间":
+																		compareInValue := int64(0)
+																		if ele, ok := compare.Value.(string); ok {
+																			if ele != "" {
+																				eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
+																				if err != nil {
+																					continue
+																				}
+																				compareInValue = eleTime.Unix()
+																			}
+																		}
+																		dataVal := int64(0)
+																		eleRaw, ok := data[logic.ID].(string)
+																		if !ok {
+																			continue
+																		} else {
+																			if eleRaw != "" {
+																				formatLayout := timex.FormatTimeFormat(eleRaw)
+																				timeConvert, err := timex.ConvertStringToTime(formatLayout, eleRaw, time.Local)
+																				if err != nil {
+																					logger.Errorf("传入的时间转换失败:%s", err.Error())
+																					continue
+																				}
+																				dataVal = timeConvert.Unix()
+																			}
+																		}
+																		if compare.TimeType != "" {
+																			startPoint := int64(0)
+																			endPoint := int64(0)
+																			switch compare.TimeType {
+																			case "今天":
+																				startPoint = timex.GetUnixToNewTimeDay(0).Unix()
+																				endPoint = timex.GetUnixToNewTimeDay(1).Unix()
+																			case "昨天":
+																				startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
+																				endPoint = timex.GetUnixToNewTimeDay(0).Unix()
+																			case "明天":
+																				startPoint = timex.GetUnixToNewTimeDay(1).Unix()
+																				endPoint = timex.GetUnixToNewTimeDay(2).Unix()
+																			case "本周":
+																				week := int(time.Now().Weekday())
+																				if week == 0 {
+																					week = 7
+																				}
+																				startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+																				endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
+																			case "上周":
+																				week := int(time.Now().Weekday())
+																				if week == 0 {
+																					week = 7
+																				}
+																				startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
+																				endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
+																			case "今年":
+																				startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
+																				endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
+																			case "去年":
+																				startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
+																				endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
+																			case "明年":
+
+																				startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
+																				endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
+																			case "指定时间":
+																				if compare.SpecificTime != "" {
+																					eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
+																					if err != nil {
+																						continue
+																					}
+																					compareInValue = eleTime.Unix()
+																				}
+																				if dataVal == compareInValue {
+																					counter++
+																				}
+																				continue
+																			}
+																			if dataVal >= startPoint && dataVal < endPoint {
+																				counter++
+																			}
+																		}
+																	case "布尔值", "附件", "定位":
+																		if dataMap[logic.ID] == compare.Value {
+																			counter++
+																		}
+																	case "数组":
+																		if valueList, ok := compare.Value.([]interface{}); ok {
+																			if dataVal, ok := dataMap[logic.ID]; ok {
+																				if _, ok := dataVal.([]interface{}); ok {
+																					valueStringList := make([]string, 0)
+																					for _, ele := range valueList {
+																						if valueListM, ok := ele.(map[string]interface{}); ok {
+																							if idRaw, ok := valueListM["id"]; ok {
+																								if id, ok := idRaw.(string); ok {
+																									valueStringList = append(valueStringList, id)
+																								}
+																							}
+																						}
+																					}
+																					err := formatx.FormatObjectToIDListMap(&dataMap, logic.ID, "id")
+																					if err != nil {
+																						return fmt.Errorf("传入参数(%s)对象中没有id字段:%s", logic.ID, err.Error())
+																					}
+																					if dataValStringList, ok := dataMap[logic.ID].([]string); ok {
+																						if len(valueStringList) != len(dataValStringList) {
+																							continue
+																						} else {
+																							matchMap := map[string]int{}
+																							for _, ele := range valueStringList {
+																								matchMap[ele] = 1
+																							}
+																							for _, ele := range dataValStringList {
+																								if _, ok := matchMap[ele]; ok {
+																									delete(matchMap, ele)
+																								} else {
+																									matchMap[ele] = -1
+																								}
+																							}
+																							if len(matchMap) == 0 {
+																								counter++
+																							}
+																						}
+																					}else{
+																						logger.Debugf("修改的变量不是字符串数组(%s)",flowID)
+																					}
+																				}else{
+																					logger.Debugf("修改的变量不是数组(%s)",flowID)
+																				}
+																			}else{
+																				logger.Debugf("修改的变量中没有配置里需要的(%s)",flowID)
+																			}
+																		}else{
+																			logger.Debugf("数组型的prop值不是数组(%s)",flowID)
+																		}
+																	}
+																}
+															}
+														} else {
+															logger.Debugf("传入的修改资产数据没有data字段或格式不正确")
+															continue
+														}
+														if counter == 0 {
+															logger.Debugf("传入的修改资产数据的修改字段未满足条件(资产)")
+															continue
+														}
+													}
+												}
+											}
+
 											nodeInfo := bson.M{}
 											if initNode, ok := data["initNode"].(map[string]interface{}); ok {
 												nodeInfo = initNode
 											} else {
 												err = node.Get(ctx, redisClient, mongoClient, projectName, nodeID, &nodeInfo)
 												if err != nil {
-													//logger.Errorf(eventDeviceModifyLog, "流程(%s)的资产缓存(%+v)查询失败", eventID, nodeID)
+													//logger.Errorf(eventDeviceModifyLog, "流程(%s)的资产缓存(%+v)查询失败", flowID, nodeID)
 													nodeInfo = bson.M{}
 													continue
 												}
@@ -210,7 +566,7 @@ flowloop:
 											departmentMList := make([]map[string]interface{}, 0)
 											err := department.GetByList(ctx, redisClient, mongoClient, projectName, departmentStringIDList, &departmentMList)
 											if err != nil {
-												//logger.Errorf(eventDeviceModifyLog, "流程(%s)的部门缓存(%+v)查询失败", eventID, departmentStringIDList)
+												//logger.Errorf(eventDeviceModifyLog, "流程(%s)的部门缓存(%+v)查询失败", flowID, departmentStringIDList)
 												departmentMList = make([]map[string]interface{}, 0)
 											}
 
@@ -219,7 +575,7 @@ flowloop:
 											modelEle := bson.M{}
 											err = model.Get(ctx, redisClient, mongoClient, projectName, modelID, &modelEle)
 											if err != nil {
-												//logger.Errorf(eventDeviceModifyLog, "流程(%s)的模型缓存(%+v)查询失败", eventID, departmentStringIDList)
+												logger.Errorf("流程(%s)的模型缓存(%+v)查询失败", flowID, departmentStringIDList)
 												continue
 											}
 
@@ -238,6 +594,7 @@ flowloop:
 													if dashboardInfoID, ok := data["dashboard"].(string); ok {
 														data["#$dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
 													} else {
+														logger.Warnf("数据消息中dashboard字段类型不是字符串")
 														continue
 													}
 													//logger.Errorf(eventDeviceModifyLog, "数据消息中dashboard字段不存在或类型错误")
@@ -267,6 +624,7 @@ flowloop:
 											if contentInSettings, ok := settings["content"].(string); ok {
 												b, err := json.Marshal(data)
 												if err != nil {
+													logger.Errorf("资产修改事件的内容序列化失败:%s", err.Error())
 													continue
 												}
 												templateContent, err := TemplateVariableMappingFlow(ctx, apiClient, contentInSettings, string(b))
@@ -280,14 +638,15 @@ flowloop:
 											if flowXml, ok := flowInfo["flowXml"].(string); ok {
 												err = flowx.StartFlow(zbClient, flowXml, projectName, data)
 												if err != nil {
-													logger.Errorf("流程推进到下一阶段失败:%s", err.Error())
+													logger.Errorf("流程(%s)推进到下一阶段失败:%s",flowID, err.Error())
 												}
 											} else {
 												logger.Errorf("流程(%s)的xml不存在或类型错误", flowID)
 											}
-
+											logger.Errorf("流程(%s)推进到下一阶段成功",flowID)
 											continue flowloop
 										} else {
+											logger.Warnf("流程(%s)中未匹配到要修改的资产:%s",flowID, err.Error())
 											continue
 										}
 									}
@@ -295,14 +654,14 @@ flowloop:
 							}
 						}
 						//没有指定特定资产时，结合部门与模型进行判断
-						err = formatx.FormatObjectIDPrimitiveList(&settings, "department", "id")
+						err = formatx.FormatObjectToIDListMap(&settings, "department", "id")
 						if err != nil {
-							//logger.Warnln(eventDeviceModifyLog, "流程配置的部门对象中id字段不存在或类型错误")
+							logger.Warnln( "流程配置的部门对象中id字段不存在或类型错误")
 							continue
 						}
-						if ele, ok := settings["customModel"].(primitive.M); ok {
+						if ele, ok := settings["customModel"].(map[string]interface{}); ok {
 							if len(ele) != 0 {
-								err = formatx.FormatObjectIDPrimitiveList(&settings, "customModel", "id")
+								err = formatx.FormatObjectToIDListMap(&settings, "customModel", "id")
 								if err != nil {
 									logger.Warnln("流程配置的部门对象中id字段不存在或类型错误")
 									continue
@@ -348,27 +707,30 @@ flowloop:
 								isValid = true
 							}
 						} else {
+							logger.Warnf("流程(%s)中未匹配到要修改的资产(根据部门模型过滤):%s",flowID, err.Error())
 							continue
 						}
 					default:
-						//logger.Errorf(eventDeviceModifyLog, "流程(%s)的流程范围字段值(%s)未匹配到", eventID, rangType)
+						logger.Errorf("流程(%s)的流程范围字段值(%s)未匹配到", flowID, rangType)
 						continue
 					}
 				}
 				if isValid {
-					if modifyTypeAfterMapping == "修改资产属性" {
-						if props, ok := settings["prop"].(primitive.A); ok {
+					if modifyTypeAfterMapping == "编辑资产属性" {
+						if props, ok := settings["prop"].([]interface{}); ok {
 							if len(props) != 0 {
 								counter := 0
 								if dataMap, ok := data["data"].(map[string]interface{}); ok {
 									for _, prop := range props {
 										b, err := json.Marshal(prop)
 										if err != nil {
+											logger.Errorf("流程(%s)的资产属性配置数组序列化失败:%s", flowID, err.Error())
 											continue
 										}
 										logic := entity.Logic{}
 										err = json.Unmarshal(b, &logic)
 										if err != nil {
+											logger.Errorf("流程(%s)的资产属性配置数组解序列化失败:%s", flowID, err.Error())
 											continue
 										}
 										compare := logic.Compare
@@ -415,7 +777,7 @@ flowloop:
 										compare = logic.Compare
 										switch logic.PropType {
 										case "自定义属性":
-											if custom, ok := dataMap["custom"].(primitive.M); ok {
+											if custom, ok := dataMap["custom"].(map[string]interface{}); ok {
 												switch logic.DataType {
 												case "文本":
 													if custom[logic.ID] == compare.Value {
@@ -518,13 +880,12 @@ flowloop:
 														valueStringList := formatx.InterfaceListToStringList(valueList)
 														if dataVal, ok := custom[logic.ID]; ok {
 															if _, ok := dataVal.([]interface{}); ok {
-																err := formatx.FormatObjectIDPrimitiveList(&custom, logic.ID, "id")
+																err := formatx.FormatObjectToIDListMap(&custom, logic.ID, "id")
 																if err != nil {
 																	return fmt.Errorf("传入参数(%s)对象中没有id字段:%s", logic.ID, err.Error())
 																}
 																if dataValStringList, ok := custom[logic.ID].([]string); ok {
 																	if len(valueStringList) != len(dataValStringList) {
-																		counter++
 																		continue
 																	} else {
 																		matchMap := map[string]int{}
@@ -538,7 +899,7 @@ flowloop:
 																				matchMap[ele] = -1
 																			}
 																		}
-																		if len(matchMap) != 0{
+																		if len(matchMap) == 0 {
 																			counter++
 																		}
 																	}
@@ -648,16 +1009,24 @@ flowloop:
 												}
 											case "数组":
 												if valueList, ok := compare.Value.([]interface{}); ok {
-													valueStringList := formatx.InterfaceListToStringList(valueList)
 													if dataVal, ok := dataMap[logic.ID]; ok {
 														if _, ok := dataVal.([]interface{}); ok {
+															valueStringList := make([]string, 0)
+															for _, ele := range valueList {
+																if valueListM, ok := ele.(map[string]interface{}); ok {
+																	if idRaw, ok := valueListM["id"]; ok {
+																		if id, ok := idRaw.(string); ok {
+																			valueStringList = append(valueStringList, id)
+																		}
+																	}
+																}
+															}
 															err := formatx.FormatObjectToIDListMap(&dataMap, logic.ID, "id")
 															if err != nil {
 																return fmt.Errorf("传入参数(%s)对象中没有id字段:%s", logic.ID, err.Error())
 															}
 															if dataValStringList, ok := dataMap[logic.ID].([]string); ok {
 																if len(valueStringList) != len(dataValStringList) {
-																	counter++
 																	continue
 																} else {
 																	matchMap := map[string]int{}
@@ -671,13 +1040,21 @@ flowloop:
 																			matchMap[ele] = -1
 																		}
 																	}
-																	if len(matchMap) != 0{
+																	if len(matchMap) == 0 {
 																		counter++
 																	}
 																}
+															}else{
+																logger.Debugf("修改的变量不是字符串数组(%s)",flowID)
 															}
+														}else{
+															logger.Debugf("修改的变量不是数组(%s)",flowID)
 														}
+													}else{
+														logger.Debugf("修改的变量中没有配置里需要的(%s)",flowID)
 													}
+												}else{
+													logger.Debugf("数组型的prop值不是数组(%s)",flowID)
 												}
 											}
 										}
@@ -687,19 +1064,20 @@ flowloop:
 									continue
 								}
 								if counter == 0 {
-									logger.Debugf("传入的修改资产数据的修改字段未满足条件")
+									logger.Debugf("传入的修改资产数据的修改字段未满足条件(资产)")
 									continue
 								}
 							}
 						}
 					}
+
 					nodeInfo := bson.M{}
 					if initNode, ok := data["initNode"].(map[string]interface{}); ok {
 						nodeInfo = initNode
 					} else {
 						err = node.Get(ctx, redisClient, mongoClient, projectName, nodeID, &nodeInfo)
 						if err != nil {
-							//logger.Errorf(eventDeviceModifyLog, "流程(%s)的资产缓存(%+v)查询失败", eventID, nodeID)
+							logger.Errorf("流程(%s)的资产缓存(%+v)查询失败", flowID, nodeID)
 							nodeInfo = bson.M{}
 							continue
 						}
@@ -709,7 +1087,7 @@ flowloop:
 					departmentMList := make([]map[string]interface{}, 0)
 					err := department.GetByList(ctx, redisClient, mongoClient, projectName, departmentStringIDList, &departmentMList)
 					if err != nil {
-						//logger.Errorf(eventDeviceModifyLog, "流程(%s)的部门缓存(%+v)查询失败", eventID, departmentStringIDList)
+						//logger.Errorf(eventDeviceModifyLog, "流程(%s)的部门缓存(%+v)查询失败", flowID, departmentStringIDList)
 						departmentMList = make([]map[string]interface{}, 0)
 					}
 
@@ -718,7 +1096,7 @@ flowloop:
 					modelEle := bson.M{}
 					err = model.Get(ctx, redisClient, mongoClient, projectName, modelID, &modelEle)
 					if err != nil {
-						//logger.Errorf(eventDeviceModifyLog, "流程(%s)的模型缓存(%+v)查询失败", eventID, departmentStringIDList)
+						logger.Errorf( "流程(%s)的模型缓存(%+v)查询失败", flowID, departmentStringIDList)
 						continue
 					}
 
@@ -733,6 +1111,7 @@ flowloop:
 					if contentInSettings, ok := settings["content"].(string); ok {
 						b, err := json.Marshal(data)
 						if err != nil {
+							logger.Errorf(fmt.Sprintf("资产修改事件的内容序列化失败:%s", err.Error()))
 							continue
 						}
 						templateContent, err := TemplateVariableMappingFlow(ctx, apiClient, contentInSettings, string(b))
@@ -750,6 +1129,7 @@ flowloop:
 							if dashboardInfoID, ok := data["dashboard"].(string); ok {
 								data["#$dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
 							} else {
+								logger.Errorf("数据消息中dashboard字段类型不是字符串")
 								continue
 							}
 							//logger.Errorf(eventDeviceModifyLog, "数据消息中dashboard字段不存在或类型错误")
@@ -786,20 +1166,21 @@ flowloop:
 						logger.Errorf("流程(%s)的xml不存在或类型错误", flowID)
 						continue
 					}
+					logger.Errorf("流程(%s)推进到下一阶段成功:%s", flowID, err.Error())
 					hasExecute = true
 				}
 
 				//对只能执行一次的流程进行失效
 				//if validTime == "timeLimit" {
 				if rangeDefine == "once" && hasExecute {
-					//logger.Warnln(eventDeviceModifyLog, "流程(%s)为只执行一次的流程", eventID)
+					//logger.Warnln(eventDeviceModifyLog, "流程(%s)为只执行一次的流程", flowID)
 					//修改流程为失效
 					updateMap := bson.M{"invalid": true}
-					//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+					//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), flowID, updateMap)
 					var r = make(map[string]interface{})
 					err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
 					if err != nil {
-						//logger.Errorf(eventDeviceModifyLog, "失效流程(%s)失败:%s", eventID, err.Error())
+						//logger.Errorf(eventDeviceModifyLog, "失效流程(%s)失败:%s", flowID, err.Error())
 						continue
 					}
 				}
@@ -926,6 +1307,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 			"settings.eventType":  modifyTypeAfterMapping,
 			"settings.eventRange": "model",
 		},
+		"project": map[string]interface{}{"flowXml":1,"settings": 1, "invalid": 1, "disable": 1, "startTime": 1, "endTime": 1},
 	}
 
 	err := apiClient.FindFlowQuery(headerMap, query, &flowInfoList)
@@ -934,20 +1316,18 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 		return fmt.Errorf("获取当前资产修改内容类型(%s)的资产修改逻辑流程失败:%s", modelID, err.Error())
 	}
 
-	////logger.Debugf(eventDeviceModifyLog, "开始遍历流程列表")
 	for _, flowInfo := range flowInfoList {
 
 		//fmt.Println("data:", data)
 		//break
-
 		//logger.Debugf(eventDeviceModifyLog, "开始分析流程")
 		if flowID, ok := flowInfo["id"].(string); ok {
-			if settings, ok := flowInfo["settings"].(primitive.M); ok {
+			if settings, ok := flowInfo["settings"].(map[string]interface{}); ok {
 
 				//判断是否已经失效
 				if invalid, ok := flowInfo["invalid"].(bool); ok {
 					if invalid {
-						//logger.Warnln(eventLog, "流程(%s)已经失效", eventID)
+						logger.Warnln("流程(%s)已经失效", flowID)
 						continue
 					}
 				}
@@ -955,7 +1335,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 				//判断禁用
 				if disable, ok := flowInfo["disable"].(bool); ok {
 					if disable {
-						//logger.Warnln(eventDeviceModifyLog, "流程(%s)已经被禁用", eventID)
+						logger.Warnln("流程(%s)已经被禁用", flowID)
 						continue
 					}
 				}
@@ -970,7 +1350,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 				if startTime, ok := flowInfo["startTime"].(primitive.DateTime); ok {
 					startTimeInt := int64(startTime / 1e3)
 					if timex.GetLocalTimeNow(time.Now()).Unix() < startTimeInt {
-						//logger.Debugf(eventDeviceModifyLog, "流程(%s)的定时任务开始时间未到，不执行", eventID)
+						logger.Debugf("流程(%s)的定时任务开始时间未到，不执行", flowID)
 						continue
 					}
 				}
@@ -978,14 +1358,14 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 				if endTime, ok := flowInfo["endTime"].(primitive.DateTime); ok {
 					endTimeInt := int64(endTime / 1e3)
 					if timex.GetLocalTimeNow(time.Now()).Unix() >= endTimeInt {
-						//logger.Debugf(eventDeviceModifyLog, "流程(%s)的定时任务结束时间已到，不执行", eventID)
+						logger.Debugf("流程(%s)的定时任务结束时间已到，不执行", flowID)
 						//修改流程为失效
 						updateMap := bson.M{"invalid": true}
-						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+						//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), flowID, updateMap)
 						var r = make(map[string]interface{})
 						err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
 						if err != nil {
-							//logger.Errorf(eventDeviceModifyLog, "失效流程(%s)失败:%s", eventID, err.Error())
+							logger.Errorf("失效流程(%s)失败:%s", flowID, err.Error())
 							continue
 						}
 						continue
@@ -1012,7 +1392,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 					case "model":
 						modelListInSettings := make([]string, 0)
 						//没有指定特定资产时，结合部门与模型进行判断
-						err = formatx.FormatObjectIDPrimitiveList(&settings, "model", "id")
+						err = formatx.FormatObjectToIDListMap(&settings, "model", "id")
 						if err != nil {
 							logger.Warnln("流程配置的模型对象中id字段不存在或类型错误")
 							continue
@@ -1028,16 +1408,17 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 							}
 						}
 					default:
-						//logger.Errorf(eventDeviceModifyLog, "流程(%s)的流程范围字段值(%s)未匹配到", eventID, rangType)
+						logger.Errorf("流程(%s)的流程范围字段值(%s)未匹配到", flowID, rangType)
 						continue
 					}
 				}
+				//fmt.Println("isValid:", isValid)
 				if isValid {
 					departmentStringIDList := departmentObjectIDList
 					departmentMList := make([]map[string]interface{}, 0)
 					err := department.GetByList(ctx, redisClient, mongoClient, projectName, departmentStringIDList, &departmentMList)
 					if err != nil {
-						//logger.Errorf(eventDeviceModifyLog, "流程(%s)的部门缓存(%+v)查询失败", eventID, departmentStringIDList)
+						logger.Errorf("流程(%s)的部门缓存(%+v)查询失败", flowID, departmentStringIDList)
 						departmentMList = make([]map[string]interface{}, 0)
 					}
 
@@ -1046,7 +1427,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 					modelEle := bson.M{}
 					err = model.Get(ctx, redisClient, mongoClient, projectName, modelID, &modelEle)
 					if err != nil {
-						//logger.Errorf(eventDeviceModifyLog, "流程(%s)的模型缓存(%+v)查询失败", eventID, departmentStringIDList)
+						logger.Errorf("流程(%s)的模型缓存(%+v)查询失败", flowID, departmentStringIDList)
 						continue
 					}
 
@@ -1067,6 +1448,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 							if dashboardInfoID, ok := data["dashboard"].(string); ok {
 								data["#$dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
 							} else {
+								logger.Errorf("数据消息中dashboard字段类型不是字符串")
 								continue
 							}
 							//logger.Errorf(eventDeviceModifyLog, "数据消息中dashboard字段不存在或类型错误")
@@ -1102,20 +1484,21 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 						logger.Errorf("流程(%s)的xml不存在或类型错误", flowID)
 						continue
 					}
+					logger.Errorf("流程(%s)推进到下一阶段成功", flowID)
 					hasExecute = true
 				}
 
 				//对只能执行一次的流程进行失效
 				//if validTime == "timeLimit" {
 				if rangeDefine == "once" && hasExecute {
-					//logger.Warnln(eventDeviceModifyLog, "流程(%s)为只执行一次的流程", eventID)
+					//logger.Warnln(eventDeviceModifyLog, "流程(%s)为只执行一次的流程", flowID)
 					//修改流程为失效
 					updateMap := bson.M{"invalid": true}
-					//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), eventID, updateMap)
+					//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("event"), flowID, updateMap)
 					var r = make(map[string]interface{})
 					err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
 					if err != nil {
-						//logger.Errorf(eventDeviceModifyLog, "失效流程(%s)失败:%s", eventID, err.Error())
+						logger.Errorf("失效流程(%s)失败:%s", flowID, err.Error())
 						continue
 					}
 				}
