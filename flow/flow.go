@@ -102,6 +102,14 @@ func FindExtra(ctx context.Context, apiClient api.Client, param string, variable
 		if err := apiClient.FindModelById(map[string]string{ginx.XRequestProject: projectID}, id, &val); err != nil {
 			return nil, fmt.Errorf("查询模型错误: %v", err)
 		}
+	case "user":
+		if err := apiClient.FindUserById(map[string]string{ginx.XRequestProject: projectID}, id, &val); err != nil {
+			return nil, fmt.Errorf("查询用户错误: %v", err)
+		}
+	case "department":
+		if err := apiClient.FindDepartmentById(map[string]string{ginx.XRequestProject: projectID}, id, &val); err != nil {
+			return nil, fmt.Errorf("查询部门错误: %v", err)
+		}
 	}
 	dataBytes, err := json.Marshal(val)
 	if err != nil {

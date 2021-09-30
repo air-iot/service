@@ -1259,3 +1259,12 @@ func (p *client) ReplaceSystemVariableById(headers map[string]string, id string,
 	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/systemVariable/%s", id)}
 	return p.Put(u, headers, data, result)
 }
+
+func (p *client) FindDepartmentById(headers map[string]string, id string, result interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "core:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/department/%s", id)}
+	return p.Get(u, headers, result)
+}
