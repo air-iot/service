@@ -281,6 +281,63 @@ func flowHandler(ctx context.Context, client worker.JobClient, job entities.Job,
 	return nil
 }
 
+func FlowTask(ctx context.Context, client worker.JobClient, job entities.Job, apiClient api.Client) {
+	if err := flowTaskHandler(ctx, client, job, apiClient); err != nil {
+		logger.Errorf("流程 [%s] %s", job.GetBpmnProcessId(), err.Error())
+		if err := zeebe.FailJob(ctx, client, job, err.Error()); err != nil {
+			logger.Errorf("流程 [%s] 失败请求错误: %s", job.GetBpmnProcessId(), err.Error())
+		}
+		return
+	}
+	logger.Debugf("执行任务 [%s] 成功", job.GetBpmnProcessId())
+}
+
+func flowTaskHandler(ctx context.Context, client worker.JobClient, job entities.Job, apiClient api.Client) error {
+	jobKey := job.GetKey()
+	headers, err := job.GetCustomHeadersAsMap()
+	if err != nil {
+		return fmt.Errorf("获取header错误: %s", err.Error())
+	}
+	conf, ok := headers["config"]
+	if !ok {
+		return fmt.Errorf("未找到配置字段")
+	}
+	logger.Debugf("流程 [%s] 头数据: %+v", job.GetBpmnProcessId(), headers)
+	variables, err := job.GetVariablesAsMap()
+	if err != nil {
+		return fmt.Errorf("获取变量错误: %s", err.Error())
+	}
+	logger.Debugf("流程 [%s] 变量数据: %+v", job.GetBpmnProcessId(), variables)
+	variablesBytes, err := json.Marshal(variables)
+	if err != nil {
+		return err
+	}
+	projectIDResult := gjson.GetBytes(variablesBytes, "#project")
+	if !projectIDResult.Exists() {
+		return fmt.Errorf("未找到项目ID")
+	}
+	projectID := projectIDResult.String()
+	var configMap interface{}
+	if err := json.Unmarshal([]byte(conf), &configMap); err != nil {
+		return fmt.Errorf("转换配置信息错误: %s", err.Error())
+	}
+	data, err := ConvertVariable(ctx, apiClient, variablesBytes, configMap)
+	if err != nil {
+		return fmt.Errorf("变量替换错误: %s", err.Error())
+	}
+	logger.Debugf("处理后的数据: %+v", data)
+	dataMap, ok := data.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("转换数据格式非对象")
+	}
+	dataMap["jobKey"] = jobKey
+	result := make(map[string]interface{})
+	if err := apiClient.SaveFlowTask(map[string]string{ginx.XRequestProject: projectID}, data, result); err != nil {
+		return fmt.Errorf("保存任务错误: %s", err.Error())
+	}
+	return nil
+}
+
 // ConvertVariable 替换变量值
 func ConvertVariable(ctx context.Context, apiClient api.Client, variables []byte, config interface{}) (interface{}, error) {
 	switch val := config.(type) {

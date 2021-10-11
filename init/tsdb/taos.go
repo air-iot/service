@@ -11,7 +11,6 @@ import (
 	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/jmoiron/sqlx"
 
-	"github.com/air-iot/service/config"
 	"github.com/air-iot/service/logger"
 	"github.com/air-iot/service/util/timex"
 )
@@ -25,27 +24,26 @@ const (
 
 // Taos taos客户端
 type Taos struct {
-	cfg config.Taos
+	cli     *sqlx.DB
+	maxConn int
 }
 
 // NewTaos 创建Taos存储
-func NewTaos(cfg config.Taos) TSDB {
+func NewTaos(cli *sqlx.DB, maxConn int) TSDB {
 	a := new(Taos)
-	a.cfg = cfg
+	a.cli = cli
 	return a
 }
 
 func (a *Taos) Write(ctx context.Context, database string, rows []Row) (err error) {
 	wg := sync.WaitGroup{}
-	ch := make(chan struct{}, a.cfg.MaxConn)
+	ch := make(chan struct{}, a.maxConn)
 	wg.Add(len(rows))
 	for i := 0; i < len(rows); i++ {
 		ch <- struct{}{}
 		go func(database string, sqlTmp Row) {
 			defer wg.Done()
-			if err := a.insert(ctx, database, sqlTmp); err != nil {
-				logger.Errorf(err.Error())
-			}
+			a.insertControl(ctx, database, sqlTmp)
 			<-ch
 		}(database, rows[i])
 	}
@@ -72,16 +70,6 @@ func (a *Taos) insertControl(ctx context.Context, database string, row Row) {
 }
 
 func (a *Taos) insert(ctx context.Context, database string, row Row) (err error) {
-	db, err := sqlx.Open("taosSql", a.cfg.Addr)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := db.Close(); err != nil {
-			logger.Errorf("关闭连接错误: %s", err.Error())
-		}
-	}()
-
 	if len(row.Fields) == 0 {
 		return nil
 	}
@@ -131,22 +119,22 @@ func (a *Taos) insert(ctx context.Context, database string, row Row) (err error)
 	querySql := fmt.Sprintf(`select last_row(*) from %s.m_%s`, database, row.TableName)
 
 	//logger.Infof("插入数据sql: %s", insertSql)
-	_, err = db.ExecContext(ctx, insertSql)
+	_, err = a.cli.ExecContext(ctx, insertSql)
 	if err != nil {
 		if strings.Contains(err.Error(), TableNotExistMsg) {
 			logger.Debugf(err.Error())
-			_, err := db.ExecContext(ctx, createStbSql)
+			_, err := a.cli.ExecContext(ctx, createStbSql)
 			if err != nil {
 				return fmt.Errorf("create table SQL [%s] 错误: %s", createStbSql, err.Error())
 			}
-			_, err = db.ExecContext(ctx, insertSql)
+			_, err = a.cli.ExecContext(ctx, insertSql)
 			if err != nil {
 				return fmt.Errorf("创建表后插入 [%s]数据错误: %s", insertSql, err.Error())
 			}
 		} else if strings.Contains(err.Error(), InvalidColumnNameMsg) || strings.Contains(err.Error(), InvalidColumnTagNameMsg) {
 			logger.Debugf(err.Error())
 			colMap := make(map[string]string)
-			res, err := db.QueryContext(ctx, querySql)
+			res, err := a.cli.QueryContext(ctx, querySql)
 			if err != nil {
 				return fmt.Errorf("查询 SQL [%s] 表结构错误: %s", querySql, err.Error())
 			}
@@ -170,28 +158,28 @@ func (a *Taos) insert(ctx context.Context, database string, row Row) (err error)
 					}
 
 					stbSql := fmt.Sprintf("alter table %s.m_%s add column %s", database, row.TableName, nameType)
-					_, err := db.ExecContext(ctx, stbSql)
+					_, err := a.cli.ExecContext(ctx, stbSql)
 					if err != nil {
 						return fmt.Errorf("添加列 SQL [%s] 错误: %s", querySql, err.Error())
 					}
 				}
 			}
-			_, err = db.ExecContext(ctx, insertSql)
+			_, err = a.cli.ExecContext(ctx, insertSql)
 			if err != nil {
 				return fmt.Errorf("添加列后插入 [%s] 数据错误: %s", insertSql, err.Error())
 			}
 		} else if strings.Contains(err.Error(), DatabaseNotAvailableMsg) {
 			logger.Debugf(err.Error())
 			createDatabase := fmt.Sprintf("create database %s", database)
-			_, err := db.ExecContext(ctx, createDatabase)
+			_, err := a.cli.ExecContext(ctx, createDatabase)
 			if err != nil {
 				return fmt.Errorf("create database SQL [%s] 错误: %s", createDatabase, err.Error())
 			}
-			_, err = db.ExecContext(ctx, createStbSql)
+			_, err = a.cli.ExecContext(ctx, createStbSql)
 			if err != nil {
 				return fmt.Errorf("create table SQL [%s] 错误: %s", createStbSql, err.Error())
 			}
-			_, err = db.ExecContext(ctx, insertSql)
+			_, err = a.cli.ExecContext(ctx, insertSql)
 			if err != nil {
 				return fmt.Errorf("创建数据库及表后插入 [%s] 数据错误: %s", insertSql, err.Error())
 			}
@@ -201,7 +189,7 @@ func (a *Taos) insert(ctx context.Context, database string, row Row) (err error)
 	}
 
 	queryTags := fmt.Sprintf(`select id,department from %s.n_%s`, database, row.SubTableName)
-	res, err := db.QueryContext(ctx, queryTags)
+	res, err := a.cli.QueryContext(ctx, queryTags)
 	if err != nil {
 		return fmt.Errorf("查询 [%s] 表tag数据错误: %s", queryTags, err.Error())
 	}
@@ -217,7 +205,7 @@ func (a *Taos) insert(ctx context.Context, database string, row Row) (err error)
 		case "id":
 			if id != value {
 				alterSql := fmt.Sprintf("alter table %s.n_%s SET TAG %s='%s'", database, row.SubTableName, name, value)
-				_, err := db.ExecContext(ctx, alterSql)
+				_, err := a.cli.ExecContext(ctx, alterSql)
 				if err != nil {
 					logger.Errorf("修改表tag值 [%s] 执行错误: %s,", alterSql, err.Error())
 				} else {
@@ -227,7 +215,7 @@ func (a *Taos) insert(ctx context.Context, database string, row Row) (err error)
 		case "department":
 			if department != value {
 				alterSql := fmt.Sprintf("alter table %s.n_%s SET TAG %s='%s'", database, row.SubTableName, name, value)
-				_, err := db.ExecContext(ctx, alterSql)
+				_, err := a.cli.ExecContext(ctx, alterSql)
 				if err != nil {
 					logger.Errorf("修改表tag值 [%s] 执行错误: %s,", alterSql, err.Error())
 				} else {
@@ -242,17 +230,17 @@ func (a *Taos) insert(ctx context.Context, database string, row Row) (err error)
 }
 
 func (a *Taos) Query(ctx context.Context, database string, sql string) (res []client.Result, err error) {
-	db, err := sqlx.Open("taosSql", a.cfg.Addr)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err := db.Close(); err != nil {
-			logger.Errorf("关闭连接错误: %s", err.Error())
-		}
-	}()
+	//db, err := sqlx.Open("taosSql", a.cfg.Addr)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//defer func() {
+	//	if err := a.cli.Close(); err != nil {
+	//		logger.Errorf("关闭连接错误: %s", err.Error())
+	//	}
+	//}()
 	_ = database
-	colList, resultCombineList, err := a.query(ctx, db, sql)
+	colList, resultCombineList, err := a.query(ctx, sql)
 	if err != nil {
 		return nil, err
 	}
@@ -268,11 +256,12 @@ func (a *Taos) Query(ctx context.Context, database string, sql string) (res []cl
 	}, nil
 }
 
-func (a *Taos) query(ctx context.Context, db *sqlx.DB, sqlString string) ([]string, [][]interface{}, error) {
-	rows, err := db.QueryxContext(ctx, sqlString) // go text mode
+func (a *Taos) query(ctx context.Context, sqlString string) ([]string, [][]interface{}, error) {
+	rows, err := a.cli.QueryxContext(ctx, sqlString) // go text mode
 	if err != nil {
 		return nil, nil, fmt.Errorf("查询错误: %s", err.Error())
 	}
+	defer rows.Close()
 	colList, err := rows.Columns()
 	if err != nil {
 		return nil, nil, fmt.Errorf("columns获取失败: %s", err.Error())
@@ -554,7 +543,7 @@ func (a *Taos) QueryFilter(ctx context.Context, database string, query []map[str
 	//		if tableName == "" {
 	//			queryNodeMap := &bson.M{"filter": bson.M{"name": modelName}}
 	//			modelInfoList := make([]bson.M, 0)
-	//			_, err := p.FindFilter(*ctx, idb.Database.Collection(model.MODEL), &modelInfoList, *queryNodeMap, func(d *bson.M) {})
+	//			_, err := p.FindFilter(*ctx, ia.cli.Database.Collection(model.MODEL), &modelInfoList, *queryNodeMap, func(d *bson.M) {})
 	//			if err != nil {
 	//				return nil, fmt.Errorf("查询模型名称为(%s)的模型的ID失败", modelName)
 	//			}
@@ -575,7 +564,7 @@ func (a *Taos) QueryFilter(ctx context.Context, database string, query []map[str
 	//		if tableName == "" {
 	//			queryNodeMap := &bson.M{"filter": bson.M{"uid": uid}}
 	//			nodeInfoList := make([]bson.M, 0)
-	//			_, err := p.FindFilter(*ctx, idb.Database.Collection(model.NODE), &nodeInfoList, *queryNodeMap, func(d *bson.M) {})
+	//			_, err := p.FindFilter(*ctx, ia.cli.Database.Collection(model.NODE), &nodeInfoList, *queryNodeMap, func(d *bson.M) {})
 	//			if err != nil {
 	//				return nil, fmt.Errorf("查询资产编号(%s)的资产信息失败", uid)
 	//			}
@@ -596,7 +585,7 @@ func (a *Taos) QueryFilter(ctx context.Context, database string, query []map[str
 	//	if id, ok := val["id"].(string); ok {
 	//		if tableName == "" {
 	//			nodeInfo := bson.M{}
-	//			err := p.FindByID(*ctx, idb.Database.Collection(model.NODE), &nodeInfo, id, func(d *bson.M) {})
+	//			err := p.FindByID(*ctx, ia.cli.Database.Collection(model.NODE), &nodeInfo, id, func(d *bson.M) {})
 	//			if err != nil {
 	//				return nil, fmt.Errorf("查询资产ID(%s)的资产信息失败", id)
 	//			}
@@ -813,18 +802,18 @@ func (a *Taos) QueryFilter(ctx context.Context, database string, query []map[str
 	//
 	//	sqlString = sqlString + fmt.Sprintf("select %s from m_%s %s %s %s %s %s %s %s %s %s %s %s ;", fieldsList, tableName, assetUIDList, assetIDList, departmentIDList, andDeptIDList, whereList, interval, groupByList, fillValue, orderByValue, limitValue, offsetValue)
 	//	var queryFunc = func(sqlString string) ([]string, [][]interface{}, error) {
-	//		//db, err := itaos.DB.Get()
+	//		//db, err := itaos.a.cli.Get()
 	//		//if err != nil {
 	//		//	return nil, nil, fmt.Errorf("taos 获取连接失败:%s", err.Error())
 	//		//}
-	//		//defer itaos.DB.Put(db)
+	//		//defer itaos.a.cli.Put(db)
 	//
 	//		//db, err := itaos.GetDB()
 	//		//if err != nil {
 	//		//	return nil, nil, fmt.Errorf("taos 获取连接失败:%s", err.Error())
 	//		//}
-	//		//defer db.Close()
-	//		rows, err := taos.DB.GetDB().Queryx(sqlString) // go text mode
+	//		//defer a.cli.Close()
+	//		rows, err := taos.a.cli.GetDB().Queryx(sqlString) // go text mode
 	//		if err != nil {
 	//			return nil, nil, fmt.Errorf("taos SQL查询错误:%+v", err)
 	//		}

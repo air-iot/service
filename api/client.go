@@ -1268,3 +1268,64 @@ func (p *client) FindDepartmentById(headers map[string]string, id string, result
 	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/department/%s", id)}
 	return p.Get(u, headers, result)
 }
+
+func (p *client) FindFlowTaskQuery(headers map[string]string, query, result interface{}) error {
+	b, err := json.Marshal(query)
+	if err != nil {
+		return err
+	}
+	host := p.cfg.Host
+	if host == "" {
+		host = "flow:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "flow/flowTask"}
+	v := url.Values{}
+	v.Set("query", string(b))
+	u.RawQuery = v.Encode()
+	return p.Get(u, headers, result)
+}
+
+func (p *client) FindFlowTaskById(headers map[string]string, id string, result interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "flow:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("flow/flowTask/%s", id)}
+	return p.Get(u, headers, result)
+}
+
+func (p *client) SaveFlowTask(headers map[string]string, data, result interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "flow:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "flow/flowTask"}
+	return p.Post(u, headers, data, result)
+}
+
+func (p *client) DelFlowTaskById(headers map[string]string, id string, result interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "flow:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("flow/flowTask/%s", id)}
+	return p.Delete(u, headers, result)
+}
+
+func (p *client) UpdateFlowTaskById(headers map[string]string, id string, data, result interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "flow:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("flow/flowTask/%s", id)}
+	return p.Patch(u, headers, data, result)
+}
+
+func (p *client) ReplaceFlowTaskById(headers map[string]string, id string, data, result interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "flow:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("flow/flowTask/%s", id)}
+	return p.Put(u, headers, data, result)
+}
