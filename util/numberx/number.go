@@ -17,6 +17,9 @@ func IsNumber(data string) bool {
 }
 
 func GetIntNumberFromMongoDB(data primitive.M, key string) (int, error) {
+	if data[key] == nil{
+		return 0, fmt.Errorf("该字段值为空")
+	}
 	number := 0
 	numberInDB, ok := data[key].(int32)
 	if !ok {
@@ -43,6 +46,9 @@ func GetIntNumberFromMongoDB(data primitive.M, key string) (int, error) {
 }
 
 func GetFloat64NumberFromMongoDB(data primitive.M, key string) (float64, error) {
+	if data[key] == nil{
+		return 0, fmt.Errorf("该字段值为空")
+	}
 	number := float64(0)
 	numberInDB, ok := data[key].(int32)
 	if !ok {
@@ -69,6 +75,9 @@ func GetFloat64NumberFromMongoDB(data primitive.M, key string) (float64, error) 
 }
 
 func GetFloatNumber(data interface{}) (float64, error) {
+	if data == nil{
+		return 0, fmt.Errorf("该字段值为空")
+	}
 	number := float64(0)
 	numberInDBFloat32, ok := data.(float32)
 	if !ok {
