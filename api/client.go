@@ -1285,13 +1285,39 @@ func (p *client) FindFlowTaskQuery(headers map[string]string, query, result inte
 	return p.Get(u, headers, result)
 }
 
-func (p *client) FindFlowTaskById(headers map[string]string, id string, result interface{}) error {
+func (p *client) FindFlowTaskById(headers map[string]string, id string, result interface{}) (int, error) {
 	host := p.cfg.Host
 	if host == "" {
 		host = "flow:9000"
 	}
 	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("flow/flowTask/%s", id)}
-	return p.Get(u, headers, result)
+	project, ok := headers[ginx.XRequestProject]
+	if !ok {
+		project = ginx.XRequestProjectDefault
+		headers[ginx.XRequestProject] = ginx.XRequestProjectDefault
+	}
+
+	token, err := p.FindToken(project)
+	if err != nil {
+		return 400, err
+	}
+	for k, v := range p.headers {
+		if _, ok := headers[k]; !ok {
+			headers[k] = v
+		}
+	}
+	headers[ginx.XRequestHeaderAuthorization] = fmt.Sprintf("%s %s", token.TokenType, token.AccessToken)
+	resp, err := resty.New().SetTimeout(time.Second * time.Duration(p.cfg.Timeout)).R().
+		SetHeaders(headers).
+		SetResult(result).
+		Get(u.String())
+	if err != nil {
+		return 400, err
+	}
+	if resp.StatusCode() >= 200 && resp.StatusCode() <= 204 {
+		return resp.StatusCode(), nil
+	}
+	return resp.StatusCode(), errors.New(resp.String())
 }
 
 func (p *client) SaveFlowTask(headers map[string]string, data, result interface{}) error {

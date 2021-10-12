@@ -13,6 +13,7 @@ import (
 	"github.com/camunda-cloud/zeebe/clients/go/pkg/worker"
 	"github.com/tidwall/gjson"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -281,8 +282,8 @@ func flowHandler(ctx context.Context, client worker.JobClient, job entities.Job,
 	return nil
 }
 
-func FlowTask(ctx context.Context, client worker.JobClient, job entities.Job, apiClient api.Client) {
-	if err := flowTaskHandler(ctx, client, job, apiClient); err != nil {
+func FlowTask(ctx context.Context, client worker.JobClient, job entities.Job, apiClient api.Client, handler Handler) {
+	if err := flowTaskHandler(ctx, client, job, apiClient, handler); err != nil {
 		logger.Errorf("流程 [%s] %s", job.GetBpmnProcessId(), err.Error())
 		if err := zeebe.FailJob(ctx, client, job, err.Error()); err != nil {
 			logger.Errorf("流程 [%s] 失败请求错误: %s", job.GetBpmnProcessId(), err.Error())
@@ -292,8 +293,9 @@ func FlowTask(ctx context.Context, client worker.JobClient, job entities.Job, ap
 	logger.Debugf("执行任务 [%s] 成功", job.GetBpmnProcessId())
 }
 
-func flowTaskHandler(ctx context.Context, client worker.JobClient, job entities.Job, apiClient api.Client) error {
+func flowTaskHandler(ctx context.Context, client worker.JobClient, job entities.Job, apiClient api.Client, handler Handler) error {
 	jobKey := job.GetKey()
+	id := strconv.Itoa(int(jobKey))
 	headers, err := job.GetCustomHeadersAsMap()
 	if err != nil {
 		return fmt.Errorf("获取header错误: %s", err.Error())
@@ -317,6 +319,16 @@ func flowTaskHandler(ctx context.Context, client worker.JobClient, job entities.
 		return fmt.Errorf("未找到项目ID")
 	}
 	projectID := projectIDResult.String()
+	result := make(map[string]interface{})
+	resCode, err := apiClient.FindFlowTaskById(map[string]string{ginx.XRequestProject: projectID}, id, &result)
+	if resCode != 200 && resCode != 404 && err != nil {
+		return fmt.Errorf("根据jobKey查询任务错误: %s", err.Error())
+	}
+
+	if resCode == 200 && len(result) > 0 {
+		logger.Debugf("流程jobKey [%d] 存在", jobKey)
+		return nil
+	}
 	var configMap interface{}
 	if err := json.Unmarshal([]byte(conf), &configMap); err != nil {
 		return fmt.Errorf("转换配置信息错误: %s", err.Error())
@@ -326,13 +338,23 @@ func flowTaskHandler(ctx context.Context, client worker.JobClient, job entities.
 		return fmt.Errorf("变量替换错误: %s", err.Error())
 	}
 	logger.Debugf("处理后的数据: %+v", data)
-	dataMap, ok := data.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("转换数据格式非对象")
+	//dataMap, ok := data.(map[string]interface{})
+	//if !ok {
+	//	return fmt.Errorf("转换数据格式非对象")
+	//}
+	handlerResult, err := handler(projectID, data)
+	if err != nil {
+		return fmt.Errorf("handler错误: %s", err.Error())
 	}
-	dataMap["jobKey"] = jobKey
-	result := make(map[string]interface{})
-	if err := apiClient.SaveFlowTask(map[string]string{ginx.XRequestProject: projectID}, data, result); err != nil {
+
+	handlerResult["id"] = id
+	handlerResult["jobKey"] = jobKey
+	handlerResult["elementId"] = job.GetElementId()
+	handlerResult["bpmnProcessId"] = job.GetBpmnProcessId()
+	handlerResult["process"] = "START"
+	handlerResult["variables"] = variables
+	//result = make(map[string]interface{})
+	if err := apiClient.SaveFlowTask(map[string]string{ginx.XRequestProject: projectID}, handlerResult, result); err != nil {
 		return fmt.Errorf("保存任务错误: %s", err.Error())
 	}
 	return nil
