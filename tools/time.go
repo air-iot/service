@@ -147,30 +147,32 @@ func GetUnixToOldYearQuarterTime(i, month int) time.Time {
 
 func FormatTimeFormat(data string) string {
 	formatLayout := "2006-01-02T15:04:05"
-	if !strings.Contains(data,"T"){
+	if !strings.Contains(data, "T") {
 		formatLayout = "2006-01-02 15:04:05"
 	}
 	if strings.Contains(data, "Z") {
 		switch len(data) {
 		case 20:
 			formatLayout = formatLayout + "Z"
-		case 21:
-			formatLayout = formatLayout + ".0Z"
-		case 22:
-			formatLayout = formatLayout + ".00Z"
-		case 23:
-			formatLayout = formatLayout + ".000Z"
+		}
+		if len(data) > 21 {
+			formatLayout += "."
+			for i := 1; i <= len(data)-21; i++ {
+				formatLayout += "0"
+			}
+			formatLayout += "Z"
 		}
 	} else {
 		switch len(data) {
 		case 25:
 			formatLayout = formatLayout + data[len(data)-6:]
-		case 27:
-			formatLayout = formatLayout + ".0" + data[len(data)-6:]
-		case 28:
-			formatLayout = formatLayout + ".00" + data[len(data)-6:]
-		case 29:
-			formatLayout = formatLayout + ".000" + data[len(data)-6:]
+		}
+		if len(data) > 26 {
+			formatLayout += "."
+			for i := 1; i <= len(data)-26; i++ {
+				formatLayout += "0"
+			}
+			formatLayout += data[len(data)-6:]
 		}
 	}
 	return formatLayout
