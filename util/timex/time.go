@@ -187,7 +187,9 @@ func FormatTimeFormat(data string) string {
 	if !strings.Contains(data, "T") {
 		formatLayout = "2006-01-02 15:04:05"
 	}
-	if strings.Contains(data, "Z") {
+	if len(data) == len("2006-01-02") {
+		formatLayout = "2006-01-02"
+	} else if strings.Contains(data, "Z") {
 		switch len(data) {
 		case 20:
 			formatLayout = formatLayout + "Z"
