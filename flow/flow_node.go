@@ -258,7 +258,7 @@ flowloop:
 																case "自定义属性":
 																	if custom, ok := dataMap["custom"].(map[string]interface{}); ok {
 																		switch logic.DataType {
-																		case "文本":
+																		case "字符串":
 																			if custom[logic.ID] == compare.Value {
 																				counter++
 																			}
@@ -266,7 +266,7 @@ flowloop:
 																			if custom[logic.ID] == compare.Value {
 																				counter++
 																			}
-																		case "数值":
+																		case "数字":
 																			if custom[logic.ID] == compare.Value {
 																				counter++
 																			}
@@ -350,7 +350,7 @@ flowloop:
 																					counter++
 																				}
 																			}
-																		case "布尔值", "附件", "定位":
+																		case "布尔", "附件", "定位":
 																			if custom[logic.ID] == compare.Value {
 																				counter++
 																			}
@@ -390,7 +390,7 @@ flowloop:
 																	}
 																case "内置属性":
 																	switch logic.DataType {
-																	case "文本":
+																	case "字符串":
 																		if dataMap[logic.ID] == compare.Value {
 																			counter++
 																		}
@@ -398,7 +398,7 @@ flowloop:
 																		if dataMap[logic.ID] == compare.Value {
 																			counter++
 																		}
-																	case "数值":
+																	case "数字":
 																		if dataMap[logic.ID] == compare.Value {
 																			counter++
 																		}
@@ -482,7 +482,7 @@ flowloop:
 																				counter++
 																			}
 																		}
-																	case "布尔值", "附件", "定位":
+																	case "布尔", "附件", "定位":
 																		if dataMap[logic.ID] == compare.Value {
 																			counter++
 																		}
@@ -779,7 +779,7 @@ flowloop:
 										case "自定义属性":
 											if custom, ok := dataMap["custom"].(map[string]interface{}); ok {
 												switch logic.DataType {
-												case "文本":
+												case "字符串":
 													if custom[logic.ID] == compare.Value {
 														counter++
 													}
@@ -787,7 +787,7 @@ flowloop:
 													if custom[logic.ID] == compare.Value {
 														counter++
 													}
-												case "数值":
+												case "数字":
 													if custom[logic.ID] == compare.Value {
 														counter++
 													}
@@ -871,7 +871,7 @@ flowloop:
 															counter++
 														}
 													}
-												case "布尔值", "附件", "定位":
+												case "布尔", "附件", "定位":
 													if custom[logic.ID] == compare.Value {
 														counter++
 													}
@@ -911,7 +911,7 @@ flowloop:
 											}
 										case "内置属性":
 											switch logic.DataType {
-											case "文本":
+											case "字符串":
 												if dataMap[logic.ID] == compare.Value {
 													counter++
 												}
@@ -919,7 +919,7 @@ flowloop:
 												if dataMap[logic.ID] == compare.Value {
 													counter++
 												}
-											case "数值":
+											case "数字":
 												if dataMap[logic.ID] == compare.Value {
 													counter++
 												}
@@ -1003,7 +1003,7 @@ flowloop:
 														counter++
 													}
 												}
-											case "布尔值", "附件", "定位":
+											case "布尔", "附件", "定位":
 												if dataMap[logic.ID] == compare.Value {
 													counter++
 												}
