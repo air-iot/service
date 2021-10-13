@@ -133,7 +133,7 @@ type Client interface {
 	FindDepartmentById(headers map[string]string, id string, result interface{}) error
 
 	FindFlowTaskQuery(headers map[string]string, query, result interface{}) error
-	FindFlowTaskById(headers map[string]string, id string, result interface{}) error
+	FindFlowTaskById(headers map[string]string, id string, result interface{}) (int, error)
 	SaveFlowTask(headers map[string]string, data, result interface{}) error
 	DelFlowTaskById(headers map[string]string, id string, result interface{}) error
 	UpdateFlowTaskById(headers map[string]string, id string, data, result interface{}) error
