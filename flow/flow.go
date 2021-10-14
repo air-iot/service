@@ -22,6 +22,14 @@ var Reg, _ = regexp.Compile("\\${(.+?)}")
 
 const ExtraSymbol = "#$"
 
+type HandlerType string
+
+const (
+	CC      HandlerType = "cc"
+	FILLIN  HandlerType = "fillin"
+	APPROVE HandlerType = "approve"
+)
+
 type SystemVariable struct {
 	Uid   string      `json:"uid"`
 	Type  string      `json:"type"`
@@ -346,15 +354,8 @@ func flowTaskHandler(ctx context.Context, client worker.JobClient, job entities.
 	if err != nil {
 		return fmt.Errorf("handler错误: %s", err.Error())
 	}
-
-	handlerResult["id"] = id
-	handlerResult["jobKey"] = jobKey
-	handlerResult["elementId"] = job.GetElementId()
-	handlerResult["bpmnProcessId"] = job.GetBpmnProcessId()
-	handlerResult["process"] = "START"
-	handlerResult["variables"] = variables
 	//result = make(map[string]interface{})
-	if err := apiClient.SaveFlowTask(map[string]string{ginx.XRequestProject: projectID}, handlerResult, result); err != nil {
+	if err := apiClient.SaveFlowTask(map[string]string{ginx.XRequestProject: projectID}, handlerResult, &result); err != nil {
 		return fmt.Errorf("保存任务错误: %s", err.Error())
 	}
 	return nil
