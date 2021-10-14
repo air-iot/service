@@ -293,6 +293,10 @@ func (p *APIView) FindQueryConvertPipeline(query bson.M) (mongo.Pipeline, mongo.
 	if sort, ok := query["sort"]; ok {
 		if s, ok := sort.(bson.M); ok {
 			if len(s) > 0 {
+				if sID, ok := s["id"]; ok {
+					s["_id"] = sID
+					delete(s, "id")
+				}
 				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
 			}
 		}
@@ -611,6 +615,10 @@ func (p *APIView) FindFilter(ctx context.Context, col *mongo.Collection, result 
 	if sort, ok := query["sort"]; ok {
 		if s, ok := sort.(bson.M); ok {
 			if len(s) > 0 {
+				if sID, ok := s["id"]; ok {
+					s["_id"] = sID
+					delete(s, "id")
+				}
 				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
 			}
 		}
@@ -945,6 +953,10 @@ func (p *APIView) FindFilterDeptQuery(ctx context.Context, col *mongo.Collection
 	if sort, ok := query["sort"]; ok {
 		if s, ok := sort.(bson.M); ok {
 			if len(s) > 0 {
+				if sID, ok := s["id"]; ok {
+					s["_id"] = sID
+					delete(s, "id")
+				}
 				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
 			}
 		}
@@ -1423,6 +1435,10 @@ func (p *APIView) FindFilterLimit(ctx context.Context, col *mongo.Collection, re
 	if sort, ok := query["sort"]; ok {
 		if s, ok := sort.(bson.M); ok {
 			if len(s) > 0 {
+				if sID, ok := s["id"]; ok {
+					s["_id"] = sID
+					delete(s, "id")
+				}
 				pipeLine = append(pipeLine, bson.D{bson.E{Key: "$sort", Value: s}})
 			}
 		}
