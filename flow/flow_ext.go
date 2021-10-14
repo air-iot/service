@@ -68,6 +68,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			"flowJson": 1,
 			"invalid":  1,
 			"flowXml":  1,
+			"disable":  1,
 		},
 	}
 	err := apiClient.FindFlowQuery(headerMap, query, &flowInfoList)
@@ -2108,7 +2109,7 @@ flowloop:
 									counter++
 									continue logicLoop1
 								}
-							}  else if compare.ID != "" {
+							} else if compare.ID != "" {
 								compareValue := int64(0)
 								eleRaw, ok := data[compare.ID].(string)
 								if !ok {
@@ -6454,7 +6455,7 @@ flowloop:
 								counter++
 								continue logicLoop5
 							}
-						}else if compare.ID != "" {
+						} else if compare.ID != "" {
 							compareValue := int64(0)
 							eleRaw, ok := data[compare.ID].(string)
 							if !ok {
