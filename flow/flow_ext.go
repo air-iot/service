@@ -40,7 +40,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 	modifyTypeMapping := map[string]string{
 		"工作表记录增加":  "新增记录时",
 		"工作表记录修改":  "更新记录时",
-		"新增或更新记录时": "新增或更新记录时",
+		"新增或更新记录时": "添加或更新记录时",
 		"工作表记录删除":  "删除记录时",
 		//"编辑模型":   "编辑模型",
 		//"删除模型":   "删除模型",
@@ -5961,7 +5961,7 @@ flowloop:
 				//	}
 				//}
 			}
-		case "新增或更新记录时":
+		case "添加或更新记录时":
 			//fmt.Println("新增或更新记录时 projectName ;", projectName, "data:", data)
 			for _, update := range settings.UpdateField {
 				if _, ok := data[update.ID]; !ok {
