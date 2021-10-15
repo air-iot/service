@@ -158,6 +158,8 @@ type TagMongo struct {
 	Total     interface{} `json:"total" bson:"total"`
 	TimeBase  interface{} `json:"timeBase" bson:"timeBase"`
 	Filter    interface{} `json:"filter" bson:"filter"`
+
+	Fixed interface{} `json:"fixed"`
 }
 
 type NodeIDUidForRedis struct {

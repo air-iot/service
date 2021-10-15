@@ -18,6 +18,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/tidwall/gjson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"strconv"
 	"time"
 
 	"github.com/air-iot/service/api"
@@ -122,7 +123,7 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 				//修改流程为失效
 				updateMap := bson.M{"invalid": true}
 				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), eventID, updateMap)
-				var r= make(map[string]interface{})
+				var r = make(map[string]interface{})
 				err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
 				if err != nil {
 					logger.Errorf("失效流程(%s)失败:%s", flowID, err.Error())
@@ -319,8 +320,8 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 						sendTime := ""
 						if data.Time == 0 {
 							sendTime = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
-						}else{
-							time.Unix(data.Time,0).Format("2006-01-02 15:04:05")
+						} else {
+							time.Unix(data.Time, 0).Format("2006-01-02 15:04:05")
 						}
 						dataMapInLoop = map[string]interface{}{
 							"time":         sendTime,
@@ -338,12 +339,26 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 							if err != nil {
 								continue
 							}
+							formatVal := v
+							if tagCache.Fixed >= 0 {
+								formatVal, err = strconv.ParseFloat(fmt.Sprintf("%."+strconv.Itoa(int(tagCache.Fixed))+"f", v), 64)
+								if err != nil {
+									logger.Errorf("流程[%s]结果小数转化失败:%+v", flowID, v)
+									continue
+								}
+							} else {
+								formatVal, err = strconv.ParseFloat(fmt.Sprintf("%.3f", v), 64)
+								if err != nil {
+									logger.Errorf("流程[%s]结果3位小数转化失败:%+v", flowID, v)
+									continue
+								}
+							}
 							fields = append(fields, map[string]interface{}{
 								"id":    k,
 								"name":  tagCache.Name,
-								"value": v,
+								"value": formatVal,
 							})
-							dataMapInLoop[k] = v
+							dataMapInLoop[k] = formatVal
 							//dataMapInLoop["tagInfo"] = formatx.FormatDataInfoList(fields)
 						}
 						if customMap, ok := nodeCustomFieldsMap[data.Uid]; ok {
@@ -479,7 +494,7 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 				//修改流程为失效
 				updateMap := bson.M{"invalid": true}
 				//_, err := restfulapi.UpdateByID(context.Background(), idb.Database.Collection("flow"), eventID, updateMap)
-				var r= make(map[string]interface{})
+				var r = make(map[string]interface{})
 				err := apiClient.UpdateFlowById(headerMap, flowID, updateMap, &r)
 				if err != nil {
 					logger.Errorf("失效流程(%s)失败:%s", flowID, err.Error())
@@ -649,8 +664,8 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 							sendTime := ""
 							if data.Time == 0 {
 								sendTime = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
-							}else{
-								time.Unix(data.Time,0).Format("2006-01-02 15:04:05")
+							} else {
+								time.Unix(data.Time, 0).Format("2006-01-02 15:04:05")
 							}
 							dataMap = map[string]interface{}{
 								"time":         sendTime,
@@ -668,12 +683,26 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 								if err != nil {
 									continue
 								}
+								formatVal := v
+								if tagCache.Fixed >= 0 {
+									formatVal, err = strconv.ParseFloat(fmt.Sprintf("%."+strconv.Itoa(int(tagCache.Fixed))+"f", v), 64)
+									if err != nil {
+										logger.Errorf("流程[%s]结果小数转化失败:%+v", flowID, v)
+										continue
+									}
+								} else {
+									formatVal, err = strconv.ParseFloat(fmt.Sprintf("%.3f", v), 64)
+									if err != nil {
+										logger.Errorf("流程[%s]结果3位小数转化失败:%+v", flowID, v)
+										continue
+									}
+								}
 								fields = append(fields, map[string]interface{}{
 									"id":    k,
 									"name":  tagCache.Name,
-									"value": v,
+									"value": formatVal,
 								})
-								dataMap[k] = v
+								dataMap[k] = formatVal
 								//dataMap["tagInfo"] = formatx.FormatDataInfoList(fields)
 							}
 						}
