@@ -57,12 +57,13 @@ type ExtFlow struct {
 }
 
 type ExtFlowSettings struct {
-	Table        Table           `json:"table"`
-	Logic        []Logic         `json:"logic"`
-	EventType    string          `json:"eventType"`
-	SelectTyp    string          `json:"selectType"`
-	SelectRecord []GeneralIDName `json:"selectRecord"`
-	RangeType    string          `json:"rangeType"`
+	Table Table `json:"table"`
+	//Logic        []Logic         `json:"logic"`
+	Query        map[string]interface{} `json:"query"`
+	EventType    string                 `json:"eventType"`
+	SelectTyp    string                 `json:"selectType"`
+	SelectRecord []GeneralIDName        `json:"selectRecord"`
+	RangeType    string                 `json:"rangeType"`
 	//Invalid      bool               `json:"invalid"`
 	//Disable      bool               `json:"disable"`
 	//Range        string             `json:"range"`
@@ -73,13 +74,13 @@ type ExtFlowSettings struct {
 }
 
 type Logic struct {
-	ID        string              `json:"id"`
-	Name      string              `json:"name"`
-	Relation  string              `json:"relation"`
+	ID        string            `json:"id"`
+	Name      string            `json:"name"`
+	Relation  string            `json:"relation"`
 	Compare   GeneralExtCompare `json:"compare"`
-	DataType  string              `json:"dataType"`
-	LogicType string              `json:"logicType"`
-	PropType string              `json:"propType"`
+	DataType  string            `json:"dataType"`
+	LogicType string            `json:"logicType"`
+	PropType  string            `json:"propType"`
 }
 
 type Table struct {

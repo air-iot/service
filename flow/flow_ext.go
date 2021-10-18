@@ -8,7 +8,6 @@ import (
 	"github.com/air-iot/service/logger"
 	"github.com/air-iot/service/util/flowx"
 	"github.com/air-iot/service/util/json"
-	"github.com/air-iot/service/util/numberx"
 	"github.com/camunda-cloud/zeebe/clients/go/pkg/zbc"
 	"strings"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 
+	"github.com/air-iot/service/util/uuid"
 	"github.com/air-iot/service/api"
 	"github.com/air-iot/service/gin/ginx"
 	"github.com/air-iot/service/init/mq"
@@ -165,2618 +165,1098 @@ flowloop:
 		//=================
 		//fmt.Println("settings:", settings)
 		//fmt.Println("settings.EventType:", settings.EventType)
-		counter := 0
-		orCounter := 0
-		for _, logic := range settings.Logic {
-			compare := logic.Compare
-			if compare.Value != "" {
-				formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.Value)
-				if err != nil {
-					logger.Errorf("流程(%s)中替换模板Value变量失败:%s", flowID, err.Error())
-					continue
-				}
-				logic.Compare.Value = formatVal
-			}
-			if compare.StartTime.Value != "" {
-				formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.StartTime.Value)
-				if err != nil {
-					logger.Errorf("流程(%s)中替换模板StartTime变量失败:%s", flowID, err.Error())
-					continue
-				}
-				logic.Compare.StartTime.Value = formatVal
-			}
-			if compare.EndTime.Value != "" {
-				formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.EndTime.Value)
-				if err != nil {
-					logger.Errorf("流程(%s)中替换模板EndTime变量失败:%s", flowID, err.Error())
-					continue
-				}
-				logic.Compare.EndTime.Value = formatVal
-			}
-			if compare.StartValue.Value != "" {
-				formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.StartValue.Value)
-				if err != nil {
-					logger.Errorf("流程(%s)中替换模板StartValue变量失败:%s", flowID, err.Error())
-					continue
-				}
-				logic.Compare.StartValue.Value = formatVal
-			}
-			if compare.EndValue.Value != "" {
-				formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, compare.EndValue.Value)
-				if err != nil {
-					logger.Errorf("流程(%s)中替换模板EndValue变量失败:%s", flowID, err.Error())
-					continue
-				}
-				logic.Compare.EndValue.Value = formatVal
-			}
+		formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, settings.Query)
+		if err != nil {
+			logger.Errorf("流程(%s)中替换模板变量失败:%s", flowID, err.Error())
+			continue
+		}
+		if formatMap,ok := formatVal.(map[string]interface{});ok{
+			settings.Query = formatMap
+		}else{
+			logger.Errorf("流程(%s)中替换后的模板变量类型不是对象", flowID)
+			continue
 		}
 		switch settings.EventType {
 		case "新增记录时":
-			//fmt.Println("新增记录时 projectName ;", projectName, "data:", data)
-		logicLoop:
-			for i, logic := range settings.Logic {
-				compare := logic.Compare
-				if i%2 == 1 {
-					if settings.Logic[i].LogicType == "或" {
-						orCounter++
-					}
-				}
-				if i > 1 && i%2 == 1 {
-					if settings.Logic[i-2].LogicType == "且" && counter != 0 {
-						continue flowloop
-					}
-				} else if i != 0 && i%2 == 0 {
-					if settings.Logic[i-1].LogicType == "且" && counter != 0 {
-						continue flowloop
-					}
-				}
-				switch logic.DataType {
-				case "文本":
-					switch logic.Relation {
-					case "是":
-						if compare.ID != "" {
-							if data[logic.ID] != data[compare.ID] {
-								counter++
-								continue logicLoop
-							}
-						} else if data[logic.ID] != compare.Value {
-							counter++
-							continue logicLoop
-						}
-					case "不是":
-						if compare.ID != "" {
-							if data[logic.ID] == data[compare.ID] {
-								counter++
-								continue logicLoop
-							}
-						} else if data[logic.ID] == compare.Value {
-							counter++
-							continue logicLoop
-						}
-					case "包含":
-						compareInValue := ""
-						if ele, ok := compare.Value.(string); ok {
-							compareInValue = ele
-						}
-						dataVal, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop
-						}
-						if compare.ID != "" {
-							compareVal, ok := data[compare.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop
-							}
-							if !strings.Contains(dataVal, compareVal) {
-								counter++
-								continue logicLoop
-							}
-						} else if !strings.Contains(dataVal, compareInValue) {
-							counter++
-							continue logicLoop
-						}
-					case "不包含":
-						compareInValue := ""
-						if ele, ok := compare.Value.(string); ok {
-							compareInValue = ele
-						}
-						dataVal, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop
-						}
-						if compare.ID != "" {
-							compareVal, ok := data[compare.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop
-							}
-							if strings.Contains(dataVal, compareVal) {
-								counter++
-								continue logicLoop
-							}
-						} else if strings.Contains(dataVal, compareInValue) {
-							counter++
-							continue logicLoop
-						}
-					case "开始为":
-						compareInValue := ""
-						if ele, ok := compare.Value.(string); ok {
-							compareInValue = ele
-						}
-						dataVal, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop
-						}
-						if compare.ID != "" {
-							compareVal, ok := data[compare.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop
-							}
-							if !strings.HasPrefix(dataVal, compareVal) {
-								counter++
-								continue logicLoop
-							}
-						} else if !strings.HasPrefix(dataVal, compareInValue) {
-							counter++
-							continue logicLoop
-						}
-					case "结尾为":
-						compareInValue := ""
-						if ele, ok := compare.Value.(string); ok {
-							compareInValue = ele
-						}
-						dataVal, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop
-						}
-						if compare.ID != "" {
-							compareVal, ok := data[compare.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop
-							}
-							if !strings.HasSuffix(dataVal, compareVal) {
-								counter++
-								continue logicLoop
-							}
-						} else if !strings.HasSuffix(dataVal, compareInValue) {
-							counter++
-							continue logicLoop
-						}
-					case "为空":
-						if data[logic.ID] != nil {
-							counter++
-							continue logicLoop
-						}
-					case "不为空":
-						if data[logic.ID] == nil {
-							counter++
-							continue logicLoop
-						}
-					}
-				case "选择器":
-					switch logic.Relation {
-					case "是", "等于":
-						if compare.ID != "" {
-							if data[logic.ID] != data[compare.ID] {
-								counter++
-								continue logicLoop
-							}
-						} else if data[logic.ID] != compare.Value {
-							counter++
-							continue logicLoop
-						}
-					case "不是", "不等于":
-						if compare.ID != "" {
-							if data[logic.ID] == data[compare.ID] {
-								counter++
-								continue logicLoop
-							}
-						} else if data[logic.ID] == compare.Value {
-							counter++
-							continue logicLoop
-						}
-					case "为空":
-						if data[logic.ID] != nil {
-							counter++
-							continue logicLoop
-						}
-					case "不为空":
-						if data[logic.ID] == nil {
-							counter++
-							continue logicLoop
-						}
-					}
-				case "数值":
-					switch logic.Relation {
-					case "等于":
-						if compare.ID != "" {
-							if data[logic.ID] != data[compare.ID] {
-								counter++
-								continue logicLoop
-							}
-						} else if data[logic.ID] != compare.Value {
-							counter++
-							continue logicLoop
-						}
-					case "不等于":
-						if compare.ID != "" {
-							if data[logic.ID] == data[compare.ID] {
-								counter++
-								continue logicLoop
-							}
-						} else if data[logic.ID] == compare.Value {
-							counter++
-							continue logicLoop
-						}
-					case "大于":
-						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-						if err != nil {
-							counter++
-							continue logicLoop
-						}
-						if compare.ID != "" {
-							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-							if err != nil {
-								counter++
-								continue logicLoop
-							}
-							if logicVal <= compareVal {
-								counter++
-								continue logicLoop
-							}
-						} else {
-							compareVal, err := numberx.GetFloatNumber(compare.Value)
-							if err != nil {
-								counter++
-								continue logicLoop
-							}
-							if logicVal <= compareVal {
-								counter++
-								continue logicLoop
-							}
-						}
-					case "小于":
-						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-						if err != nil {
-							counter++
-							continue logicLoop
-						}
-						if compare.ID != "" {
-							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-							if err != nil {
-								counter++
-								continue logicLoop
-							}
-							if logicVal >= compareVal {
-								counter++
-								continue logicLoop
-							}
-						} else {
-							compareVal, err := numberx.GetFloatNumber(compare.Value)
-							if err != nil {
-								counter++
-								continue logicLoop
-							}
-							if logicVal >= compareVal {
-								counter++
-								continue logicLoop
-							}
-						}
-					case "大于等于":
-						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-						if err != nil {
-							counter++
-							continue logicLoop
-						}
-						if compare.ID != "" {
-							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-							if err != nil {
-								counter++
-								continue logicLoop
-							}
-							if logicVal < compareVal {
-								counter++
-								continue logicLoop
-							}
-						} else {
-							compareVal, err := numberx.GetFloatNumber(compare.Value)
-							if err != nil {
-								counter++
-								continue logicLoop
-							}
-							if logicVal < compareVal {
-								counter++
-								continue logicLoop
-							}
-						}
-					case "小于等于":
-						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-						if err != nil {
-							counter++
-							continue logicLoop
-						}
-						if compare.ID != "" {
-							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-							if err != nil {
-								counter++
-								continue logicLoop
-							}
-							if logicVal > compareVal {
-								counter++
-								continue logicLoop
-							}
-						} else {
-							compareVal, err := numberx.GetFloatNumber(compare.Value)
-							if err != nil {
-								counter++
-								continue logicLoop
-							}
-							if logicVal > compareVal {
-								counter++
-								continue logicLoop
-							}
-						}
-					case "在范围内":
-						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-						if err != nil {
-							counter++
-							continue logicLoop
-						}
-						startVal := float64(0)
-						endVal := float64(0)
-						if compare.StartValue.ID != "" {
-							startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-							if err != nil {
-								counter++
-								continue logicLoop
-							}
-						} else {
-							startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-							if err != nil {
-								counter++
-								continue logicLoop
-							}
-						}
-						if compare.EndValue.ID != "" {
-							endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-							if err != nil {
-								counter++
-								continue logicLoop
-							}
-						} else {
-							endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-							if err != nil {
-								counter++
-								continue logicLoop
-							}
-						}
-						if logicVal < startVal || logicVal > endVal {
-							counter++
-							continue logicLoop
-						}
-					case "不在范围内":
-						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-						if err != nil {
-							counter++
-							continue logicLoop
-						}
-						startVal := float64(0)
-						endVal := float64(0)
-						if compare.StartValue.ID != "" {
-							startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-							if err != nil {
-								counter++
-								continue logicLoop
-							}
-						} else {
-							startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-							if err != nil {
-								counter++
-								continue logicLoop
-							}
-						}
-						if compare.EndValue.ID != "" {
-							endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-							if err != nil {
-								counter++
-								continue logicLoop
-							}
-						} else {
-							endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-							if err != nil {
-								counter++
-								continue logicLoop
-							}
-						}
-						if logicVal >= startVal && logicVal <= endVal {
-							counter++
-							continue logicLoop
-						}
-					case "为空":
-						if data[logic.ID] != nil {
-							counter++
-							continue logicLoop
-						}
-					case "不为空":
-						if data[logic.ID] == nil {
-							counter++
-							continue logicLoop
-						}
-					}
-				case "时间":
-					switch logic.Relation {
-					case "等于":
-						compareInValue := int64(0)
-						if ele, ok := compare.Value.(string); ok {
-							if ele != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								compareInValue = eleTime.Unix()
-							}
-						}
-						dataVal := int64(0)
-						eleRaw, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop
-						} else {
-							if eleRaw != "" {
-								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-									dataVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop
-									}
-								} else {
-									counter++
-									continue logicLoop
-								}
-							}
-						}
-						if compare.TimeType != "" {
-							startPoint := int64(0)
-							endPoint := int64(0)
-							switch compare.TimeType {
-							case "今天":
-								startPoint = timex.GetUnixToNewTimeDay(0).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(1).Unix()
-							case "昨天":
-								startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(0).Unix()
-							case "明天":
-								startPoint = timex.GetUnixToNewTimeDay(1).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(2).Unix()
-							case "本周":
-								week := int(time.Now().Weekday())
-								if week == 0 {
-									week = 7
-								}
-								startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
-							case "上周":
-								week := int(time.Now().Weekday())
-								if week == 0 {
-									week = 7
-								}
-								startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-							case "今年":
-								startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
-								endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
-							case "去年":
-								startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
-								endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
-							case "明年":
-
-								startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
-							case "指定时间":
-								if compare.SpecificTime != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop
-									}
-									compareInValue = eleTime.Unix()
-								}
-								if dataVal != compareInValue {
-									counter++
-									continue logicLoop
-								}
-								continue
-							}
-							if dataVal < startPoint || dataVal >= endPoint {
-								counter++
-								continue logicLoop
-							}
-						} else if compare.ID != "" {
-							compareValue := int64(0)
-							eleRaw, ok := data[compare.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-										compareValue, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop
-										}
-									} else {
-										counter++
-										continue logicLoop
-									}
-								}
-							}
-							if dataVal != compareValue {
-								counter++
-								continue logicLoop
-							}
-						} else if dataVal != compareInValue {
-							counter++
-							continue logicLoop
-						} else if compareInValue == 0 {
-							counter++
-							continue logicLoop
-						}
-					case "不等于":
-						compareInValue := int64(0)
-						if ele, ok := compare.Value.(string); ok {
-							if ele != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								compareInValue = eleTime.Unix()
-							}
-						}
-						dataVal := int64(0)
-						eleRaw, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop
-						} else {
-							if eleRaw != "" {
-								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-									dataVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop
-									}
-								} else {
-									counter++
-									continue logicLoop
-								}
-							}
-						}
-						if compare.TimeType != "" {
-							startPoint := int64(0)
-							endPoint := int64(0)
-							switch compare.TimeType {
-							case "今天":
-								startPoint = timex.GetUnixToNewTimeDay(0).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(1).Unix()
-							case "昨天":
-								startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(0).Unix()
-							case "明天":
-								startPoint = timex.GetUnixToNewTimeDay(1).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(2).Unix()
-							case "本周":
-								week := int(time.Now().Weekday())
-								if week == 0 {
-									week = 7
-								}
-								startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
-							case "上周":
-								week := int(time.Now().Weekday())
-								if week == 0 {
-									week = 7
-								}
-								startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-							case "今年":
-								startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
-								endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
-							case "去年":
-								startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
-								endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
-							case "明年":
-
-								startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
-							case "指定时间":
-								if compare.SpecificTime != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop
-									}
-									compareInValue = eleTime.Unix()
-								}
-								if dataVal == compareInValue {
-									counter++
-									continue logicLoop
-								}
-								continue
-							}
-							if dataVal >= startPoint && dataVal < endPoint {
-								counter++
-								continue logicLoop
-							}
-						} else if compare.ID != "" {
-							compareValue := int64(0)
-							eleRaw, ok := data[compare.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-										compareValue, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop
-										}
-									} else {
-										counter++
-										continue logicLoop
-									}
-								}
-							}
-							if dataVal == compareValue {
-								counter++
-								continue logicLoop
-							}
-						} else if dataVal == compareInValue {
-							counter++
-							continue logicLoop
-						} else if compareInValue == 0 {
-							counter++
-							continue logicLoop
-						}
-					case "早于":
-						compareInValue := int64(0)
-						if ele, ok := compare.Value.(string); ok {
-							if ele != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								compareInValue = eleTime.Unix()
-							}
-						}
-						dataVal := int64(0)
-						eleRaw, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop
-						} else {
-							if eleRaw != "" {
-								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-									dataVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop
-									}
-								} else {
-									counter++
-									continue logicLoop
-								}
-							}
-						}
-						if compare.TimeType != "" {
-							switch compare.TimeType {
-							case "今天":
-								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-							case "昨天":
-								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-							case "明天":
-								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-							case "本周":
-								week := int(time.Now().Weekday())
-								if week == 0 {
-									week = 7
-								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-							case "上周":
-								week := int(time.Now().Weekday())
-								if week == 0 {
-									week = 7
-								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-							case "今年":
-								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-							case "去年":
-								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-							case "明年":
-								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-							case "指定时间":
-								if compare.SpecificTime != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop
-									}
-									compareInValue = eleTime.Unix()
-								}
-							}
-							if dataVal >= compareInValue {
-								counter++
-								continue logicLoop
-							}
-						} else if compare.ID != "" {
-							compareValue := int64(0)
-							eleRaw, ok := data[compare.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-										compareValue, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop
-										}
-									} else {
-										counter++
-										continue logicLoop
-									}
-								}
-							}
-							if dataVal >= compareValue {
-								counter++
-								continue logicLoop
-							}
-						} else if dataVal >= compareInValue {
-							counter++
-							continue logicLoop
-						} else if compareInValue == 0 {
-							counter++
-							continue logicLoop
-						}
-					case "晚于":
-						compareInValue := int64(0)
-						if ele, ok := compare.Value.(string); ok {
-							if ele != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								compareInValue = eleTime.Unix()
-							}
-						}
-						dataVal := int64(0)
-						eleRaw, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop
-						} else {
-							if eleRaw != "" {
-								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-									dataVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop
-									}
-								} else {
-									counter++
-									continue logicLoop
-								}
-							}
-						}
-						if compare.TimeType != "" {
-							switch compare.TimeType {
-							case "今天":
-								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-							case "昨天":
-								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-							case "明天":
-								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-							case "本周":
-								week := int(time.Now().Weekday())
-								if week == 0 {
-									week = 7
-								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-							case "上周":
-								week := int(time.Now().Weekday())
-								if week == 0 {
-									week = 7
-								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-							case "今年":
-								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-							case "去年":
-								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-							case "明年":
-								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-							case "指定时间":
-								if compare.SpecificTime != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop
-									}
-									compareInValue = eleTime.Unix()
-								}
-							}
-							if dataVal <= compareInValue {
-								counter++
-								continue logicLoop
-							}
-						} else if compare.ID != "" {
-							compareValue := int64(0)
-							eleRaw, ok := data[compare.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-										compareValue, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop
-										}
-									} else {
-										counter++
-										continue logicLoop
-									}
-								}
-							}
-							if dataVal <= compareValue {
-								counter++
-								continue logicLoop
-							}
-						} else if dataVal <= compareInValue {
-							counter++
-							continue logicLoop
-						} else if compareInValue == 0 {
-							counter++
-							continue logicLoop
-						}
-					case "在范围内":
-						logicVal := int64(0)
-						eleRaw, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop
-						} else {
-							if eleRaw != "" {
-								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-									logicVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop
-									}
-								} else {
-									counter++
-									continue logicLoop
-								}
-							}
-						}
-						startVal := int64(0)
-						endVal := int64(0)
-						if compare.StartTime.ID != "" {
-							if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
-								if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
-									startVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop
-									}
-								} else {
-									counter++
-									continue logicLoop
-								}
-							}
-						} else if compare.StartTime.Value != "" {
-							if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								startVal = eleTime.Unix()
-							}
-						}
-						if compare.EndTime.ID != "" {
-							if eleRaw, ok := data[compare.EndTime.ID].(string); ok {
-								if extVal, ok := excelColNameTypeExtMap[compare.EndTime.ID]; ok {
-									endVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop
-									}
-								} else {
-									counter++
-									continue logicLoop
-								}
-							}
-						} else if compare.EndTime.Value != "" {
-							if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								endVal = eleTime.Unix()
-							}
-						}
-						if logicVal < startVal || logicVal > endVal {
-							counter++
-							continue logicLoop
-						}
-					case "不在范围内":
-						logicVal := int64(0)
-						eleRaw, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop
-						} else {
-							if eleRaw != "" {
-								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-									logicVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop
-									}
-								} else {
-									counter++
-									continue logicLoop
-								}
-							}
-						}
-						startVal := int64(0)
-						endVal := int64(0)
-						if compare.StartTime.ID != "" {
-							if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
-								if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
-									startVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop
-									}
-								} else {
-									counter++
-									continue logicLoop
-								}
-							}
-						} else if compare.StartTime.Value != "" {
-							if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								startVal = eleTime.Unix()
-							}
-						}
-						if compare.EndTime.ID != "" {
-							if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								endVal = eleTime.Unix()
-							}
-						} else if compare.EndTime.Value != "" {
-							if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop
-								}
-								endVal = eleTime.Unix()
-							}
-						}
-						if logicVal < startVal || logicVal > endVal {
-							counter++
-							continue logicLoop
-						}
-					case "为空":
-						if data[logic.ID] != nil {
-							counter++
-							continue logicLoop
-						}
-					case "不为空":
-						if data[logic.ID] == nil {
-							counter++
-							continue logicLoop
-						}
-					}
-				case "布尔值", "附件", "定位":
-					switch logic.Relation {
-					case "为空":
-						if data[logic.ID] != nil {
-							counter++
-							continue logicLoop
-						}
-					case "不为空":
-						if data[logic.ID] == nil {
-							counter++
-							continue logicLoop
-						}
-					}
-				case "关联字段":
-					switch logic.Relation {
-					case "是":
-						var dataVal interface{}
-						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-							eleRaw, ok := data[logic.ID].(map[string]interface{})
-							if !ok {
-								counter++
-								continue logicLoop
-							} else {
-								if eleRaw != nil {
-									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-										dataVal = relateVal
-									} else {
-										counter++
-										continue logicLoop
-									}
-								}
-							}
-						}
-						if compare.ID != "" {
-							var compareValue interface{}
-							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-								eleRaw, ok := data[compare.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											compareValue = relateVal
-										} else {
-											counter++
-											continue logicLoop
-										}
-									}
-								}
-							}
-							if dataVal != compareValue {
-								counter++
-								continue logicLoop
-							}
-						} else if dataVal != compare.Value {
-							counter++
-							continue logicLoop
-						}
-					case "不是":
-						var dataVal interface{}
-						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-							eleRaw, ok := data[logic.ID].(map[string]interface{})
-							if !ok {
-								counter++
-								continue logicLoop
-							} else {
-								if eleRaw != nil {
-									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-										dataVal = relateVal
-									} else {
-										counter++
-										continue logicLoop
-									}
-								}
-							}
-						}
-						if compare.ID == "" {
-							var compareValue interface{}
-							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-								eleRaw, ok := data[compare.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											compareValue = relateVal
-										} else {
-											counter++
-											continue logicLoop
-										}
-									}
-								}
-							}
-							if dataVal != compareValue {
-								counter++
-								continue logicLoop
-							}
-						} else if dataVal == compare.Value {
-							counter++
-							continue logicLoop
-						}
-					case "包含":
-						compareInValue := ""
-						if ele, ok := compare.Value.(string); ok {
-							compareInValue = ele
-						}
-						dataVal := ""
-						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-							eleRaw, ok := data[logic.ID].(map[string]interface{})
-							if !ok {
-								counter++
-								continue logicLoop
-							} else {
-								if eleRaw != nil {
-									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-										if relateValString, ok := relateVal.(string); ok {
-											dataVal = relateValString
-										} else {
-											counter++
-											continue logicLoop
-										}
-									} else {
-										counter++
-										continue logicLoop
-									}
-								}
-							}
-						}
-						if compare.ID != "" {
-							compareVal := ""
-							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-								eleRaw, ok := data[compare.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											if relateValString, ok := relateVal.(string); ok {
-												compareVal = relateValString
-											} else {
-												counter++
-												continue logicLoop
-											}
-										} else {
-											counter++
-											continue logicLoop
-										}
-									}
-								}
-							}
-							if !strings.Contains(dataVal, compareVal) {
-								counter++
-								continue logicLoop
-							}
-						} else if !strings.Contains(dataVal, compareInValue) {
-							counter++
-							continue logicLoop
-						}
-					case "不包含":
-						compareInValue := ""
-						if ele, ok := compare.Value.(string); ok {
-							compareInValue = ele
-						}
-						dataVal := ""
-						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-							eleRaw, ok := data[logic.ID].(map[string]interface{})
-							if !ok {
-								counter++
-								continue logicLoop
-							} else {
-								if eleRaw != nil {
-									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-										if relateValString, ok := relateVal.(string); ok {
-											dataVal = relateValString
-										} else {
-											counter++
-											continue logicLoop
-										}
-									} else {
-										counter++
-										continue logicLoop
-									}
-								}
-							}
-						}
-						if compare.ID != "" {
-							compareVal := ""
-							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-								eleRaw, ok := data[compare.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											if relateValString, ok := relateVal.(string); ok {
-												compareVal = relateValString
-											} else {
-												counter++
-												continue logicLoop
-											}
-										} else {
-											counter++
-											continue logicLoop
-										}
-									}
-								}
-							}
-							if strings.Contains(dataVal, compareVal) {
-								counter++
-								continue logicLoop
-							}
-						} else if strings.Contains(dataVal, compareInValue) {
-							counter++
-							continue logicLoop
-						}
-					case "为空":
-						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-							eleRaw, ok := data[logic.ID].(map[string]interface{})
-							if ok {
-								if eleRaw != nil {
-									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-										if relateVal != nil {
-											counter++
-											continue logicLoop
-										}
-									} else {
-										counter++
-										continue logicLoop
-									}
-								} else {
-									counter++
-									continue logicLoop
-								}
-							} else {
-								counter++
-								continue logicLoop
-							}
-						}
-					case "不为空":
-						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-							eleRaw, ok := data[logic.ID].(map[string]interface{})
-							if ok {
-								if eleRaw != nil {
-									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-										if relateVal == nil {
-											counter++
-											continue logicLoop
-										}
-									} else {
-										counter++
-										continue logicLoop
-									}
-								} else {
-									counter++
-									continue logicLoop
-								}
-							} else {
-								counter++
-								continue logicLoop
-							}
-						}
-					}
-				}
-			}
-			if len(settings.Logic) > 1 {
-				if settings.Logic[len(settings.Logic)-2].LogicType == "且" && counter != 0 {
-					continue flowloop
-				}
-			}
-			//fmt.Println("after counter:", counter, "orCounter:", orCounter)
-			if counter >= orCounter+1 {
-				continue flowloop
-			}
-		case "更新记录时":
-			//fmt.Println("更新记录时 projectName ;", projectName, "data:", data)
-			for _, update := range settings.UpdateField {
-				if _, ok := data[update.ID]; !ok {
-					continue flowloop
-				}
-			}
-			switch settings.SelectTyp {
-			case "记录选择":
-				deleteID, ok := data["id"].(string)
-				if !ok {
-					continue
-				}
-				canDelete := false
-				for _, record := range settings.SelectRecord {
-					if deleteID == record.ID {
-						canDelete = true
-						break
-					}
-				}
-				if !canDelete {
-					continue
-				}
-			default:
-				counter := 0
-			logicLoop1:
-				for i, logic := range settings.Logic {
-					compare := logic.Compare
-					if i%2 == 1 {
-						if settings.Logic[i].LogicType == "或" {
-							orCounter++
-						}
-					}
-					if i > 1 && i%2 == 1 {
-						if settings.Logic[i-2].LogicType == "且" && counter != 0 {
-							continue flowloop
-						}
-					} else if i != 0 && i%2 == 0 {
-						if settings.Logic[i-1].LogicType == "且" && counter != 0 {
-							continue flowloop
-						}
-					}
-					switch logic.DataType {
-					case "文本":
-						switch logic.Relation {
-						case "是":
-							if compare.ID != "" {
-								if data[logic.ID] != data[compare.ID] {
-									counter++
-									continue logicLoop1
-								}
-							} else if data[logic.ID] != compare.Value {
-								counter++
-								continue logicLoop1
-							}
-						case "不是":
-							if compare.ID != "" {
-								if data[logic.ID] == data[compare.ID] {
-									counter++
-									continue logicLoop1
-								}
-							} else if data[logic.ID] == compare.Value {
-								counter++
-								continue logicLoop1
-							}
-						case "包含":
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop1
-							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop1
-								}
-								if !strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop1
-								}
-							} else if !strings.Contains(dataVal, compareInValue) {
-								counter++
-								continue logicLoop1
-							}
-						case "不包含":
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop1
-							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop1
-								}
-								if strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop1
-								}
-							} else if strings.Contains(dataVal, compareInValue) {
-								counter++
-								continue logicLoop1
-							}
-						case "开始为":
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop1
-							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop1
-								}
-								if !strings.HasPrefix(dataVal, compareVal) {
-									counter++
-									continue logicLoop1
-								}
-							} else if !strings.HasPrefix(dataVal, compareInValue) {
-								counter++
-								continue logicLoop1
-							}
-						case "结尾为":
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop1
-							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop1
-								}
-								if !strings.HasSuffix(dataVal, compareVal) {
-									counter++
-									continue logicLoop1
-								}
-							} else if !strings.HasSuffix(dataVal, compareInValue) {
-								counter++
-								continue logicLoop1
-							}
-						case "为空":
-							if data[logic.ID] != nil {
-								counter++
-								continue logicLoop1
-							}
-						case "不为空":
-							if data[logic.ID] == nil {
-								counter++
-								continue logicLoop1
-							}
-						}
-					case "选择器":
-						switch logic.Relation {
-						case "是", "等于":
-							if compare.ID != "" {
-								if data[logic.ID] != data[compare.ID] {
-									counter++
-									continue logicLoop1
-								}
-							} else if data[logic.ID] != compare.Value {
-								counter++
-								continue logicLoop1
-							}
-						case "不是", "不等于":
-							if compare.ID != "" {
-								if data[logic.ID] == data[compare.ID] {
-									counter++
-									continue logicLoop1
-								}
-							} else if data[logic.ID] == compare.Value {
-								counter++
-								continue logicLoop1
-							}
-						case "为空":
-							if data[logic.ID] != nil {
-								counter++
-								continue logicLoop1
-							}
-						case "不为空":
-							if data[logic.ID] == nil {
-								counter++
-								continue logicLoop1
-							}
-						}
-					case "数值":
-						switch logic.Relation {
-						case "等于":
-							if compare.ID != "" {
-								if data[logic.ID] != data[compare.ID] {
-									counter++
-									continue logicLoop1
-								}
-							} else if data[logic.ID] != compare.Value {
-								counter++
-								continue logicLoop1
-							}
-						case "不等于":
-							if compare.ID != "" {
-								if data[logic.ID] == data[compare.ID] {
-									counter++
-									continue logicLoop1
-								}
-							} else if data[logic.ID] == compare.Value {
-								counter++
-								continue logicLoop1
-							}
-						case "大于":
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-							if err != nil {
-								counter++
-								continue logicLoop1
-							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-								if logicVal <= compareVal {
-									counter++
-									continue logicLoop1
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-								if logicVal <= compareVal {
-									counter++
-									continue logicLoop1
-								}
-							}
-						case "小于":
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-							if err != nil {
-								counter++
-								continue logicLoop1
-							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-								if logicVal >= compareVal {
-									counter++
-									continue logicLoop1
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-								if logicVal >= compareVal {
-									counter++
-									continue logicLoop1
-								}
-							}
-						case "大于等于":
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-							if err != nil {
-								counter++
-								continue logicLoop1
-							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-								if logicVal < compareVal {
-									counter++
-									continue logicLoop1
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-								if logicVal < compareVal {
-									counter++
-									continue logicLoop1
-								}
-							}
-						case "小于等于":
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-							if err != nil {
-								counter++
-								continue logicLoop1
-							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-								if logicVal > compareVal {
-									counter++
-									continue logicLoop1
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-								if logicVal > compareVal {
-									counter++
-									continue logicLoop1
-								}
-							}
-						case "在范围内":
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-							if err != nil {
-								counter++
-								continue logicLoop1
-							}
-							startVal := float64(0)
-							endVal := float64(0)
-							if compare.StartValue.ID != "" {
-								startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-							} else {
-								startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-							}
-							if compare.EndValue.ID != "" {
-								endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-							} else {
-								endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-							}
-							if logicVal < startVal || logicVal > endVal {
-								counter++
-								continue logicLoop1
-							}
-						case "不在范围内":
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-							if err != nil {
-								counter++
-								continue logicLoop1
-							}
-							startVal := float64(0)
-							endVal := float64(0)
-							if compare.StartValue.ID != "" {
-								startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-							} else {
-								startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-							}
-							if compare.EndValue.ID != "" {
-								endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-							} else {
-								endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop1
-								}
-							}
-							if logicVal >= startVal && logicVal <= endVal {
-								counter++
-								continue logicLoop1
-							}
-						case "为空":
-							if data[logic.ID] != nil {
-								counter++
-								continue logicLoop1
-							}
-						case "不为空":
-							if data[logic.ID] == nil {
-								counter++
-								continue logicLoop1
-							}
-						}
-					case "时间":
-						switch logic.Relation {
-						case "等于":
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop1
-									}
-									compareInValue = eleTime.Unix()
-								}
-							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop1
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-									} else {
-										counter++
-										continue logicLoop1
-									}
-								}
-							}
-							if compare.TimeType != "" {
-								startPoint := int64(0)
-								endPoint := int64(0)
-								switch compare.TimeType {
-								case "今天":
-									startPoint = timex.GetUnixToNewTimeDay(0).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(1).Unix()
-								case "昨天":
-									startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(0).Unix()
-								case "明天":
-									startPoint = timex.GetUnixToNewTimeDay(1).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(2).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "今年":
-									startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
-									endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "去年":
-									startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
-									endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "明年":
-
-									startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
-									endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-										compareInValue = eleTime.Unix()
-									}
-									if dataVal != compareInValue {
-										counter++
-										continue logicLoop1
-									}
-									continue
-								}
-								if dataVal < startPoint || dataVal >= endPoint {
-									counter++
-									continue logicLoop1
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop1
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop1
-											}
-										} else {
-											counter++
-											continue logicLoop1
-										}
-									}
-								}
-								if dataVal != compareValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if dataVal != compareInValue {
-								counter++
-								continue logicLoop1
-							} else if compareInValue == 0 {
-								counter++
-								continue logicLoop1
-							}
-						case "不等于":
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop1
-									}
-									compareInValue = eleTime.Unix()
-								}
-							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop1
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-									} else {
-										counter++
-										continue logicLoop1
-									}
-								}
-							}
-							if compare.TimeType != "" {
-								startPoint := int64(0)
-								endPoint := int64(0)
-								switch compare.TimeType {
-								case "今天":
-									startPoint = timex.GetUnixToNewTimeDay(0).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(1).Unix()
-								case "昨天":
-									startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(0).Unix()
-								case "明天":
-									startPoint = timex.GetUnixToNewTimeDay(1).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(2).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "今年":
-									startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
-									endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "去年":
-									startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
-									endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "明年":
-
-									startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
-									endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-										compareInValue = eleTime.Unix()
-									}
-									if dataVal == compareInValue {
-										counter++
-										continue logicLoop1
-									}
-									continue
-								}
-								if dataVal >= startPoint && dataVal < endPoint {
-									counter++
-									continue logicLoop1
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop1
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop1
-											}
-										} else {
-											counter++
-											continue logicLoop1
-										}
-									}
-								}
-								if dataVal == compareValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if dataVal == compareInValue {
-								counter++
-								continue logicLoop1
-							} else if compareInValue == 0 {
-								counter++
-								continue logicLoop1
-							}
-						case "早于":
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop1
-									}
-									compareInValue = eleTime.Unix()
-								}
-							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop1
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-									} else {
-										counter++
-										continue logicLoop1
-									}
-								}
-							}
-							if compare.TimeType != "" {
-								switch compare.TimeType {
-								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-										compareInValue = eleTime.Unix()
-									}
-								}
-								if dataVal >= compareInValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop1
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop1
-											}
-										} else {
-											counter++
-											continue logicLoop1
-										}
-									}
-								}
-								if dataVal >= compareValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if dataVal >= compareInValue {
-								counter++
-								continue logicLoop1
-							} else if compareInValue == 0 {
-								counter++
-								continue logicLoop1
-							}
-						case "晚于":
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop1
-									}
-									compareInValue = eleTime.Unix()
-								}
-							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop1
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-									} else {
-										counter++
-										continue logicLoop1
-									}
-								}
-							}
-							if compare.TimeType != "" {
-								switch compare.TimeType {
-								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-										compareInValue = eleTime.Unix()
-									}
-								}
-								if dataVal <= compareInValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop1
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop1
-											}
-										} else {
-											counter++
-											continue logicLoop1
-										}
-									}
-								}
-								if dataVal <= compareValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if dataVal <= compareInValue {
-								counter++
-								continue logicLoop1
-							} else if compareInValue == 0 {
-								counter++
-								continue logicLoop1
-							}
-						case "在范围内":
-							logicVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop1
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										logicVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-									} else {
-										counter++
-										continue logicLoop1
-									}
-								}
-							}
-							startVal := int64(0)
-							endVal := int64(0)
-							if compare.StartTime.ID != "" {
-								if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
-									if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
-										startVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-									} else {
-										counter++
-										continue logicLoop1
-									}
-								}
-							} else if compare.StartTime.Value != "" {
-								if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop1
-									}
-									startVal = eleTime.Unix()
-								}
-							}
-							if compare.EndTime.ID != "" {
-								if eleRaw, ok := data[compare.EndTime.ID].(string); ok {
-									if extVal, ok := excelColNameTypeExtMap[compare.EndTime.ID]; ok {
-										endVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-									} else {
-										counter++
-										continue logicLoop1
-									}
-								}
-							} else if compare.EndTime.Value != "" {
-								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop1
-									}
-									endVal = eleTime.Unix()
-								}
-							}
-							if logicVal < startVal || logicVal > endVal {
-								counter++
-								continue logicLoop1
-							}
-						case "不在范围内":
-							logicVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop1
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										logicVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-									} else {
-										counter++
-										continue logicLoop1
-									}
-								}
-							}
-							startVal := int64(0)
-							endVal := int64(0)
-							if compare.StartTime.ID != "" {
-								if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
-									if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
-										startVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop1
-										}
-									} else {
-										counter++
-										continue logicLoop1
-									}
-								}
-							} else if compare.StartTime.Value != "" {
-								if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop1
-									}
-									startVal = eleTime.Unix()
-								}
-							}
-							if compare.EndTime.ID != "" {
-								if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop1
-									}
-									endVal = eleTime.Unix()
-								}
-							} else if compare.EndTime.Value != "" {
-								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop1
-									}
-									endVal = eleTime.Unix()
-								}
-							}
-							if logicVal < startVal || logicVal > endVal {
-								counter++
-								continue logicLoop1
-							}
-						case "为空":
-							if data[logic.ID] != nil {
-								counter++
-								continue logicLoop1
-							}
-						case "不为空":
-							if data[logic.ID] == nil {
-								counter++
-								continue logicLoop1
-							}
-						}
-					case "布尔值", "附件", "定位":
-						switch logic.Relation {
-						case "为空":
-							if data[logic.ID] != nil {
-								counter++
-								continue logicLoop1
-							}
-						case "不为空":
-							if data[logic.ID] == nil {
-								counter++
-								continue logicLoop1
-							}
-						}
-					case "关联字段":
-						switch logic.Relation {
-						case "是":
-							var dataVal interface{}
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop1
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											dataVal = relateVal
-										} else {
-											counter++
-											continue logicLoop1
-										}
-									}
-								}
-							}
-							if compare.ID != "" {
-								var compareValue interface{}
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
-										counter++
-										continue logicLoop1
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												compareValue = relateVal
-											} else {
-												counter++
-												continue logicLoop1
-											}
-										}
-									}
-								}
-								if dataVal != compareValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if dataVal != compare.Value {
-								counter++
-								continue logicLoop1
-							}
-						case "不是":
-							var dataVal interface{}
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop1
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											dataVal = relateVal
-										} else {
-											counter++
-											continue logicLoop1
-										}
-									}
-								}
-							}
-							if compare.ID == "" {
-								var compareValue interface{}
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
-										counter++
-										continue logicLoop1
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												compareValue = relateVal
-											} else {
-												counter++
-												continue logicLoop1
-											}
-										}
-									}
-								}
-								if dataVal != compareValue {
-									counter++
-									continue logicLoop1
-								}
-							} else if dataVal == compare.Value {
-								counter++
-								continue logicLoop1
-							}
-						case "包含":
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal := ""
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop1
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											if relateValString, ok := relateVal.(string); ok {
-												dataVal = relateValString
-											} else {
-												counter++
-												continue logicLoop1
-											}
-										} else {
-											counter++
-											continue logicLoop1
-										}
-									}
-								}
-							}
-							if compare.ID != "" {
-								compareVal := ""
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
-										counter++
-										continue logicLoop1
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												if relateValString, ok := relateVal.(string); ok {
-													compareVal = relateValString
-												} else {
-													counter++
-													continue logicLoop1
+			if filter, ok := settings.Query["filter"]; ok {
+				if filterM, ok := filter.(map[string]interface{}); ok {
+					for key, val := range filterM {
+						if extRaw, ok := excelColNameTypeExtMap[key]; ok {
+							if extRaw.Format != "" {
+								if timeMapRaw, ok := val.(map[string]interface{}); ok {
+									for k, v := range timeMapRaw {
+										if originTime, ok := v.(string); ok {
+											var queryTime string
+											var startPoint string
+											var endPoint string
+											timeMap := map[string]interface{}{}
+											switch originTime {
+											case "今天":
+												startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
 												}
-											} else {
-												counter++
-												continue logicLoop1
-											}
-										}
-									}
-								}
-								if !strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop1
-								}
-							} else if !strings.Contains(dataVal, compareInValue) {
-								counter++
-								continue logicLoop1
-							}
-						case "不包含":
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal := ""
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop1
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											if relateValString, ok := relateVal.(string); ok {
-												dataVal = relateValString
-											} else {
-												counter++
-												continue logicLoop1
-											}
-										} else {
-											counter++
-											continue logicLoop1
-										}
-									}
-								}
-							}
-							if compare.ID != "" {
-								compareVal := ""
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
-										counter++
-										continue logicLoop1
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												if relateValString, ok := relateVal.(string); ok {
-													compareVal = relateValString
-												} else {
-													counter++
-													continue logicLoop1
+											case "昨天":
+												startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
 												}
+											case "明天":
+												startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "本周":
+												week := int(time.Now().Weekday())
+												if week == 0 {
+													week = 7
+												}
+												startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "上周":
+												week := int(time.Now().Weekday())
+												if week == 0 {
+													week = 7
+												}
+												startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "今年":
+												startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "去年":
+												startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "明年":
+												startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											default:
+												if originTime != "" {
+													eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+													if err != nil {
+														continue
+													}
+													queryTime = eleTime.Format("2006-01-02 15:04:05")
+												}
+											}
+											if len(timeMap) != 0 {
+												timeMapRaw[k] = timeMap
 											} else {
-												counter++
-												continue logicLoop1
+												timeMapRaw[k] = queryTime
 											}
 										}
 									}
-								}
-								if strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop1
-								}
-							} else if strings.Contains(dataVal, compareInValue) {
-								counter++
-								continue logicLoop1
-							}
-						case "为空":
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
-								if ok {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											if relateVal != nil {
-												counter++
-												continue logicLoop1
-											}
-										} else {
-											counter++
-											continue logicLoop1
+								} else if originTime, ok := val.(string); ok {
+									var queryTime string
+									var startPoint string
+									var endPoint string
+									timeMap := map[string]interface{}{}
+									switch originTime {
+									case "今天":
+										startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
 										}
+									case "昨天":
+										startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "明天":
+										startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "本周":
+										week := int(time.Now().Weekday())
+										if week == 0 {
+											week = 7
+										}
+										startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "上周":
+										week := int(time.Now().Weekday())
+										if week == 0 {
+											week = 7
+										}
+										startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "今年":
+										startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "去年":
+										startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "明年":
+										startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									default:
+										if originTime != "" {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+											if err != nil {
+												continue
+											}
+											queryTime = eleTime.Format("2006-01-02 15:04:05")
+										}
+									}
+									if len(timeMap) != 0 {
+										filterM[key] = timeMap
 									} else {
-										counter++
-										continue logicLoop1
+										filterM[key] = queryTime
 									}
-								} else {
-									counter++
-									continue logicLoop1
 								}
 							}
-						case "不为空":
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
-								if ok {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											if relateVal == nil {
-												counter++
-												continue logicLoop1
+						} else if key == "createTime" || key == "modifyTime" {
+							if timeMapRaw, ok := val.(map[string]interface{}); ok {
+								for k, v := range timeMapRaw {
+									if originTime, ok := v.(string); ok {
+										var queryTime string
+										var startPoint string
+										var endPoint string
+										timeMap := map[string]interface{}{}
+										switch originTime {
+										case "今天":
+											startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
 											}
-										} else {
-											counter++
-											continue logicLoop1
+										case "昨天":
+											startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "明天":
+											startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "本周":
+											week := int(time.Now().Weekday())
+											if week == 0 {
+												week = 7
+											}
+											startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "上周":
+											week := int(time.Now().Weekday())
+											if week == 0 {
+												week = 7
+											}
+											startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "今年":
+											startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "去年":
+											startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "明年":
+											startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										default:
+											if originTime != "" {
+												eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+												if err != nil {
+													continue
+												}
+												queryTime = eleTime.Format("2006-01-02 15:04:05")
+											}
 										}
-									} else {
-										counter++
-										continue logicLoop1
+										if len(timeMap) != 0 {
+											timeMapRaw[k] = timeMap
+										} else {
+											timeMapRaw[k] = queryTime
+										}
 									}
+								}
+							} else if originTime, ok := val.(string); ok {
+								var queryTime string
+								var startPoint string
+								var endPoint string
+								timeMap := map[string]interface{}{}
+								switch originTime {
+								case "今天":
+									startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+									endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+									timeMap = map[string]interface{}{
+										"$gte": startPoint,
+										"$lt":  endPoint,
+									}
+								case "昨天":
+									startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+									endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+									timeMap = map[string]interface{}{
+										"$gte": startPoint,
+										"$lt":  endPoint,
+									}
+								case "明天":
+									startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+									endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+									timeMap = map[string]interface{}{
+										"$gte": startPoint,
+										"$lt":  endPoint,
+									}
+								case "本周":
+									week := int(time.Now().Weekday())
+									if week == 0 {
+										week = 7
+									}
+									startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+									endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+									timeMap = map[string]interface{}{
+										"$gte": startPoint,
+										"$lt":  endPoint,
+									}
+								case "上周":
+									week := int(time.Now().Weekday())
+									if week == 0 {
+										week = 7
+									}
+									startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+									endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+									timeMap = map[string]interface{}{
+										"$gte": startPoint,
+										"$lt":  endPoint,
+									}
+								case "今年":
+									startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+									endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+									timeMap = map[string]interface{}{
+										"$gte": startPoint,
+										"$lt":  endPoint,
+									}
+								case "去年":
+									startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+									endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+									timeMap = map[string]interface{}{
+										"$gte": startPoint,
+										"$lt":  endPoint,
+									}
+								case "明年":
+									startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+									endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+									timeMap = map[string]interface{}{
+										"$gte": startPoint,
+										"$lt":  endPoint,
+									}
+								default:
+									if originTime != "" {
+										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+										if err != nil {
+											continue
+										}
+										queryTime = eleTime.Format("2006-01-02 15:04:05")
+									}
+								}
+								if len(timeMap) != 0 {
+									filterM[key] = timeMap
 								} else {
-									counter++
-									continue logicLoop1
+									filterM[key] = queryTime
+								}
+							}
+						}
+						if key == "$or" {
+							if orList, ok := val.([]interface{}); ok {
+								for _, orEle := range orList {
+									if orEleMap, ok := orEle.(map[string]interface{}); ok {
+										for orKey, orVal := range orEleMap {
+											if orKey == "$and" {
+												if orList, ok := orVal.([]interface{}); ok {
+													for _, orEle := range orList {
+														if orEleMap, ok := orEle.(map[string]interface{}); ok {
+															for orKey, orVal := range orEleMap {
+																if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
+																	if extRaw.Format != "" {
+																		if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+																			for k, v := range timeMapRaw {
+																				if originTime, ok := v.(string); ok {
+																					var queryTime string
+																					var startPoint string
+																					var endPoint string
+																					timeMap := map[string]interface{}{}
+																					switch originTime {
+																					case "今天":
+																						startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "昨天":
+																						startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "明天":
+																						startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "本周":
+																						week := int(time.Now().Weekday())
+																						if week == 0 {
+																							week = 7
+																						}
+																						startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "上周":
+																						week := int(time.Now().Weekday())
+																						if week == 0 {
+																							week = 7
+																						}
+																						startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "今年":
+																						startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "去年":
+																						startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "明年":
+																						startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					default:
+																						if originTime != "" {
+																							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																							if err != nil {
+																								continue
+																							}
+																							queryTime = eleTime.Format("2006-01-02 15:04:05")
+																						}
+																					}
+																					if len(timeMap) != 0 {
+																						timeMapRaw[k] = timeMap
+																					} else {
+																						timeMapRaw[k] = queryTime
+																					}
+																				}
+																			}
+																		} else if originTime, ok := orVal.(string); ok {
+																			var queryTime string
+																			var startPoint string
+																			var endPoint string
+																			timeMap := map[string]interface{}{}
+																			switch originTime {
+																			case "今天":
+																				startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "昨天":
+																				startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "明天":
+																				startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "本周":
+																				week := int(time.Now().Weekday())
+																				if week == 0 {
+																					week = 7
+																				}
+																				startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "上周":
+																				week := int(time.Now().Weekday())
+																				if week == 0 {
+																					week = 7
+																				}
+																				startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "今年":
+																				startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "去年":
+																				startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "明年":
+																				startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			default:
+																				if originTime != "" {
+																					eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																					if err != nil {
+																						continue
+																					}
+																					queryTime = eleTime.Format("2006-01-02 15:04:05")
+																				}
+																			}
+																			if len(timeMap) != 0 {
+																				orEleMap[orKey] = timeMap
+																			} else {
+																				orEleMap[orKey] = queryTime
+																			}
+																		}
+																	}
+																} else if orKey == "createTime" || orKey == "modifyTime" {
+																	if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+																		for k, v := range timeMapRaw {
+																			if originTime, ok := v.(string); ok {
+																				var queryTime string
+																				var startPoint string
+																				var endPoint string
+																				timeMap := map[string]interface{}{}
+																				switch originTime {
+																				case "今天":
+																					startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "昨天":
+																					startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "明天":
+																					startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "本周":
+																					week := int(time.Now().Weekday())
+																					if week == 0 {
+																						week = 7
+																					}
+																					startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "上周":
+																					week := int(time.Now().Weekday())
+																					if week == 0 {
+																						week = 7
+																					}
+																					startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "今年":
+																					startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "去年":
+																					startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "明年":
+																					startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				default:
+																					if originTime != "" {
+																						eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																						if err != nil {
+																							continue
+																						}
+																						queryTime = eleTime.Format("2006-01-02 15:04:05")
+																					}
+																				}
+																				if len(timeMap) != 0 {
+																					timeMapRaw[k] = timeMap
+																				} else {
+																					timeMapRaw[k] = queryTime
+																				}
+																			}
+																		}
+																	} else if originTime, ok := orVal.(string); ok {
+																		var queryTime string
+																		var startPoint string
+																		var endPoint string
+																		timeMap := map[string]interface{}{}
+																		switch originTime {
+																		case "今天":
+																			startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "昨天":
+																			startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "明天":
+																			startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "本周":
+																			week := int(time.Now().Weekday())
+																			if week == 0 {
+																				week = 7
+																			}
+																			startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "上周":
+																			week := int(time.Now().Weekday())
+																			if week == 0 {
+																				week = 7
+																			}
+																			startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "今年":
+																			startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "去年":
+																			startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "明年":
+																			startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		default:
+																			if originTime != "" {
+																				eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																				if err != nil {
+																					continue
+																				}
+																				queryTime = eleTime.Format("2006-01-02 15:04:05")
+																			}
+																		}
+																		if len(timeMap) != 0 {
+																			orEleMap[orKey] = timeMap
+																		} else {
+																			orEleMap[orKey] = queryTime
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}else if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
+												if extRaw.Format != "" {
+													if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+														for k, v := range timeMapRaw {
+															if originTime, ok := v.(string); ok {
+																var queryTime string
+																var startPoint string
+																var endPoint string
+																timeMap := map[string]interface{}{}
+																switch originTime {
+																case "今天":
+																	startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "昨天":
+																	startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "明天":
+																	startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "本周":
+																	week := int(time.Now().Weekday())
+																	if week == 0 {
+																		week = 7
+																	}
+																	startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "上周":
+																	week := int(time.Now().Weekday())
+																	if week == 0 {
+																		week = 7
+																	}
+																	startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "今年":
+																	startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "去年":
+																	startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "明年":
+																	startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																default:
+																	if originTime != "" {
+																		eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																		if err != nil {
+																			continue
+																		}
+																		queryTime = eleTime.Format("2006-01-02 15:04:05")
+																	}
+																}
+																if len(timeMap) != 0 {
+																	timeMapRaw[k] = timeMap
+																} else {
+																	timeMapRaw[k] = queryTime
+																}
+															}
+														}
+													} else if originTime, ok := orVal.(string); ok {
+														var queryTime string
+														var startPoint string
+														var endPoint string
+														timeMap := map[string]interface{}{}
+														switch originTime {
+														case "今天":
+															startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "昨天":
+															startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "明天":
+															startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "本周":
+															week := int(time.Now().Weekday())
+															if week == 0 {
+																week = 7
+															}
+															startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "上周":
+															week := int(time.Now().Weekday())
+															if week == 0 {
+																week = 7
+															}
+															startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "今年":
+															startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "去年":
+															startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "明年":
+															startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														default:
+															if originTime != "" {
+																eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																if err != nil {
+																	continue
+																}
+																queryTime = eleTime.Format("2006-01-02 15:04:05")
+															}
+														}
+														if len(timeMap) != 0 {
+															orEleMap[orKey] = timeMap
+														} else {
+															orEleMap[orKey] = queryTime
+														}
+													}
+												}
+											} else if orKey == "createTime" || orKey == "modifyTime" {
+												if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+													for k, v := range timeMapRaw {
+														if originTime, ok := v.(string); ok {
+															var queryTime string
+															var startPoint string
+															var endPoint string
+															timeMap := map[string]interface{}{}
+															switch originTime {
+															case "今天":
+																startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "昨天":
+																startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "明天":
+																startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "本周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "上周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "今年":
+																startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "去年":
+																startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "明年":
+																startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															default:
+																if originTime != "" {
+																	eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																	if err != nil {
+																		continue
+																	}
+																	queryTime = eleTime.Format("2006-01-02 15:04:05")
+																}
+															}
+															if len(timeMap) != 0 {
+																timeMapRaw[k] = timeMap
+															} else {
+																timeMapRaw[k] = queryTime
+															}
+														}
+													}
+												} else if originTime, ok := orVal.(string); ok {
+													var queryTime string
+													var startPoint string
+													var endPoint string
+													timeMap := map[string]interface{}{}
+													switch originTime {
+													case "今天":
+														startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													case "昨天":
+														startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													case "明天":
+														startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													case "本周":
+														week := int(time.Now().Weekday())
+														if week == 0 {
+															week = 7
+														}
+														startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													case "上周":
+														week := int(time.Now().Weekday())
+														if week == 0 {
+															week = 7
+														}
+														startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													case "今年":
+														startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													case "去年":
+														startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													case "明年":
+														startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													default:
+														if originTime != "" {
+															eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+															if err != nil {
+																continue
+															}
+															queryTime = eleTime.Format("2006-01-02 15:04:05")
+														}
+													}
+													if len(timeMap) != 0 {
+														orEleMap[orKey] = timeMap
+													} else {
+														orEleMap[orKey] = queryTime
+													}
+												}
+											}
+										}
+									}
 								}
 							}
 						}
 					}
-				}
-				//fmt.Println("after counter:", counter, "orCounter:", orCounter)
-				if len(settings.Logic) > 1 {
-					if settings.Logic[len(settings.Logic)-2].LogicType == "且" && counter != 0 {
-						continue flowloop
-					}
-				}
-				if counter >= orCounter+1 {
-					continue flowloop
 				}
 			}
 		case "删除记录时":
-			//fmt.Println("删除记录时 projectName ;", projectName, "data:", data)
-			//fmt.Println("settings.SelectTyp:", settings.SelectTyp, "settings.RangeType:", settings.RangeType)
-			counter := 0
 			switch settings.SelectTyp {
 			case "记录选择":
 				deleteID, ok := data["id"].(string)
@@ -2794,4479 +1274,2197 @@ flowloop:
 					continue
 				}
 			case "范围定义":
-			logicLoop2:
-				for i, logic := range settings.Logic {
-					compare := logic.Compare
-					if i%2 == 1 {
-						if settings.Logic[i].LogicType == "或" {
-							orCounter++
-						}
-					}
-					if i > 1 && i%2 == 1 {
-						if settings.Logic[i-2].LogicType == "且" && counter != 0 {
-							continue flowloop
-						}
-					} else if i != 0 && i%2 == 0 {
-						if settings.Logic[i-1].LogicType == "且" && counter != 0 {
-							continue flowloop
-						}
-					}
-					switch logic.DataType {
-					case "文本":
-						switch logic.Relation {
-						case "是":
-							if compare.ID != "" {
-								if data[logic.ID] != data[compare.ID] {
-									counter++
-									continue logicLoop2
-								}
-							} else if data[logic.ID] != compare.Value {
-								counter++
-								continue logicLoop2
-							}
-						case "不是":
-							if compare.ID != "" {
-								if data[logic.ID] == data[compare.ID] {
-									counter++
-									continue logicLoop2
-								}
-							} else if data[logic.ID] == compare.Value {
-								counter++
-								continue logicLoop2
-							}
-						case "包含":
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop2
-							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop2
-								}
-								if !strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop2
-								}
-							} else if !strings.Contains(dataVal, compareInValue) {
-								counter++
-								continue logicLoop2
-							}
-						case "不包含":
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop2
-							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop2
-								}
-								if strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop2
-								}
-							} else if strings.Contains(dataVal, compareInValue) {
-								counter++
-								continue logicLoop2
-							}
-						case "开始为":
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop2
-							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop2
-								}
-								if !strings.HasPrefix(dataVal, compareVal) {
-									counter++
-									continue logicLoop2
-								}
-							} else if !strings.HasPrefix(dataVal, compareInValue) {
-								counter++
-								continue logicLoop2
-							}
-						case "结尾为":
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop2
-							}
-							if compare.ID != "" {
-								compareVal, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop2
-								}
-								if !strings.HasSuffix(dataVal, compareVal) {
-									counter++
-									continue logicLoop2
-								}
-							} else if !strings.HasSuffix(dataVal, compareInValue) {
-								counter++
-								continue logicLoop2
-							}
-						case "为空":
-							if data[logic.ID] != nil {
-								counter++
-								continue logicLoop2
-							}
-						case "不为空":
-							if data[logic.ID] == nil {
-								counter++
-								continue logicLoop2
-							}
-						}
-					case "选择器":
-						switch logic.Relation {
-						case "是", "等于":
-							if compare.ID != "" {
-								if data[logic.ID] != data[compare.ID] {
-									counter++
-									continue logicLoop2
-								}
-							} else if data[logic.ID] != compare.Value {
-								counter++
-								continue logicLoop2
-							}
-						case "不是", "不等于":
-							if compare.ID != "" {
-								if data[logic.ID] == data[compare.ID] {
-									counter++
-									continue logicLoop2
-								}
-							} else if data[logic.ID] == compare.Value {
-								counter++
-								continue logicLoop2
-							}
-						case "为空":
-							if data[logic.ID] != nil {
-								counter++
-								continue logicLoop2
-							}
-						case "不为空":
-							if data[logic.ID] == nil {
-								counter++
-								continue logicLoop2
-							}
-						}
-					case "数值":
-						switch logic.Relation {
-						case "等于":
-							if compare.ID != "" {
-								if data[logic.ID] != data[compare.ID] {
-									counter++
-									continue logicLoop2
-								}
-							} else if data[logic.ID] != compare.Value {
-								counter++
-								continue logicLoop2
-							}
-						case "不等于":
-							if compare.ID != "" {
-								if data[logic.ID] == data[compare.ID] {
-									counter++
-									continue logicLoop2
-								}
-							} else if data[logic.ID] == compare.Value {
-								counter++
-								continue logicLoop2
-							}
-						case "大于":
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-							if err != nil {
-								counter++
-								continue logicLoop2
-							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop2
-								}
-								if logicVal <= compareVal {
-									counter++
-									continue logicLoop2
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop2
-								}
-								if logicVal <= compareVal {
-									counter++
-									continue logicLoop2
-								}
-							}
-						case "小于":
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-							if err != nil {
-								counter++
-								continue logicLoop2
-							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop2
-								}
-								if logicVal >= compareVal {
-									counter++
-									continue logicLoop2
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop2
-								}
-								if logicVal >= compareVal {
-									counter++
-									continue logicLoop2
-								}
-							}
-						case "大于等于":
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-							if err != nil {
-								counter++
-								continue logicLoop2
-							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop2
-								}
-								if logicVal < compareVal {
-									counter++
-									continue logicLoop2
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop2
-								}
-								if logicVal < compareVal {
-									counter++
-									continue logicLoop2
-								}
-							}
-						case "小于等于":
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-							if err != nil {
-								counter++
-								continue logicLoop2
-							}
-							if compare.ID != "" {
-								compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-								if err != nil {
-									counter++
-									continue logicLoop2
-								}
-								if logicVal > compareVal {
-									counter++
-									continue logicLoop2
-								}
-							} else {
-								compareVal, err := numberx.GetFloatNumber(compare.Value)
-								if err != nil {
-									counter++
-									continue logicLoop2
-								}
-								if logicVal > compareVal {
-									counter++
-									continue logicLoop2
-								}
-							}
-						case "在范围内":
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-							if err != nil {
-								counter++
-								continue logicLoop2
-							}
-							startVal := float64(0)
-							endVal := float64(0)
-							if compare.StartValue.ID != "" {
-								startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop2
-								}
-							} else {
-								startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop2
-								}
-							}
-							if compare.EndValue.ID != "" {
-								endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop2
-								}
-							} else {
-								endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop2
-								}
-							}
-							//fmt.Println("logicVal:",logicVal,"startVal:",startVal,"endVal:",endVal)
-							if logicVal < startVal || logicVal > endVal {
-								counter++
-								continue logicLoop2
-							}
-						case "不在范围内":
-							logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-							if err != nil {
-								counter++
-								continue logicLoop2
-							}
-							startVal := float64(0)
-							endVal := float64(0)
-							if compare.StartValue.ID != "" {
-								startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop2
-								}
-							} else {
-								startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop2
-								}
-							}
-							if compare.EndValue.ID != "" {
-								endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-								if err != nil {
-									counter++
-									continue logicLoop2
-								}
-							} else {
-								endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-								if err != nil {
-									counter++
-									continue logicLoop2
-								}
-							}
-							if logicVal >= startVal && logicVal <= endVal {
-								counter++
-								continue logicLoop2
-							}
-						case "为空":
-							if data[logic.ID] != nil {
-								counter++
-								continue logicLoop2
-							}
-						case "不为空":
-							if data[logic.ID] == nil {
-								counter++
-								continue logicLoop2
-							}
-						}
-					case "时间":
-						switch logic.Relation {
-						case "等于":
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									compareInValue = eleTime.Unix()
-								}
-							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop2
-							} else {
-								if eleRaw != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleRaw), eleRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									dataVal = eleTime.Unix()
-								}
-							}
-							if compare.TimeType != "" {
-								startPoint := int64(0)
-								endPoint := int64(0)
-								switch compare.TimeType {
-								case "今天":
-									startPoint = timex.GetUnixToNewTimeDay(0).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(1).Unix()
-								case "昨天":
-									startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(0).Unix()
-								case "明天":
-									startPoint = timex.GetUnixToNewTimeDay(1).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(2).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "今年":
-									startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
-									endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "去年":
-									startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
-									endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "明年":
-									startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
-									endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-										compareInValue = eleTime.Unix()
-									}
-									if dataVal != compareInValue {
-										counter++
-										continue logicLoop2
-									}
-									continue
-								}
-								if dataVal < startPoint || dataVal >= endPoint {
-									counter++
-									continue logicLoop2
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop2
-								} else {
-									if eleRaw != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleRaw), eleRaw, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-										compareValue = eleTime.Unix()
-									}
-								}
-								if dataVal != compareValue {
-									counter++
-									continue logicLoop2
-								}
-							} else if dataVal != compareInValue {
-								counter++
-								continue logicLoop2
-							} else if compareInValue == 0 {
-								counter++
-								continue logicLoop2
-							}
-						case "不等于":
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									compareInValue = eleTime.Unix()
-								}
-							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop2
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-									} else {
-										counter++
-										continue logicLoop2
-									}
-								}
-							}
-							if compare.TimeType != "" {
-								startPoint := int64(0)
-								endPoint := int64(0)
-								switch compare.TimeType {
-								case "今天":
-									startPoint = timex.GetUnixToNewTimeDay(0).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(1).Unix()
-								case "昨天":
-									startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(0).Unix()
-								case "明天":
-									startPoint = timex.GetUnixToNewTimeDay(1).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(2).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-									endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "今年":
-									startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
-									endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "去年":
-									startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
-									endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "明年":
-
-									startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
-									endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-										compareInValue = eleTime.Unix()
-									}
-									if dataVal == compareInValue {
-										counter++
-										continue logicLoop2
-									}
-									continue
-								}
-								if dataVal >= startPoint && dataVal < endPoint {
-									counter++
-									continue logicLoop2
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop2
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop2
-											}
-										} else {
-											counter++
-											continue logicLoop2
-										}
-									}
-								}
-								if dataVal == compareValue {
-									counter++
-									continue logicLoop2
-								}
-							} else if dataVal == compareInValue {
-								counter++
-								continue logicLoop2
-							} else if compareInValue == 0 {
-								counter++
-								continue logicLoop2
-							}
-						case "早于":
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									compareInValue = eleTime.Unix()
-								}
-							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop2
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-									} else {
-										counter++
-										continue logicLoop2
-									}
-								}
-							}
-							if compare.TimeType != "" {
-								switch compare.TimeType {
-								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-										compareInValue = eleTime.Unix()
-									}
-								}
-								if dataVal >= compareInValue {
-									counter++
-									continue logicLoop2
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop2
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop2
-											}
-										} else {
-											counter++
-											continue logicLoop2
-										}
-									}
-								}
-								if dataVal >= compareValue {
-									counter++
-									continue logicLoop2
-								}
-							} else if dataVal >= compareInValue {
-								counter++
-								continue logicLoop2
-							} else if compareInValue == 0 {
-								counter++
-								continue logicLoop2
-							}
-						case "晚于":
-							compareInValue := int64(0)
-							if ele, ok := compare.Value.(string); ok {
-								if ele != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									compareInValue = eleTime.Unix()
-								}
-							}
-							dataVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop2
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-										dataVal, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-									} else {
-										counter++
-										continue logicLoop2
-									}
-								}
-							}
-							if compare.TimeType != "" {
-								switch compare.TimeType {
-								case "今天":
-									compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-								case "昨天":
-									compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-								case "明天":
-									compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								case "今年":
-									compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-								case "去年":
-									compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-								case "明年":
-									compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								case "指定时间":
-									if compare.SpecificTime != "" {
-										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-										if err != nil {
-											counter++
-											continue logicLoop2
-										}
-										compareInValue = eleTime.Unix()
-									}
-								}
-								if dataVal <= compareInValue {
-									counter++
-									continue logicLoop2
-								}
-							} else if compare.ID != "" {
-								compareValue := int64(0)
-								eleRaw, ok := data[compare.ID].(string)
-								if !ok {
-									counter++
-									continue logicLoop2
-								} else {
-									if eleRaw != "" {
-										if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-											compareValue, err = TimeConvertExt(extVal, eleRaw)
-											if err != nil {
-												counter++
-												continue logicLoop2
-											}
-										} else {
-											counter++
-											continue logicLoop2
-										}
-									}
-								}
-								if dataVal <= compareValue {
-									counter++
-									continue logicLoop2
-								}
-							} else if dataVal <= compareInValue {
-								counter++
-								continue logicLoop2
-							} else if compareInValue == 0 {
-								counter++
-								continue logicLoop2
-							}
-						case "在范围内":
-							logicVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop2
-							} else {
-								if eleRaw != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleRaw), eleRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									logicVal = eleTime.Unix()
-								}
-							}
-							startVal := int64(0)
-							endVal := int64(0)
-							if compare.StartTime.ID != "" {
-								if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									startVal = eleTime.Unix()
-								}
-							} else if compare.StartTime.Value != "" {
-								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									startVal = eleTime.Unix()
-								}
-							}
-							if compare.EndTime.ID != "" {
-								if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									startVal = eleTime.Unix()
-								}
-							} else if compare.EndTime.Value != "" {
-								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									endVal = eleTime.Unix()
-								}
-							}
-							if logicVal < startVal || logicVal > endVal {
-								counter++
-								continue logicLoop2
-							}
-						case "不在范围内":
-							logicVal := int64(0)
-							eleRaw, ok := data[logic.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop2
-							} else {
-								if eleRaw != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleRaw), eleRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									logicVal = eleTime.Unix()
-								}
-							}
-							startVal := int64(0)
-							endVal := int64(0)
-							if compare.StartTime.ID != "" {
-								if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									startVal = eleTime.Unix()
-								}
-							} else if compare.StartTime.Value != "" {
-								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									startVal = eleTime.Unix()
-								}
-							}
-							if compare.EndTime.ID != "" {
-								if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									startVal = eleTime.Unix()
-								}
-							} else if compare.EndTime.Value != "" {
-								if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop2
-									}
-									endVal = eleTime.Unix()
-								}
-							}
-							if logicVal < startVal || logicVal > endVal {
-								counter++
-								continue logicLoop2
-							}
-						case "为空":
-							if data[logic.ID] != nil {
-								counter++
-								continue logicLoop2
-							}
-						case "不为空":
-							if data[logic.ID] == nil {
-								counter++
-								continue logicLoop2
-							}
-						}
-					case "布尔值", "附件", "定位":
-						switch logic.Relation {
-						case "为空":
-							if data[logic.ID] != nil {
-								counter++
-								continue logicLoop2
-							}
-						case "不为空":
-							if data[logic.ID] == nil {
-								counter++
-								continue logicLoop2
-							}
-						}
-					case "关联字段":
-						switch logic.Relation {
-						case "是":
-							var dataVal interface{}
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop2
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											dataVal = relateVal
-										} else {
-											counter++
-											continue logicLoop2
-										}
-									}
-								}
-							}
-							if compare.ID != "" {
-								var compareValue interface{}
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
-										counter++
-										continue logicLoop2
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												compareValue = relateVal
-											} else {
-												counter++
-												continue logicLoop2
-											}
-										}
-									}
-								}
-								if dataVal != compareValue {
-									counter++
-									continue logicLoop2
-								}
-							} else if dataVal != compare.Value {
-								counter++
-								continue logicLoop2
-							}
-						case "不是":
-							var dataVal interface{}
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop2
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											dataVal = relateVal
-										} else {
-											counter++
-											continue logicLoop2
-										}
-									}
-								}
-							}
-							if compare.ID == "" {
-								var compareValue interface{}
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
-										counter++
-										continue logicLoop2
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												compareValue = relateVal
-											} else {
-												counter++
-												continue logicLoop2
-											}
-										}
-									}
-								}
-								if dataVal != compareValue {
-									counter++
-									continue logicLoop2
-								}
-							} else if dataVal == compare.Value {
-								counter++
-								continue logicLoop2
-							}
-						case "包含":
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal := ""
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop2
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											if relateValString, ok := relateVal.(string); ok {
-												dataVal = relateValString
-											} else {
-												counter++
-												continue logicLoop2
-											}
-										} else {
-											counter++
-											continue logicLoop2
-										}
-									}
-								}
-							}
-							if compare.ID != "" {
-								compareVal := ""
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
-										counter++
-										continue logicLoop2
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												if relateValString, ok := relateVal.(string); ok {
-													compareVal = relateValString
-												} else {
-													counter++
-													continue logicLoop2
+				if filter, ok := settings.Query["filter"]; ok {
+					if filterM, ok := filter.(map[string]interface{}); ok {
+						for key, val := range filterM {
+							if extRaw, ok := excelColNameTypeExtMap[key]; ok {
+								if extRaw.Format != "" {
+									if timeMapRaw, ok := val.(map[string]interface{}); ok {
+										for k, v := range timeMapRaw {
+											if originTime, ok := v.(string); ok {
+												var queryTime string
+												var startPoint string
+												var endPoint string
+												timeMap := map[string]interface{}{}
+												switch originTime {
+												case "今天":
+													startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "昨天":
+													startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "明天":
+													startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "本周":
+													week := int(time.Now().Weekday())
+													if week == 0 {
+														week = 7
+													}
+													startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "上周":
+													week := int(time.Now().Weekday())
+													if week == 0 {
+														week = 7
+													}
+													startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "今年":
+													startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "去年":
+													startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "明年":
+													startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												default:
+													if originTime != "" {
+														eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+														if err != nil {
+															continue
+														}
+														queryTime = eleTime.Format("2006-01-02 15:04:05")
+													}
 												}
-											} else {
-												counter++
-												continue logicLoop2
-											}
-										}
-									}
-								}
-								if !strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop2
-								}
-							} else if !strings.Contains(dataVal, compareInValue) {
-								counter++
-								continue logicLoop2
-							}
-						case "不包含":
-							compareInValue := ""
-							if ele, ok := compare.Value.(string); ok {
-								compareInValue = ele
-							}
-							dataVal := ""
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop2
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											if relateValString, ok := relateVal.(string); ok {
-												dataVal = relateValString
-											} else {
-												counter++
-												continue logicLoop2
-											}
-										} else {
-											counter++
-											continue logicLoop2
-										}
-									}
-								}
-							}
-							if compare.ID != "" {
-								compareVal := ""
-								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-									eleRaw, ok := data[compare.ID].(map[string]interface{})
-									if !ok {
-										counter++
-										continue logicLoop2
-									} else {
-										if eleRaw != nil {
-											if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-												if relateValString, ok := relateVal.(string); ok {
-													compareVal = relateValString
+												if len(timeMap) != 0 {
+													timeMapRaw[k] = timeMap
 												} else {
-													counter++
-													continue logicLoop2
+													timeMapRaw[k] = queryTime
 												}
+											}
+										}
+									} else if originTime, ok := val.(string); ok {
+										var queryTime string
+										var startPoint string
+										var endPoint string
+										timeMap := map[string]interface{}{}
+										switch originTime {
+										case "今天":
+											startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "昨天":
+											startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "明天":
+											startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "本周":
+											week := int(time.Now().Weekday())
+											if week == 0 {
+												week = 7
+											}
+											startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "上周":
+											week := int(time.Now().Weekday())
+											if week == 0 {
+												week = 7
+											}
+											startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "今年":
+											startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "去年":
+											startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "明年":
+											startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										default:
+											if originTime != "" {
+												eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+												if err != nil {
+													continue
+												}
+												queryTime = eleTime.Format("2006-01-02 15:04:05")
+											}
+										}
+										if len(timeMap) != 0 {
+											filterM[key] = timeMap
+										} else {
+											filterM[key] = queryTime
+										}
+									}
+								}
+							} else if key == "createTime" || key == "modifyTime" {
+								if timeMapRaw, ok := val.(map[string]interface{}); ok {
+									for k, v := range timeMapRaw {
+										if originTime, ok := v.(string); ok {
+											var queryTime string
+											var startPoint string
+											var endPoint string
+											timeMap := map[string]interface{}{}
+											switch originTime {
+											case "今天":
+												startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "昨天":
+												startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "明天":
+												startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "本周":
+												week := int(time.Now().Weekday())
+												if week == 0 {
+													week = 7
+												}
+												startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "上周":
+												week := int(time.Now().Weekday())
+												if week == 0 {
+													week = 7
+												}
+												startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "今年":
+												startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "去年":
+												startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "明年":
+												startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											default:
+												if originTime != "" {
+													eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+													if err != nil {
+														continue
+													}
+													queryTime = eleTime.Format("2006-01-02 15:04:05")
+												}
+											}
+											if len(timeMap) != 0 {
+												timeMapRaw[k] = timeMap
 											} else {
-												counter++
-												continue logicLoop2
+												timeMapRaw[k] = queryTime
 											}
 										}
 									}
-								}
-								if strings.Contains(dataVal, compareVal) {
-									counter++
-									continue logicLoop2
-								}
-							} else if strings.Contains(dataVal, compareInValue) {
-								counter++
-								continue logicLoop2
-							}
-						case "为空":
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
-								if ok {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											if relateVal != nil {
-												counter++
-												continue logicLoop2
-											}
-										} else {
-											counter++
-											continue logicLoop2
+								} else if originTime, ok := val.(string); ok {
+									var queryTime string
+									var startPoint string
+									var endPoint string
+									timeMap := map[string]interface{}{}
+									switch originTime {
+									case "今天":
+										startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
 										}
+									case "昨天":
+										startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "明天":
+										startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "本周":
+										week := int(time.Now().Weekday())
+										if week == 0 {
+											week = 7
+										}
+										startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "上周":
+										week := int(time.Now().Weekday())
+										if week == 0 {
+											week = 7
+										}
+										startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "今年":
+										startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "去年":
+										startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "明年":
+										startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									default:
+										if originTime != "" {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+											if err != nil {
+												continue
+											}
+											queryTime = eleTime.Format("2006-01-02 15:04:05")
+										}
+									}
+									if len(timeMap) != 0 {
+										filterM[key] = timeMap
 									} else {
-										counter++
-										continue logicLoop2
+										filterM[key] = queryTime
 									}
-								} else {
-									counter++
-									continue logicLoop2
 								}
 							}
-						case "不为空":
-							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-								eleRaw, ok := data[logic.ID].(map[string]interface{})
-								if ok {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											if relateVal == nil {
-												counter++
-												continue logicLoop2
+							if key == "$or" {
+								if orList, ok := val.([]interface{}); ok {
+									for _, orEle := range orList {
+										if orEleMap, ok := orEle.(map[string]interface{}); ok {
+											for orKey, orVal := range orEleMap {
+												if orKey == "$and" {
+													if orList, ok := orVal.([]interface{}); ok {
+														for _, orEle := range orList {
+															if orEleMap, ok := orEle.(map[string]interface{}); ok {
+																for orKey, orVal := range orEleMap {
+																	if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
+																		if extRaw.Format != "" {
+																			if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+																				for k, v := range timeMapRaw {
+																					if originTime, ok := v.(string); ok {
+																						var queryTime string
+																						var startPoint string
+																						var endPoint string
+																						timeMap := map[string]interface{}{}
+																						switch originTime {
+																						case "今天":
+																							startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "昨天":
+																							startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "明天":
+																							startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "本周":
+																							week := int(time.Now().Weekday())
+																							if week == 0 {
+																								week = 7
+																							}
+																							startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "上周":
+																							week := int(time.Now().Weekday())
+																							if week == 0 {
+																								week = 7
+																							}
+																							startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "今年":
+																							startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "去年":
+																							startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "明年":
+																							startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						default:
+																							if originTime != "" {
+																								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																								if err != nil {
+																									continue
+																								}
+																								queryTime = eleTime.Format("2006-01-02 15:04:05")
+																							}
+																						}
+																						if len(timeMap) != 0 {
+																							timeMapRaw[k] = timeMap
+																						} else {
+																							timeMapRaw[k] = queryTime
+																						}
+																					}
+																				}
+																			} else if originTime, ok := orVal.(string); ok {
+																				var queryTime string
+																				var startPoint string
+																				var endPoint string
+																				timeMap := map[string]interface{}{}
+																				switch originTime {
+																				case "今天":
+																					startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "昨天":
+																					startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "明天":
+																					startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "本周":
+																					week := int(time.Now().Weekday())
+																					if week == 0 {
+																						week = 7
+																					}
+																					startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "上周":
+																					week := int(time.Now().Weekday())
+																					if week == 0 {
+																						week = 7
+																					}
+																					startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "今年":
+																					startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "去年":
+																					startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "明年":
+																					startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				default:
+																					if originTime != "" {
+																						eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																						if err != nil {
+																							continue
+																						}
+																						queryTime = eleTime.Format("2006-01-02 15:04:05")
+																					}
+																				}
+																				if len(timeMap) != 0 {
+																					orEleMap[orKey] = timeMap
+																				} else {
+																					orEleMap[orKey] = queryTime
+																				}
+																			}
+																		}
+																	} else if orKey == "createTime" || orKey == "modifyTime" {
+																		if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+																			for k, v := range timeMapRaw {
+																				if originTime, ok := v.(string); ok {
+																					var queryTime string
+																					var startPoint string
+																					var endPoint string
+																					timeMap := map[string]interface{}{}
+																					switch originTime {
+																					case "今天":
+																						startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "昨天":
+																						startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "明天":
+																						startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "本周":
+																						week := int(time.Now().Weekday())
+																						if week == 0 {
+																							week = 7
+																						}
+																						startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "上周":
+																						week := int(time.Now().Weekday())
+																						if week == 0 {
+																							week = 7
+																						}
+																						startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "今年":
+																						startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "去年":
+																						startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "明年":
+																						startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					default:
+																						if originTime != "" {
+																							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																							if err != nil {
+																								continue
+																							}
+																							queryTime = eleTime.Format("2006-01-02 15:04:05")
+																						}
+																					}
+																					if len(timeMap) != 0 {
+																						timeMapRaw[k] = timeMap
+																					} else {
+																						timeMapRaw[k] = queryTime
+																					}
+																				}
+																			}
+																		} else if originTime, ok := orVal.(string); ok {
+																			var queryTime string
+																			var startPoint string
+																			var endPoint string
+																			timeMap := map[string]interface{}{}
+																			switch originTime {
+																			case "今天":
+																				startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "昨天":
+																				startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "明天":
+																				startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "本周":
+																				week := int(time.Now().Weekday())
+																				if week == 0 {
+																					week = 7
+																				}
+																				startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "上周":
+																				week := int(time.Now().Weekday())
+																				if week == 0 {
+																					week = 7
+																				}
+																				startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "今年":
+																				startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "去年":
+																				startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "明年":
+																				startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			default:
+																				if originTime != "" {
+																					eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																					if err != nil {
+																						continue
+																					}
+																					queryTime = eleTime.Format("2006-01-02 15:04:05")
+																				}
+																			}
+																			if len(timeMap) != 0 {
+																				orEleMap[orKey] = timeMap
+																			} else {
+																				orEleMap[orKey] = queryTime
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}else if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
+													if extRaw.Format != "" {
+														if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+															for k, v := range timeMapRaw {
+																if originTime, ok := v.(string); ok {
+																	var queryTime string
+																	var startPoint string
+																	var endPoint string
+																	timeMap := map[string]interface{}{}
+																	switch originTime {
+																	case "今天":
+																		startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "昨天":
+																		startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "明天":
+																		startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "本周":
+																		week := int(time.Now().Weekday())
+																		if week == 0 {
+																			week = 7
+																		}
+																		startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "上周":
+																		week := int(time.Now().Weekday())
+																		if week == 0 {
+																			week = 7
+																		}
+																		startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "今年":
+																		startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "去年":
+																		startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "明年":
+																		startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	default:
+																		if originTime != "" {
+																			eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																			if err != nil {
+																				continue
+																			}
+																			queryTime = eleTime.Format("2006-01-02 15:04:05")
+																		}
+																	}
+																	if len(timeMap) != 0 {
+																		timeMapRaw[k] = timeMap
+																	} else {
+																		timeMapRaw[k] = queryTime
+																	}
+																}
+															}
+														} else if originTime, ok := orVal.(string); ok {
+															var queryTime string
+															var startPoint string
+															var endPoint string
+															timeMap := map[string]interface{}{}
+															switch originTime {
+															case "今天":
+																startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "昨天":
+																startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "明天":
+																startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "本周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "上周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "今年":
+																startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "去年":
+																startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "明年":
+																startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															default:
+																if originTime != "" {
+																	eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																	if err != nil {
+																		continue
+																	}
+																	queryTime = eleTime.Format("2006-01-02 15:04:05")
+																}
+															}
+															if len(timeMap) != 0 {
+																orEleMap[orKey] = timeMap
+															} else {
+																orEleMap[orKey] = queryTime
+															}
+														}
+													}
+												} else if orKey == "createTime" || orKey == "modifyTime" {
+													if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+														for k, v := range timeMapRaw {
+															if originTime, ok := v.(string); ok {
+																var queryTime string
+																var startPoint string
+																var endPoint string
+																timeMap := map[string]interface{}{}
+																switch originTime {
+																case "今天":
+																	startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "昨天":
+																	startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "明天":
+																	startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "本周":
+																	week := int(time.Now().Weekday())
+																	if week == 0 {
+																		week = 7
+																	}
+																	startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "上周":
+																	week := int(time.Now().Weekday())
+																	if week == 0 {
+																		week = 7
+																	}
+																	startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "今年":
+																	startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "去年":
+																	startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "明年":
+																	startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																default:
+																	if originTime != "" {
+																		eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																		if err != nil {
+																			continue
+																		}
+																		queryTime = eleTime.Format("2006-01-02 15:04:05")
+																	}
+																}
+																if len(timeMap) != 0 {
+																	timeMapRaw[k] = timeMap
+																} else {
+																	timeMapRaw[k] = queryTime
+																}
+															}
+														}
+													} else if originTime, ok := orVal.(string); ok {
+														var queryTime string
+														var startPoint string
+														var endPoint string
+														timeMap := map[string]interface{}{}
+														switch originTime {
+														case "今天":
+															startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "昨天":
+															startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "明天":
+															startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "本周":
+															week := int(time.Now().Weekday())
+															if week == 0 {
+																week = 7
+															}
+															startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "上周":
+															week := int(time.Now().Weekday())
+															if week == 0 {
+																week = 7
+															}
+															startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "今年":
+															startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "去年":
+															startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "明年":
+															startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														default:
+															if originTime != "" {
+																eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																if err != nil {
+																	continue
+																}
+																queryTime = eleTime.Format("2006-01-02 15:04:05")
+															}
+														}
+														if len(timeMap) != 0 {
+															orEleMap[orKey] = timeMap
+														} else {
+															orEleMap[orKey] = queryTime
+														}
+													}
+												}
 											}
-										} else {
-											counter++
-											continue logicLoop2
 										}
-									} else {
-										counter++
-										continue logicLoop2
 									}
-								} else {
-									counter++
-									continue logicLoop2
 								}
 							}
 						}
 					}
 				}
-				if len(settings.Logic) > 1 {
-					if settings.Logic[len(settings.Logic)-2].LogicType == "且" && counter != 0 {
-						continue flowloop
-					}
-				}
-				//fmt.Println("after counter:", counter, "orCounter:", orCounter)
-				if counter >= orCounter+1 {
-					continue flowloop
-				}
-				//switch settings.RangeType {
-				//case "按字段值":
-				//logicLoop2:
-				//	for i, logic := range settings.Logic {
-				//		//fmt.Println("按字段值 logic.DataType:", logic.DataType)
-				//		//fmt.Println("i:", i, "counter:", counter, "orCounter:", orCounter)
-				//		if i%2 == 1 {
-				//			if settings.Logic[i].LogicType == "或" {
-				//				orCounter++
-				//			}
-				//		}
-				//		if i > 1 && i%2 == 1 {
-				//			if settings.Logic[i-2].LogicType == "且" && counter != 0 {
-				//				continue flowloop
-				//			}
-				//		} else if i != 0 && i%2 == 0 {
-				//			if settings.Logic[i-1].LogicType == "且" && counter != 0 {
-				//				continue flowloop
-				//			}
-				//		}
-				//		switch logic.DataType {
-				//		case "文本":
-				//			switch logic.Relation {
-				//			case "是":
-				//				for _, compare := range logic.Compare {
-				//					if compare.ID != "" {
-				//						if data[logic.ID] != data[compare.ID] {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if data[logic.ID] != compare.Value {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "不是":
-				//				for _, compare := range logic.Compare {
-				//					if compare.ID != "" {
-				//						if data[logic.ID] == data[compare.ID] {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if data[logic.ID] == compare.Value {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "包含":
-				//				for _, compare := range logic.Compare {
-				//					compareInValue := ""
-				//					if ele, ok := compare.Value.(string); ok {
-				//						compareInValue = ele
-				//					}
-				//					dataVal, ok := data[logic.ID].(string)
-				//					if !ok {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//					if compare.ID != "" {
-				//						compareVal, ok := data[compare.ID].(string)
-				//						if !ok {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//						if !strings.Contains(dataVal, compareVal) {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if !strings.Contains(dataVal, compareInValue) {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "不包含":
-				//				for _, compare := range logic.Compare {
-				//					compareInValue := ""
-				//					if ele, ok := compare.Value.(string); ok {
-				//						compareInValue = ele
-				//					}
-				//					dataVal, ok := data[logic.ID].(string)
-				//					if !ok {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//					if compare.ID != "" {
-				//						compareVal, ok := data[compare.ID].(string)
-				//						if !ok {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//						if strings.Contains(dataVal, compareVal) {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if strings.Contains(dataVal, compareInValue) {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "开始为":
-				//				for _, compare := range logic.Compare {
-				//					compareInValue := ""
-				//					if ele, ok := compare.Value.(string); ok {
-				//						compareInValue = ele
-				//					}
-				//					dataVal, ok := data[logic.ID].(string)
-				//					if !ok {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//					if compare.ID != "" {
-				//						compareVal, ok := data[compare.ID].(string)
-				//						if !ok {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//						if !strings.HasPrefix(dataVal, compareVal) {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if !strings.HasPrefix(dataVal, compareInValue) {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "结尾为":
-				//				for _, compare := range logic.Compare {
-				//					compareInValue := ""
-				//					if ele, ok := compare.Value.(string); ok {
-				//						compareInValue = ele
-				//					}
-				//					dataVal, ok := data[logic.ID].(string)
-				//					if !ok {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//					if compare.ID != "" {
-				//						compareVal, ok := data[compare.ID].(string)
-				//						if !ok {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//						if !strings.HasSuffix(dataVal, compareVal) {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if !strings.HasSuffix(dataVal, compareInValue) {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "为空":
-				//				if data[logic.ID] != nil {
-				//					counter++
-				//					continue logicLoop2
-				//				}
-				//			case "不为空":
-				//				if data[logic.ID] == nil {
-				//					counter++
-				//					continue logicLoop2
-				//				}
-				//			}
-				//		case "选择器":
-				//			switch logic.Relation {
-				//			case "是", "等于":
-				//				for _, compare := range logic.Compare {
-				//					if compare.ID != "" {
-				//						if data[logic.ID] != data[compare.ID] {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if data[logic.ID] != compare.Value {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "不是", "不等于":
-				//				for _, compare := range logic.Compare {
-				//					if compare.ID != "" {
-				//						if data[logic.ID] == data[compare.ID] {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if data[logic.ID] == compare.Value {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "为空":
-				//				if data[logic.ID] != nil {
-				//					counter++
-				//					continue logicLoop2
-				//				}
-				//			case "不为空":
-				//				if data[logic.ID] == nil {
-				//					counter++
-				//					continue logicLoop2
-				//				}
-				//			}
-				//		case "数值":
-				//			switch logic.Relation {
-				//			case "等于":
-				//				for _, compare := range logic.Compare {
-				//					if compare.ID != "" {
-				//						if data[logic.ID] != data[compare.ID] {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if data[logic.ID] != compare.Value {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "不等于":
-				//				for _, compare := range logic.Compare {
-				//					if compare.ID != "" {
-				//						if data[logic.ID] == data[compare.ID] {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if data[logic.ID] == compare.Value {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "大于":
-				//				for _, compare := range logic.Compare {
-				//					logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-				//					if err != nil {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//					if compare.ID != "" {
-				//						compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-				//						if err != nil {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//						if logicVal <= compareVal {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else {
-				//						compareVal, err := numberx.GetFloatNumber(compare.Value)
-				//						if err != nil {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//						if logicVal <= compareVal {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					}
-				//				}
-				//			case "小于":
-				//				for _, compare := range logic.Compare {
-				//					logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-				//					if err != nil {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//					if compare.ID != "" {
-				//						compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-				//						if err != nil {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//						if logicVal >= compareVal {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else {
-				//						compareVal, err := numberx.GetFloatNumber(compare.Value)
-				//						if err != nil {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//						if logicVal >= compareVal {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					}
-				//				}
-				//			case "大于等于":
-				//				for _, compare := range logic.Compare {
-				//					logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-				//					if err != nil {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//					if compare.ID != "" {
-				//						compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-				//						if err != nil {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//						if logicVal < compareVal {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else {
-				//						compareVal, err := numberx.GetFloatNumber(compare.Value)
-				//						if err != nil {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//						if logicVal < compareVal {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					}
-				//				}
-				//			case "小于等于":
-				//				for _, compare := range logic.Compare {
-				//					logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-				//					if err != nil {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//					if compare.ID != "" {
-				//						compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-				//						if err != nil {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//						if logicVal > compareVal {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else {
-				//						compareVal, err := numberx.GetFloatNumber(compare.Value)
-				//						if err != nil {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//						if logicVal > compareVal {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					}
-				//				}
-				//			case "在范围内":
-				//				for _, compare := range logic.Compare {
-				//					logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-				//					if err != nil {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//					startVal := float64(0)
-				//					endVal := float64(0)
-				//					if compare.StartValue.ID != "" {
-				//						startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-				//						if err != nil {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else {
-				//						startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-				//						if err != nil {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					}
-				//					if compare.EndValue.ID != "" {
-				//						endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-				//						if err != nil {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else {
-				//						endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-				//						if err != nil {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					}
-				//					//fmt.Println("logicVal:",logicVal,"startVal:",startVal,"endVal:",endVal)
-				//					if logicVal < startVal || logicVal > endVal {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "不在范围内":
-				//				for _, compare := range logic.Compare {
-				//					logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-				//					if err != nil {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//					startVal := float64(0)
-				//					endVal := float64(0)
-				//					if compare.StartValue.ID != "" {
-				//						startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-				//						if err != nil {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else {
-				//						startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-				//						if err != nil {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					}
-				//					if compare.EndValue.ID != "" {
-				//						endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-				//						if err != nil {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else {
-				//						endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-				//						if err != nil {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					}
-				//					if logicVal >= startVal && logicVal <= endVal {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "为空":
-				//				if data[logic.ID] != nil {
-				//					counter++
-				//					continue logicLoop2
-				//				}
-				//			case "不为空":
-				//				if data[logic.ID] == nil {
-				//					counter++
-				//					continue logicLoop2
-				//				}
-				//			}
-				//		case "时间":
-				//			switch logic.Relation {
-				//			case "等于":
-				//				for _, compare := range logic.Compare {
-				//					compareInValue := int64(0)
-				//					if ele, ok := compare.Value.(string); ok {
-				//						if ele != "" {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//							compareInValue = eleTime.Unix()
-				//						}
-				//					}
-				//					dataVal := int64(0)
-				//					eleRaw, ok := data[logic.ID].(string)
-				//					if !ok {
-				//						counter++
-				//						continue logicLoop2
-				//					} else {
-				//						if eleRaw != "" {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleRaw), eleRaw, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//							dataVal = eleTime.Unix()
-				//						}
-				//					}
-				//					if compare.TimeType != "" {
-				//						switch compare.TimeType {
-				//						case "今天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-				//						case "昨天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-				//						case "明天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-				//						case "本周":
-				//							week := int(time.Now().Weekday())
-				//							if week == 0 {
-				//								week = 7
-				//							}
-				//							compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-				//						case "上周":
-				//							week := int(time.Now().Weekday())
-				//							if week == 0 {
-				//								week = 7
-				//							}
-				//							compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-				//						case "今年":
-				//							compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-				//						case "去年":
-				//							compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-				//						case "明年":
-				//							compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-				//						case "指定时间":
-				//							if compare.SpecificTime != "" {
-				//								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-				//								if err != nil {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//								compareInValue = eleTime.Unix()
-				//							}
-				//						}
-				//						if dataVal != compareInValue {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if compare.ID != "" {
-				//						compareValue := int64(0)
-				//						eleRaw, ok := data[compare.ID].(string)
-				//						if !ok {
-				//							counter++
-				//							continue logicLoop2
-				//						} else {
-				//							if eleRaw != "" {
-				//								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleRaw), eleRaw, time.Local)
-				//								if err != nil {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//								compareValue = eleTime.Unix()
-				//							}
-				//						}
-				//						if dataVal != compareValue {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if dataVal != compareInValue {
-				//						counter++
-				//						continue logicLoop2
-				//					} else if compareInValue == 0 {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "不等于":
-				//				for _, compare := range logic.Compare {
-				//					compareInValue := int64(0)
-				//					if ele, ok := compare.Value.(string); ok {
-				//						if ele != "" {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//							compareInValue = eleTime.Unix()
-				//						}
-				//					}
-				//					dataVal := int64(0)
-				//					eleRaw, ok := data[logic.ID].(string)
-				//					if !ok {
-				//						counter++
-				//						continue logicLoop2
-				//					} else {
-				//						if eleRaw != "" {
-				//							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-				//								dataVal, err = TimeConvertExt(extVal, eleRaw)
-				//								if err != nil {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//							} else {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//						}
-				//					}
-				//					if compare.TimeType != "" {
-				//						switch compare.TimeType {
-				//						case "今天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-				//						case "昨天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-				//						case "明天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-				//						case "本周":
-				//							week := int(time.Now().Weekday())
-				//							if week == 0 {
-				//								week = 7
-				//							}
-				//							compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-				//						case "上周":
-				//							week := int(time.Now().Weekday())
-				//							if week == 0 {
-				//								week = 7
-				//							}
-				//							compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-				//						case "今年":
-				//							compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-				//						case "去年":
-				//							compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-				//						case "明年":
-				//							compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-				//						case "指定时间":
-				//							if compare.SpecificTime != "" {
-				//								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-				//								if err != nil {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//								compareInValue = eleTime.Unix()
-				//							}
-				//						}
-				//						if dataVal == compareInValue {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if compare.ID != "" {
-				//						compareValue := int64(0)
-				//						eleRaw, ok := data[compare.ID].(string)
-				//						if !ok {
-				//							counter++
-				//							continue logicLoop2
-				//						} else {
-				//							if eleRaw != "" {
-				//								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-				//									compareValue, err = TimeConvertExt(extVal, eleRaw)
-				//									if err != nil {
-				//										counter++
-				//										continue logicLoop2
-				//									}
-				//								} else {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//							}
-				//						}
-				//						if dataVal == compareValue {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if dataVal == compareInValue {
-				//						counter++
-				//						continue logicLoop2
-				//					} else if compareInValue == 0 {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "早于":
-				//				for _, compare := range logic.Compare {
-				//					compareInValue := int64(0)
-				//					if ele, ok := compare.Value.(string); ok {
-				//						if ele != "" {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//							compareInValue = eleTime.Unix()
-				//						}
-				//					}
-				//					dataVal := int64(0)
-				//					eleRaw, ok := data[logic.ID].(string)
-				//					if !ok {
-				//						counter++
-				//						continue logicLoop2
-				//					} else {
-				//						if eleRaw != "" {
-				//							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-				//								dataVal, err = TimeConvertExt(extVal, eleRaw)
-				//								if err != nil {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//							} else {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//						}
-				//					}
-				//					if compare.TimeType != "" {
-				//						switch compare.TimeType {
-				//						case "今天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-				//						case "昨天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-				//						case "明天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-				//						case "本周":
-				//							week := int(time.Now().Weekday())
-				//							if week == 0 {
-				//								week = 7
-				//							}
-				//							compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-				//						case "上周":
-				//							week := int(time.Now().Weekday())
-				//							if week == 0 {
-				//								week = 7
-				//							}
-				//							compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-				//						case "今年":
-				//							compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-				//						case "去年":
-				//							compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-				//						case "明年":
-				//							compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-				//						case "指定时间":
-				//							if compare.SpecificTime != "" {
-				//								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-				//								if err != nil {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//								compareInValue = eleTime.Unix()
-				//							}
-				//						}
-				//						if dataVal >= compareInValue {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if compare.ID != "" {
-				//						compareValue := int64(0)
-				//						eleRaw, ok := data[compare.ID].(string)
-				//						if !ok {
-				//							counter++
-				//							continue logicLoop2
-				//						} else {
-				//							if eleRaw != "" {
-				//								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-				//									compareValue, err = TimeConvertExt(extVal, eleRaw)
-				//									if err != nil {
-				//										counter++
-				//										continue logicLoop2
-				//									}
-				//								} else {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//							}
-				//						}
-				//						if dataVal >= compareValue {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if dataVal >= compareInValue {
-				//						counter++
-				//						continue logicLoop2
-				//					} else if compareInValue == 0 {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "晚于":
-				//				for _, compare := range logic.Compare {
-				//					compareInValue := int64(0)
-				//					if ele, ok := compare.Value.(string); ok {
-				//						if ele != "" {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//							compareInValue = eleTime.Unix()
-				//						}
-				//					}
-				//					dataVal := int64(0)
-				//					eleRaw, ok := data[logic.ID].(string)
-				//					if !ok {
-				//						counter++
-				//						continue logicLoop2
-				//					} else {
-				//						if eleRaw != "" {
-				//							if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-				//								dataVal, err = TimeConvertExt(extVal, eleRaw)
-				//								if err != nil {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//							} else {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//						}
-				//					}
-				//					if compare.TimeType != "" {
-				//						switch compare.TimeType {
-				//						case "今天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-				//						case "昨天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-				//						case "明天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-				//						case "本周":
-				//							week := int(time.Now().Weekday())
-				//							if week == 0 {
-				//								week = 7
-				//							}
-				//							compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-				//						case "上周":
-				//							week := int(time.Now().Weekday())
-				//							if week == 0 {
-				//								week = 7
-				//							}
-				//							compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-				//						case "今年":
-				//							compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-				//						case "去年":
-				//							compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-				//						case "明年":
-				//							compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-				//						case "指定时间":
-				//							if compare.SpecificTime != "" {
-				//								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-				//								if err != nil {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//								compareInValue = eleTime.Unix()
-				//							}
-				//						}
-				//						if dataVal <= compareInValue {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if compare.ID != "" {
-				//						compareValue := int64(0)
-				//						eleRaw, ok := data[compare.ID].(string)
-				//						if !ok {
-				//							counter++
-				//							continue logicLoop2
-				//						} else {
-				//							if eleRaw != "" {
-				//								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-				//									compareValue, err = TimeConvertExt(extVal, eleRaw)
-				//									if err != nil {
-				//										counter++
-				//										continue logicLoop2
-				//									}
-				//								} else {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//							}
-				//						}
-				//						if dataVal <= compareValue {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if dataVal <= compareInValue {
-				//						counter++
-				//						continue logicLoop2
-				//					} else if compareInValue == 0 {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "在范围内":
-				//				for _, compare := range logic.Compare {
-				//					logicVal := int64(0)
-				//					eleRaw, ok := data[logic.ID].(string)
-				//					if !ok {
-				//						counter++
-				//						continue logicLoop2
-				//					} else {
-				//						if eleRaw != "" {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleRaw), eleRaw, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//							logicVal = eleTime.Unix()
-				//						}
-				//					}
-				//					startVal := int64(0)
-				//					endVal := int64(0)
-				//					if compare.StartTime.ID != "" {
-				//						if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//							startVal = eleTime.Unix()
-				//						}
-				//					} else if compare.StartTime.Value != "" {
-				//						if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//							startVal = eleTime.Unix()
-				//						}
-				//					}
-				//					if compare.EndTime.ID != "" {
-				//						if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//							startVal = eleTime.Unix()
-				//						}
-				//					} else if compare.EndTime.Value != "" {
-				//						if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//							endVal = eleTime.Unix()
-				//						}
-				//					}
-				//					if logicVal < startVal || logicVal > endVal {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "不在范围内":
-				//				for _, compare := range logic.Compare {
-				//					logicVal := int64(0)
-				//					eleRaw, ok := data[logic.ID].(string)
-				//					if !ok {
-				//						counter++
-				//						continue logicLoop2
-				//					} else {
-				//						if eleRaw != "" {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleRaw), eleRaw, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//							logicVal = eleTime.Unix()
-				//						}
-				//					}
-				//					startVal := int64(0)
-				//					endVal := int64(0)
-				//					if compare.StartTime.ID != "" {
-				//						if eleTimeRaw, ok := data[compare.StartTime.ID].(string); ok {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//							startVal = eleTime.Unix()
-				//						}
-				//					} else if compare.StartTime.Value != "" {
-				//						if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//							startVal = eleTime.Unix()
-				//						}
-				//					}
-				//					if compare.EndTime.ID != "" {
-				//						if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//							startVal = eleTime.Unix()
-				//						}
-				//					} else if compare.EndTime.Value != "" {
-				//						if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//							endVal = eleTime.Unix()
-				//						}
-				//					}
-				//					if logicVal < startVal || logicVal > endVal {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "为空":
-				//				if data[logic.ID] != nil {
-				//					counter++
-				//					continue logicLoop2
-				//				}
-				//			case "不为空":
-				//				if data[logic.ID] == nil {
-				//					counter++
-				//					continue logicLoop2
-				//				}
-				//			}
-				//		case "布尔值", "附件", "定位":
-				//			switch logic.Relation {
-				//			case "为空":
-				//				if data[logic.ID] != nil {
-				//					counter++
-				//					continue logicLoop2
-				//				}
-				//			case "不为空":
-				//				if data[logic.ID] == nil {
-				//					counter++
-				//					continue logicLoop2
-				//				}
-				//			}
-				//		case "关联字段":
-				//			switch logic.Relation {
-				//			case "是":
-				//				for _, compare := range logic.Compare {
-				//					var dataVal interface{}
-				//					if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-				//						eleRaw, ok := data[logic.ID].(map[string]interface{})
-				//						if !ok {
-				//							counter++
-				//							continue logicLoop2
-				//						} else {
-				//							if eleRaw != nil {
-				//								if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-				//									dataVal = relateVal
-				//								} else {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//							}
-				//						}
-				//					}
-				//					if compare.ID != "" {
-				//						var compareValue interface{}
-				//						if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-				//							eleRaw, ok := data[compare.ID].(map[string]interface{})
-				//							if !ok {
-				//								counter++
-				//								continue logicLoop2
-				//							} else {
-				//								if eleRaw != nil {
-				//									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-				//										compareValue = relateVal
-				//									} else {
-				//										counter++
-				//										continue logicLoop2
-				//									}
-				//								}
-				//							}
-				//						}
-				//						if dataVal != compareValue {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if dataVal != compare.Value {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "不是":
-				//				for _, compare := range logic.Compare {
-				//					var dataVal interface{}
-				//					if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-				//						eleRaw, ok := data[logic.ID].(map[string]interface{})
-				//						if !ok {
-				//							counter++
-				//							continue logicLoop2
-				//						} else {
-				//							if eleRaw != nil {
-				//								if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-				//									dataVal = relateVal
-				//								} else {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//							}
-				//						}
-				//					}
-				//					if compare.ID == "" {
-				//						var compareValue interface{}
-				//						if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-				//							eleRaw, ok := data[compare.ID].(map[string]interface{})
-				//							if !ok {
-				//								counter++
-				//								continue logicLoop2
-				//							} else {
-				//								if eleRaw != nil {
-				//									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-				//										compareValue = relateVal
-				//									} else {
-				//										counter++
-				//										continue logicLoop2
-				//									}
-				//								}
-				//							}
-				//						}
-				//						if dataVal != compareValue {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if dataVal == compare.Value {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "包含":
-				//				for _, compare := range logic.Compare {
-				//					compareInValue := ""
-				//					if ele, ok := compare.Value.(string); ok {
-				//						compareInValue = ele
-				//					}
-				//					dataVal := ""
-				//					if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-				//						eleRaw, ok := data[logic.ID].(map[string]interface{})
-				//						if !ok {
-				//							counter++
-				//							continue logicLoop2
-				//						} else {
-				//							if eleRaw != nil {
-				//								if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-				//									if relateValString, ok := relateVal.(string); ok {
-				//										dataVal = relateValString
-				//									} else {
-				//										counter++
-				//										continue logicLoop2
-				//									}
-				//								} else {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//							}
-				//						}
-				//					}
-				//					if compare.ID != "" {
-				//						compareVal := ""
-				//						if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-				//							eleRaw, ok := data[compare.ID].(map[string]interface{})
-				//							if !ok {
-				//								counter++
-				//								continue logicLoop2
-				//							} else {
-				//								if eleRaw != nil {
-				//									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-				//										if relateValString, ok := relateVal.(string); ok {
-				//											compareVal = relateValString
-				//										} else {
-				//											counter++
-				//											continue logicLoop2
-				//										}
-				//									} else {
-				//										counter++
-				//										continue logicLoop2
-				//									}
-				//								}
-				//							}
-				//						}
-				//						if !strings.Contains(dataVal, compareVal) {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if !strings.Contains(dataVal, compareInValue) {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "不包含":
-				//				for _, compare := range logic.Compare {
-				//					compareInValue := ""
-				//					if ele, ok := compare.Value.(string); ok {
-				//						compareInValue = ele
-				//					}
-				//					dataVal := ""
-				//					if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-				//						eleRaw, ok := data[logic.ID].(map[string]interface{})
-				//						if !ok {
-				//							counter++
-				//							continue logicLoop2
-				//						} else {
-				//							if eleRaw != nil {
-				//								if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-				//									if relateValString, ok := relateVal.(string); ok {
-				//										dataVal = relateValString
-				//									} else {
-				//										counter++
-				//										continue logicLoop2
-				//									}
-				//								} else {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//							}
-				//						}
-				//					}
-				//					if compare.ID != "" {
-				//						compareVal := ""
-				//						if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-				//							eleRaw, ok := data[compare.ID].(map[string]interface{})
-				//							if !ok {
-				//								counter++
-				//								continue logicLoop2
-				//							} else {
-				//								if eleRaw != nil {
-				//									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-				//										if relateValString, ok := relateVal.(string); ok {
-				//											compareVal = relateValString
-				//										} else {
-				//											counter++
-				//											continue logicLoop2
-				//										}
-				//									} else {
-				//										counter++
-				//										continue logicLoop2
-				//									}
-				//								}
-				//							}
-				//						}
-				//						if strings.Contains(dataVal, compareVal) {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else if strings.Contains(dataVal, compareInValue) {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "为空":
-				//				if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-				//					eleRaw, ok := data[logic.ID].(map[string]interface{})
-				//					if ok {
-				//						if eleRaw != nil {
-				//							if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-				//								if relateVal != nil {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//							} else {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//						} else {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			case "不为空":
-				//				if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-				//					eleRaw, ok := data[logic.ID].(map[string]interface{})
-				//					if ok {
-				//						if eleRaw != nil {
-				//							if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-				//								if relateVal == nil {
-				//									counter++
-				//									continue logicLoop2
-				//								}
-				//							} else {
-				//								counter++
-				//								continue logicLoop2
-				//							}
-				//						} else {
-				//							counter++
-				//							continue logicLoop2
-				//						}
-				//					} else {
-				//						counter++
-				//						continue logicLoop2
-				//					}
-				//				}
-				//			}
-				//		}
-				//	}
-				//	if len(settings.Logic) > 1 {
-				//		if settings.Logic[len(settings.Logic)-2].LogicType == "且" && counter != 0 {
-				//			continue flowloop
-				//		}
-				//	}
-				//	//fmt.Println("after counter:", counter, "orCounter:", orCounter)
-				//	if counter >= orCounter+1 {
-				//		continue flowloop
-				//	}
-				//case "按创建人员":
-				//logicLoop3:
-				//	for i, logic := range settings.Logic {
-				//		//fmt.Println("按创建人员 logic.DataType:", logic.DataType)
-				//		//fmt.Println("i:", i, "counter:", counter, "orCounter:", orCounter)
-				//		if i%2 == 1 {
-				//			if settings.Logic[i].LogicType == "或" {
-				//				orCounter++
-				//			}
-				//		}
-				//		if i > 1 && i%2 == 1 {
-				//			if settings.Logic[i-2].LogicType == "且" && counter != 0 {
-				//				continue flowloop
-				//			}
-				//		} else if i != 0 && i%2 == 0 {
-				//			if settings.Logic[i-1].LogicType == "且" && counter != 0 {
-				//				continue flowloop
-				//			}
-				//		}
-				//		switch logic.Relation {
-				//		case "是":
-				//			for _, compare := range logic.Compare {
-				//				dataVal := ""
-				//				eleRaw, ok := data["creator"].(map[string]interface{})
-				//				if !ok {
-				//					counter++
-				//					continue logicLoop3
-				//				} else {
-				//					if eleRaw != nil {
-				//						if relateVal, ok := eleRaw["id"]; ok {
-				//							if relateValString, ok := relateVal.(string); ok {
-				//								dataVal = relateValString
-				//							} else {
-				//								counter++
-				//								continue logicLoop3
-				//							}
-				//						} else {
-				//							counter++
-				//							continue logicLoop3
-				//						}
-				//					}
-				//				}
-				//				if compare.ID != "" {
-				//					if dataVal != compare.ID {
-				//						counter++
-				//						continue logicLoop3
-				//					}
-				//				}
-				//			}
-				//		case "不是":
-				//			for _, compare := range logic.Compare {
-				//				dataVal := ""
-				//				eleRaw, ok := data["creator"].(map[string]interface{})
-				//				if !ok {
-				//					counter++
-				//					continue logicLoop3
-				//				} else {
-				//					if eleRaw != nil {
-				//						if relateVal, ok := eleRaw["id"]; ok {
-				//							if relateValString, ok := relateVal.(string); ok {
-				//								dataVal = relateValString
-				//							} else {
-				//								counter++
-				//								continue logicLoop3
-				//							}
-				//						} else {
-				//							counter++
-				//							continue logicLoop3
-				//						}
-				//					}
-				//				}
-				//				if compare.ID != "" {
-				//					if dataVal != compare.ID {
-				//						counter++
-				//						continue logicLoop3
-				//					}
-				//				}
-				//			}
-				//		}
-				//	}
-				//	if len(settings.Logic) > 1 {
-				//		if settings.Logic[len(settings.Logic)-2].LogicType == "且" && counter != 0 {
-				//			continue flowloop
-				//		}
-				//	}
-				//	//fmt.Println("after counter:", counter, "orCounter:", orCounter)
-				//	if counter >= orCounter+1 {
-				//		continue flowloop
-				//	}
-				//case "按创建时间":
-				//logicLoop4:
-				//	for i, logic := range settings.Logic {
-				//		//fmt.Println("按创建时间 logic.DataType:", logic.DataType)
-				//		//fmt.Println("i:", i, "counter:", counter, "orCounter:", orCounter)
-				//		if i%2 == 1 {
-				//			if settings.Logic[i].LogicType == "或" {
-				//				orCounter++
-				//			}
-				//		}
-				//		if i > 1 && i%2 == 1 {
-				//			if settings.Logic[i-2].LogicType == "且" && counter != 0 {
-				//				continue flowloop
-				//			}
-				//		} else if i != 0 && i%2 == 0 {
-				//			if settings.Logic[i-1].LogicType == "且" && counter != 0 {
-				//				continue flowloop
-				//			}
-				//		}
-				//		switch logic.DataType {
-				//		case "时间":
-				//			switch logic.Relation {
-				//			case "等于":
-				//				for _, compare := range logic.Compare {
-				//					compareInValue := int64(0)
-				//					if ele, ok := compare.Value.(string); ok {
-				//						if ele != "" {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//							compareInValue = eleTime.Unix()
-				//						}
-				//					}
-				//					dataVal := int64(0)
-				//					eleRaw, ok := data[logic.ID].(string)
-				//					if !ok {
-				//						counter++
-				//						continue logicLoop4
-				//					} else {
-				//						if eleRaw != "" {
-				//							dataVal, err = TimeConvertExt(ExcelColNameTypeExt{}, eleRaw)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//						}
-				//					}
-				//					if compare.TimeType != "" {
-				//						switch compare.TimeType {
-				//						case "今天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-				//						case "昨天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-				//						case "明天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-				//						case "本周":
-				//							week := int(time.Now().Weekday())
-				//							if week == 0 {
-				//								week = 7
-				//							}
-				//							compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-				//						case "上周":
-				//							week := int(time.Now().Weekday())
-				//							if week == 0 {
-				//								week = 7
-				//							}
-				//							compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-				//						case "今年":
-				//							compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-				//						case "去年":
-				//							compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-				//						case "明年":
-				//							compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-				//						case "指定时间":
-				//							if compare.SpecificTime != "" {
-				//								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-				//								if err != nil {
-				//									counter++
-				//									continue logicLoop4
-				//								}
-				//								compareInValue = eleTime.Unix()
-				//							}
-				//						}
-				//						if dataVal != compareInValue {
-				//							counter++
-				//							continue logicLoop4
-				//						}
-				//					} else if compare.ID != "" {
-				//						compareValue := int64(0)
-				//						eleRaw, ok := data[compare.ID].(string)
-				//						if !ok {
-				//							counter++
-				//							continue logicLoop4
-				//						} else {
-				//							if eleRaw != "" {
-				//								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-				//									compareValue, err = TimeConvertExt(extVal, eleRaw)
-				//									if err != nil {
-				//										counter++
-				//										continue logicLoop4
-				//									}
-				//								} else {
-				//									counter++
-				//									continue logicLoop4
-				//								}
-				//							}
-				//						}
-				//						if dataVal != compareValue {
-				//							counter++
-				//							continue logicLoop4
-				//						}
-				//					} else if dataVal != compareInValue {
-				//						counter++
-				//						continue logicLoop4
-				//					} else if compareInValue == 0 {
-				//						counter++
-				//						continue logicLoop4
-				//					}
-				//				}
-				//			case "不等于":
-				//				for _, compare := range logic.Compare {
-				//					compareInValue := int64(0)
-				//					if ele, ok := compare.Value.(string); ok {
-				//						if ele != "" {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//							compareInValue = eleTime.Unix()
-				//						}
-				//					}
-				//					dataVal := int64(0)
-				//					eleRaw, ok := data[logic.ID].(string)
-				//					if !ok {
-				//						counter++
-				//						continue logicLoop4
-				//					} else {
-				//						if eleRaw != "" {
-				//							dataVal, err = TimeConvertExt(ExcelColNameTypeExt{}, eleRaw)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//						}
-				//					}
-				//					if compare.TimeType != "" {
-				//						switch compare.TimeType {
-				//						case "今天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-				//						case "昨天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-				//						case "明天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-				//						case "本周":
-				//							week := int(time.Now().Weekday())
-				//							if week == 0 {
-				//								week = 7
-				//							}
-				//							compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-				//						case "上周":
-				//							week := int(time.Now().Weekday())
-				//							if week == 0 {
-				//								week = 7
-				//							}
-				//							compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-				//						case "今年":
-				//							compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-				//						case "去年":
-				//							compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-				//						case "明年":
-				//							compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-				//						case "指定时间":
-				//							if compare.SpecificTime != "" {
-				//								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-				//								if err != nil {
-				//									counter++
-				//									continue logicLoop4
-				//								}
-				//								compareInValue = eleTime.Unix()
-				//							}
-				//						}
-				//						if dataVal == compareInValue {
-				//							counter++
-				//							continue logicLoop4
-				//						}
-				//					} else if compare.ID != "" {
-				//						compareValue := int64(0)
-				//						eleRaw, ok := data[compare.ID].(string)
-				//						if !ok {
-				//							counter++
-				//							continue logicLoop4
-				//						} else {
-				//							if eleRaw != "" {
-				//								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-				//									compareValue, err = TimeConvertExt(extVal, eleRaw)
-				//									if err != nil {
-				//										counter++
-				//										continue logicLoop4
-				//									}
-				//								} else {
-				//									counter++
-				//									continue logicLoop4
-				//								}
-				//							}
-				//						}
-				//						if dataVal == compareValue {
-				//							counter++
-				//							continue logicLoop4
-				//						}
-				//					} else if dataVal == compareInValue {
-				//						counter++
-				//						continue logicLoop4
-				//					} else if compareInValue == 0 {
-				//						counter++
-				//						continue logicLoop4
-				//					}
-				//				}
-				//			case "早于":
-				//				for _, compare := range logic.Compare {
-				//					compareInValue := int64(0)
-				//					if ele, ok := compare.Value.(string); ok {
-				//						if ele != "" {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//							compareInValue = eleTime.Unix()
-				//						}
-				//					}
-				//					dataVal := int64(0)
-				//					eleRaw, ok := data[logic.ID].(string)
-				//					if !ok {
-				//						counter++
-				//						continue logicLoop4
-				//					} else {
-				//						if eleRaw != "" {
-				//							dataVal, err = TimeConvertExt(ExcelColNameTypeExt{}, eleRaw)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//						}
-				//					}
-				//					if compare.TimeType != "" {
-				//						switch compare.TimeType {
-				//						case "今天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-				//						case "昨天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-				//						case "明天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-				//						case "本周":
-				//							week := int(time.Now().Weekday())
-				//							if week == 0 {
-				//								week = 7
-				//							}
-				//							compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-				//						case "上周":
-				//							week := int(time.Now().Weekday())
-				//							if week == 0 {
-				//								week = 7
-				//							}
-				//							compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-				//						case "今年":
-				//							compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-				//						case "去年":
-				//							compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-				//						case "明年":
-				//							compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-				//						case "指定时间":
-				//							if compare.SpecificTime != "" {
-				//								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-				//								if err != nil {
-				//									counter++
-				//									continue logicLoop4
-				//								}
-				//								compareInValue = eleTime.Unix()
-				//							}
-				//						}
-				//						if dataVal == compareInValue {
-				//							counter++
-				//							continue logicLoop4
-				//						}
-				//					} else if compare.ID != "" {
-				//						compareValue := int64(0)
-				//						eleRaw, ok := data[compare.ID].(string)
-				//						if !ok {
-				//							counter++
-				//							continue logicLoop4
-				//						} else {
-				//							if eleRaw != "" {
-				//								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-				//									compareValue, err = TimeConvertExt(extVal, eleRaw)
-				//									if err != nil {
-				//										counter++
-				//										continue logicLoop4
-				//									}
-				//								} else {
-				//									counter++
-				//									continue logicLoop4
-				//								}
-				//							}
-				//						}
-				//						if dataVal >= compareValue {
-				//							counter++
-				//							continue logicLoop4
-				//						}
-				//					} else if dataVal >= compareInValue {
-				//						counter++
-				//						continue logicLoop4
-				//					} else if compareInValue == 0 {
-				//						counter++
-				//						continue logicLoop4
-				//					}
-				//				}
-				//			case "晚于":
-				//				for _, compare := range logic.Compare {
-				//					compareInValue := int64(0)
-				//					if ele, ok := compare.Value.(string); ok {
-				//						if ele != "" {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//							compareInValue = eleTime.Unix()
-				//						}
-				//					}
-				//					dataVal := int64(0)
-				//					eleRaw, ok := data[logic.ID].(string)
-				//					if !ok {
-				//						counter++
-				//						continue logicLoop4
-				//					} else {
-				//						if eleRaw != "" {
-				//							dataVal, err = TimeConvertExt(ExcelColNameTypeExt{}, eleRaw)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//						}
-				//					}
-				//					if compare.TimeType != "" {
-				//						switch compare.TimeType {
-				//						case "今天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-				//						case "昨天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-				//						case "明天":
-				//							compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-				//						case "本周":
-				//							week := int(time.Now().Weekday())
-				//							if week == 0 {
-				//								week = 7
-				//							}
-				//							compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-				//						case "上周":
-				//							week := int(time.Now().Weekday())
-				//							if week == 0 {
-				//								week = 7
-				//							}
-				//							compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-				//						case "今年":
-				//							compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-				//						case "去年":
-				//							compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-				//						case "明年":
-				//							compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-				//						case "指定时间":
-				//							if compare.SpecificTime != "" {
-				//								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-				//								if err != nil {
-				//									counter++
-				//									continue logicLoop4
-				//								}
-				//								compareInValue = eleTime.Unix()
-				//							}
-				//						}
-				//						if dataVal == compareInValue {
-				//							counter++
-				//							continue logicLoop4
-				//						}
-				//					} else if compare.ID != "" {
-				//						compareValue := int64(0)
-				//						eleRaw, ok := data[compare.ID].(string)
-				//						if !ok {
-				//							counter++
-				//							continue logicLoop4
-				//						} else {
-				//							if eleRaw != "" {
-				//								if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-				//									compareValue, err = TimeConvertExt(extVal, eleRaw)
-				//									if err != nil {
-				//										counter++
-				//										continue logicLoop4
-				//									}
-				//								} else {
-				//									counter++
-				//									continue logicLoop4
-				//								}
-				//							}
-				//						}
-				//						if dataVal <= compareValue {
-				//							counter++
-				//							continue logicLoop4
-				//						}
-				//					} else if dataVal <= compareInValue {
-				//						counter++
-				//						continue logicLoop4
-				//					} else if compareInValue == 0 {
-				//						counter++
-				//						continue logicLoop4
-				//					}
-				//				}
-				//			case "在范围内":
-				//				for _, compare := range logic.Compare {
-				//					logicVal := int64(0)
-				//					eleRaw, ok := data[logic.ID].(string)
-				//					if !ok {
-				//						counter++
-				//						continue logicLoop4
-				//					} else {
-				//						if eleRaw != "" {
-				//							logicVal, err = TimeConvertExt(ExcelColNameTypeExt{}, eleRaw)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//						}
-				//					}
-				//					startVal := int64(0)
-				//					endVal := int64(0)
-				//					if compare.StartTime.ID != "" {
-				//						if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
-				//							if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
-				//								startVal, err = TimeConvertExt(extVal, eleRaw)
-				//								if err != nil {
-				//									counter++
-				//									continue logicLoop4
-				//								}
-				//							} else {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//						}
-				//					} else if compare.StartTime.Value != "" {
-				//						if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//							startVal = eleTime.Unix()
-				//						}
-				//					}
-				//					if compare.EndTime.ID != "" {
-				//						if eleRaw, ok := data[compare.EndTime.ID].(string); ok {
-				//							if extVal, ok := excelColNameTypeExtMap[compare.EndTime.ID]; ok {
-				//								endVal, err = TimeConvertExt(extVal, eleRaw)
-				//								if err != nil {
-				//									counter++
-				//									continue logicLoop4
-				//								}
-				//							} else {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//						}
-				//					} else if compare.EndTime.Value != "" {
-				//						if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//							endVal = eleTime.Unix()
-				//						}
-				//					}
-				//					if logicVal < startVal || logicVal > endVal {
-				//						counter++
-				//						continue logicLoop4
-				//					}
-				//				}
-				//			case "不在范围内":
-				//				for _, compare := range logic.Compare {
-				//					logicVal := int64(0)
-				//					eleRaw, ok := data[logic.ID].(string)
-				//					if !ok {
-				//						counter++
-				//						continue logicLoop4
-				//					} else {
-				//						if eleRaw != "" {
-				//							logicVal, err = TimeConvertExt(ExcelColNameTypeExt{}, eleRaw)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//						}
-				//					}
-				//					startVal := int64(0)
-				//					endVal := int64(0)
-				//					if compare.StartTime.ID != "" {
-				//						if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
-				//							if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
-				//								startVal, err = TimeConvertExt(extVal, eleRaw)
-				//								if err != nil {
-				//									counter++
-				//									continue logicLoop4
-				//								}
-				//							} else {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//						}
-				//					} else if compare.StartTime.Value != "" {
-				//						if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//							startVal = eleTime.Unix()
-				//						}
-				//					}
-				//					if compare.EndTime.ID != "" {
-				//						if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//							endVal = eleTime.Unix()
-				//						}
-				//					} else if compare.EndTime.Value != "" {
-				//						if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-				//							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-				//							if err != nil {
-				//								counter++
-				//								continue logicLoop4
-				//							}
-				//							endVal = eleTime.Unix()
-				//						}
-				//					}
-				//					if logicVal < startVal || logicVal > endVal {
-				//						counter++
-				//						continue logicLoop4
-				//					}
-				//				}
-				//			case "为空":
-				//				if data["createTime"] != nil {
-				//					counter++
-				//					continue logicLoop4
-				//				}
-				//			case "不为空":
-				//				if data["createTime"] == nil {
-				//					counter++
-				//					continue logicLoop4
-				//				}
-				//			}
-				//		}
-				//	}
-				//	if len(settings.Logic) > 1 {
-				//		if settings.Logic[len(settings.Logic)-2].LogicType == "且" && counter != 0 {
-				//			continue flowloop
-				//		}
-				//	}
-				//	//fmt.Println("after counter:", counter, "orCounter:", orCounter)
-				//	if counter >= orCounter+1 {
-				//		continue flowloop
-				//	}
-				//}
 			}
-		case "添加或更新记录时":
+		case "更新记录时","添加或更新记录时":
 			//fmt.Println("新增或更新记录时 projectName ;", projectName, "data:", data)
 			for _, update := range settings.UpdateField {
 				if _, ok := data[update.ID]; !ok {
 					continue flowloop
 				}
 			}
-			counter := 0
-		logicLoop5:
-			for i, logic := range settings.Logic {
-				compare := logic.Compare
-				if i%2 == 1 {
-					if settings.Logic[i].LogicType == "或" {
-						orCounter++
-					}
-				}
-				if i > 1 && i%2 == 1 {
-					if settings.Logic[i-2].LogicType == "且" && counter != 0 {
-						continue flowloop
-					}
-				} else if i != 0 && i%2 == 0 {
-					if settings.Logic[i-1].LogicType == "且" && counter != 0 {
-						continue flowloop
-					}
-				}
-				switch logic.DataType {
-				case "文本":
-					switch logic.Relation {
-					case "是":
-						if compare.ID != "" {
-							if data[logic.ID] != data[compare.ID] {
-								counter++
-								continue logicLoop5
-							}
-						} else if data[logic.ID] != compare.Value {
-							counter++
-							continue logicLoop5
-						}
-					case "不是":
-						if compare.ID != "" {
-							if data[logic.ID] == data[compare.ID] {
-								counter++
-								continue logicLoop5
-							}
-						} else if data[logic.ID] == compare.Value {
-							counter++
-							continue logicLoop5
-						}
-					case "包含":
-						compareInValue := ""
-						if ele, ok := compare.Value.(string); ok {
-							compareInValue = ele
-						}
-						dataVal, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop5
-						}
-						if compare.ID != "" {
-							compareVal, ok := data[compare.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop5
-							}
-							if !strings.Contains(dataVal, compareVal) {
-								counter++
-								continue logicLoop5
-							}
-						} else if !strings.Contains(dataVal, compareInValue) {
-							counter++
-							continue logicLoop5
-						}
-					case "不包含":
-						compareInValue := ""
-						if ele, ok := compare.Value.(string); ok {
-							compareInValue = ele
-						}
-						dataVal, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop5
-						}
-						if compare.ID != "" {
-							compareVal, ok := data[compare.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop5
-							}
-							if strings.Contains(dataVal, compareVal) {
-								counter++
-								continue logicLoop5
-							}
-						} else if strings.Contains(dataVal, compareInValue) {
-							counter++
-							continue logicLoop5
-						}
-					case "开始为":
-						compareInValue := ""
-						if ele, ok := compare.Value.(string); ok {
-							compareInValue = ele
-						}
-						dataVal, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop5
-						}
-						if compare.ID != "" {
-							compareVal, ok := data[compare.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop5
-							}
-							if !strings.HasPrefix(dataVal, compareVal) {
-								counter++
-								continue logicLoop5
-							}
-						} else if !strings.HasPrefix(dataVal, compareInValue) {
-							counter++
-							continue logicLoop5
-						}
-					case "结尾为":
-						compareInValue := ""
-						if ele, ok := compare.Value.(string); ok {
-							compareInValue = ele
-						}
-						dataVal, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop5
-						}
-						if compare.ID != "" {
-							compareVal, ok := data[compare.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop5
-							}
-							if !strings.HasSuffix(dataVal, compareVal) {
-								counter++
-								continue logicLoop5
-							}
-						} else if !strings.HasSuffix(dataVal, compareInValue) {
-							counter++
-							continue logicLoop5
-						}
-					case "为空":
-						if data[logic.ID] != nil {
-							counter++
-							continue logicLoop5
-						}
-					case "不为空":
-						if data[logic.ID] == nil {
-							counter++
-							continue logicLoop5
-						}
-					}
-				case "选择器":
-					switch logic.Relation {
-					case "是", "等于":
-						if compare.ID != "" {
-							if data[logic.ID] != data[compare.ID] {
-								counter++
-								continue logicLoop5
-							}
-						} else if data[logic.ID] != compare.Value {
-							counter++
-							continue logicLoop5
-						}
-					case "不是", "不等于":
-						if compare.ID != "" {
-							if data[logic.ID] == data[compare.ID] {
-								counter++
-								continue logicLoop5
-							}
-						} else if data[logic.ID] == compare.Value {
-							counter++
-							continue logicLoop5
-						}
-					case "为空":
-						if data[logic.ID] != nil {
-							counter++
-							continue logicLoop5
-						}
-					case "不为空":
-						if data[logic.ID] == nil {
-							counter++
-							continue logicLoop5
-						}
-					}
-				case "数值":
-					switch logic.Relation {
-					case "等于":
-						if compare.ID != "" {
-							if data[logic.ID] != data[compare.ID] {
-								counter++
-								continue logicLoop5
-							}
-						} else if data[logic.ID] != compare.Value {
-							counter++
-							continue logicLoop5
-						}
-					case "不等于":
-						if compare.ID != "" {
-							if data[logic.ID] == data[compare.ID] {
-								counter++
-								continue logicLoop5
-							}
-						} else if data[logic.ID] == compare.Value {
-							counter++
-							continue logicLoop5
-						}
-					case "大于":
-						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-						if err != nil {
-							counter++
-							continue logicLoop5
-						}
-						if compare.ID != "" {
-							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-							if err != nil {
-								counter++
-								continue logicLoop5
-							}
-							if logicVal <= compareVal {
-								counter++
-								continue logicLoop5
-							}
-						} else {
-							compareVal, err := numberx.GetFloatNumber(compare.Value)
-							if err != nil {
-								counter++
-								continue logicLoop5
-							}
-							if logicVal <= compareVal {
-								counter++
-								continue logicLoop5
-							}
-						}
-					case "小于":
-						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-						if err != nil {
-							counter++
-							continue logicLoop5
-						}
-						if compare.ID != "" {
-							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-							if err != nil {
-								counter++
-								continue logicLoop5
-							}
-							if logicVal >= compareVal {
-								counter++
-								continue logicLoop5
-							}
-						} else {
-							compareVal, err := numberx.GetFloatNumber(compare.Value)
-							if err != nil {
-								counter++
-								continue logicLoop5
-							}
-							if logicVal >= compareVal {
-								counter++
-								continue logicLoop5
-							}
-						}
-					case "大于等于":
-						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-						if err != nil {
-							counter++
-							continue logicLoop5
-						}
-						if compare.ID != "" {
-							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-							if err != nil {
-								counter++
-								continue logicLoop5
-							}
-							if logicVal < compareVal {
-								counter++
-								continue logicLoop5
-							}
-						} else {
-							compareVal, err := numberx.GetFloatNumber(compare.Value)
-							if err != nil {
-								counter++
-								continue logicLoop5
-							}
-							if logicVal < compareVal {
-								counter++
-								continue logicLoop5
-							}
-						}
-					case "小于等于":
-						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-						if err != nil {
-							counter++
-							continue logicLoop5
-						}
-						if compare.ID != "" {
-							compareVal, err := numberx.GetFloatNumber(data[compare.ID])
-							if err != nil {
-								counter++
-								continue logicLoop5
-							}
-							if logicVal > compareVal {
-								counter++
-								continue logicLoop5
-							}
-						} else {
-							compareVal, err := numberx.GetFloatNumber(compare.Value)
-							if err != nil {
-								counter++
-								continue logicLoop5
-							}
-							if logicVal > compareVal {
-								counter++
-								continue logicLoop5
-							}
-						}
-					case "在范围内":
-						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-						if err != nil {
-							counter++
-							continue logicLoop5
-						}
-						startVal := float64(0)
-						endVal := float64(0)
-						if compare.StartValue.ID != "" {
-							startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-							if err != nil {
-								counter++
-								continue logicLoop5
-							}
-						} else {
-							startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-							if err != nil {
-								counter++
-								continue logicLoop5
-							}
-						}
-						if compare.EndValue.ID != "" {
-							endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-							if err != nil {
-								counter++
-								continue logicLoop5
-							}
-						} else {
-							endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-							if err != nil {
-								counter++
-								continue logicLoop5
-							}
-						}
-						if logicVal < startVal || logicVal > endVal {
-							counter++
-							continue logicLoop5
-						}
-					case "不在范围内":
-						logicVal, err := numberx.GetFloatNumber(data[logic.ID])
-						if err != nil {
-							counter++
-							continue logicLoop5
-						}
-						startVal := float64(0)
-						endVal := float64(0)
-						if compare.StartValue.ID != "" {
-							startVal, err = numberx.GetFloatNumber(data[compare.StartValue.ID])
-							if err != nil {
-								counter++
-								continue logicLoop5
-							}
-						} else {
-							startVal, err = numberx.GetFloatNumber(compare.StartValue.Value)
-							if err != nil {
-								counter++
-								continue logicLoop5
-							}
-						}
-						if compare.EndValue.ID != "" {
-							endVal, err = numberx.GetFloatNumber(data[compare.EndValue.ID])
-							if err != nil {
-								counter++
-								continue logicLoop5
-							}
-						} else {
-							endVal, err = numberx.GetFloatNumber(compare.EndValue.Value)
-							if err != nil {
-								counter++
-								continue logicLoop5
-							}
-						}
-						if logicVal >= startVal && logicVal <= endVal {
-							counter++
-							continue logicLoop5
-						}
-					case "为空":
-						if data[logic.ID] != nil {
-							counter++
-							continue logicLoop5
-						}
-					case "不为空":
-						if data[logic.ID] == nil {
-							counter++
-							continue logicLoop5
-						}
-					}
-				case "时间":
-					switch logic.Relation {
-					case "等于":
-						compareInValue := int64(0)
-						if ele, ok := compare.Value.(string); ok {
-							if ele != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								compareInValue = eleTime.Unix()
-							}
-						}
-						dataVal := int64(0)
-						eleRaw, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop5
-						} else {
-							if eleRaw != "" {
-								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-									dataVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop5
-									}
-								} else {
-									counter++
-									continue logicLoop5
-								}
-							}
-						}
-						if compare.TimeType != "" {
-							startPoint := int64(0)
-							endPoint := int64(0)
-							switch compare.TimeType {
-							case "今天":
-								startPoint = timex.GetUnixToNewTimeDay(0).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(1).Unix()
-							case "昨天":
-								startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(0).Unix()
-							case "明天":
-								startPoint = timex.GetUnixToNewTimeDay(1).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(2).Unix()
-							case "本周":
-								week := int(time.Now().Weekday())
-								if week == 0 {
-									week = 7
-								}
-								startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
-							case "上周":
-								week := int(time.Now().Weekday())
-								if week == 0 {
-									week = 7
-								}
-								startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-							case "今年":
-								startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
-								endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
-							case "去年":
-								startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
-								endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
-							case "明年":
-
-								startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
-							case "指定时间":
-								if compare.SpecificTime != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop5
-									}
-									compareInValue = eleTime.Unix()
-								}
-								if dataVal != compareInValue {
-									counter++
-									continue logicLoop5
-								}
-								continue
-							}
-							if dataVal < startPoint || dataVal >= endPoint {
-								counter++
-								continue logicLoop5
-							}
-						} else if compare.ID != "" {
-							compareValue := int64(0)
-							eleRaw, ok := data[compare.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop5
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-										compareValue, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop5
-										}
-									} else {
-										counter++
-										continue logicLoop5
-									}
-								}
-							}
-							if dataVal != compareValue {
-								counter++
-								continue logicLoop5
-							}
-						} else if dataVal != compareInValue {
-							counter++
-							continue logicLoop5
-						} else if compareInValue == 0 {
-							counter++
-							continue logicLoop5
-						}
-					case "不等于":
-						compareInValue := int64(0)
-						if ele, ok := compare.Value.(string); ok {
-							if ele != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								compareInValue = eleTime.Unix()
-							}
-						}
-						dataVal := int64(0)
-						eleRaw, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop5
-						} else {
-							if eleRaw != "" {
-								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-									dataVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop5
-									}
-								} else {
-									counter++
-									continue logicLoop5
-								}
-							}
-						}
-						if compare.TimeType != "" {
-							startPoint := int64(0)
-							endPoint := int64(0)
-							switch compare.TimeType {
-							case "今天":
-								startPoint = timex.GetUnixToNewTimeDay(0).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(1).Unix()
-							case "昨天":
-								startPoint = timex.GetUnixToNewTimeDay(-1).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(0).Unix()
-							case "明天":
-								startPoint = timex.GetUnixToNewTimeDay(1).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(2).Unix()
-							case "本周":
-								week := int(time.Now().Weekday())
-								if week == 0 {
-									week = 7
-								}
-								startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(8 - week).Unix()
-							case "上周":
-								week := int(time.Now().Weekday())
-								if week == 0 {
-									week = 7
-								}
-								startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-								endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-							case "今年":
-								startPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
-								endPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
-							case "去年":
-								startPoint = timex.GetUnixToOldYearTime(1, 0).Unix()
-								endPoint = timex.GetUnixToOldYearTime(0, 0).Unix()
-							case "明年":
-
-								startPoint = timex.GetUnixToOldYearTime(-1, 0).Unix()
-								endPoint = timex.GetUnixToOldYearTime(-2, 0).Unix()
-							case "指定时间":
-								if compare.SpecificTime != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop5
-									}
-									compareInValue = eleTime.Unix()
-								}
-								if dataVal == compareInValue {
-									counter++
-									continue logicLoop5
-								}
-								continue
-							}
-							if dataVal >= startPoint && dataVal < endPoint {
-								counter++
-								continue logicLoop5
-							}
-						} else if compare.ID != "" {
-							compareValue := int64(0)
-							eleRaw, ok := data[compare.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop5
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-										compareValue, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop5
-										}
-									} else {
-										counter++
-										continue logicLoop5
-									}
-								}
-							}
-							if dataVal == compareValue {
-								counter++
-								continue logicLoop5
-							}
-						} else if dataVal == compareInValue {
-							counter++
-							continue logicLoop5
-						} else if compareInValue == 0 {
-							counter++
-							continue logicLoop5
-						}
-					case "早于":
-						compareInValue := int64(0)
-						if ele, ok := compare.Value.(string); ok {
-							if ele != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								compareInValue = eleTime.Unix()
-							}
-						}
-						dataVal := int64(0)
-						eleRaw, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop5
-						} else {
-							if eleRaw != "" {
-								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-									dataVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop5
-									}
-								} else {
-									counter++
-									continue logicLoop5
-								}
-							}
-						}
-						if compare.TimeType != "" {
-							switch compare.TimeType {
-							case "今天":
-								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-							case "昨天":
-								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-							case "明天":
-								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-							case "本周":
-								week := int(time.Now().Weekday())
-								if week == 0 {
-									week = 7
-								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-							case "上周":
-								week := int(time.Now().Weekday())
-								if week == 0 {
-									week = 7
-								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-							case "今年":
-								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-							case "去年":
-								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-							case "明年":
-								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-							case "指定时间":
-								if compare.SpecificTime != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop5
-									}
-									compareInValue = eleTime.Unix()
-								}
-							}
-							if dataVal >= compareInValue {
-								counter++
-								continue logicLoop5
-							}
-						} else if compare.ID != "" {
-							compareValue := int64(0)
-							eleRaw, ok := data[compare.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop5
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-										compareValue, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop5
-										}
-									} else {
-										counter++
-										continue logicLoop5
-									}
-								}
-							}
-							if dataVal >= compareValue {
-								counter++
-								continue logicLoop5
-							}
-						} else if dataVal >= compareInValue {
-							counter++
-							continue logicLoop5
-						} else if compareInValue == 0 {
-							counter++
-							continue logicLoop5
-						}
-					case "晚于":
-						compareInValue := int64(0)
-						if ele, ok := compare.Value.(string); ok {
-							if ele != "" {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(ele), ele, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								compareInValue = eleTime.Unix()
-							}
-						}
-						dataVal := int64(0)
-						eleRaw, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop5
-						} else {
-							if eleRaw != "" {
-								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-									dataVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop5
-									}
-								} else {
-									counter++
-									continue logicLoop5
-								}
-							}
-						}
-						if compare.TimeType != "" {
-							switch compare.TimeType {
-							case "今天":
-								compareInValue = timex.GetUnixToNewTimeDay(0).Unix()
-							case "昨天":
-								compareInValue = timex.GetUnixToNewTimeDay(-1).Unix()
-							case "明天":
-								compareInValue = timex.GetUnixToNewTimeDay(1).Unix()
-							case "本周":
-								week := int(time.Now().Weekday())
-								if week == 0 {
-									week = 7
-								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1)).Unix()
-							case "上周":
-								week := int(time.Now().Weekday())
-								if week == 0 {
-									week = 7
-								}
-								compareInValue = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Unix()
-							case "今年":
-								compareInValue = timex.GetUnixToOldYearTime(0, 0).Unix()
-							case "去年":
-								compareInValue = timex.GetUnixToOldYearTime(1, 0).Unix()
-							case "明年":
-								compareInValue = timex.GetUnixToOldYearTime(-1, 0).Unix()
-							case "指定时间":
-								if compare.SpecificTime != "" {
-									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(compare.SpecificTime), compare.SpecificTime, time.Local)
-									if err != nil {
-										counter++
-										continue logicLoop5
-									}
-									compareInValue = eleTime.Unix()
-								}
-							}
-							if dataVal <= compareInValue {
-								counter++
-								continue logicLoop5
-							}
-						} else if compare.ID != "" {
-							compareValue := int64(0)
-							eleRaw, ok := data[compare.ID].(string)
-							if !ok {
-								counter++
-								continue logicLoop5
-							} else {
-								if eleRaw != "" {
-									if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-										compareValue, err = TimeConvertExt(extVal, eleRaw)
-										if err != nil {
-											counter++
-											continue logicLoop5
-										}
-									} else {
-										counter++
-										continue logicLoop5
-									}
-								}
-							}
-							if dataVal <= compareValue {
-								counter++
-								continue logicLoop5
-							}
-						} else if dataVal <= compareInValue {
-							counter++
-							continue logicLoop5
-						} else if compareInValue == 0 {
-							counter++
-							continue logicLoop5
-						}
-					case "在范围内":
-						logicVal := int64(0)
-						eleRaw, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop5
-						} else {
-							if eleRaw != "" {
-								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-									logicVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop5
-									}
-								} else {
-									counter++
-									continue logicLoop5
-								}
-							}
-						}
-						startVal := int64(0)
-						endVal := int64(0)
-						if compare.StartTime.ID != "" {
-							if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
-								if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
-									startVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop5
-									}
-								} else {
-									counter++
-									continue logicLoop5
-								}
-							}
-						} else if compare.StartTime.Value != "" {
-							if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								startVal = eleTime.Unix()
-							}
-						}
-						if compare.EndTime.ID != "" {
-							if eleRaw, ok := data[compare.EndTime.ID].(string); ok {
-								if extVal, ok := excelColNameTypeExtMap[compare.EndTime.ID]; ok {
-									endVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop5
-									}
-								} else {
-									counter++
-									continue logicLoop5
-								}
-							}
-						} else if compare.EndTime.Value != "" {
-							if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								endVal = eleTime.Unix()
-							}
-						}
-						if logicVal < startVal || logicVal > endVal {
-							counter++
-							continue logicLoop5
-						}
-					case "不在范围内":
-						logicVal := int64(0)
-						eleRaw, ok := data[logic.ID].(string)
-						if !ok {
-							counter++
-							continue logicLoop5
-						} else {
-							if eleRaw != "" {
-								if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-									logicVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop5
-									}
-								} else {
-									counter++
-									continue logicLoop5
-								}
-							}
-						}
-						startVal := int64(0)
-						endVal := int64(0)
-						if compare.StartTime.ID != "" {
-							if eleRaw, ok := data[compare.StartTime.ID].(string); ok {
-								if extVal, ok := excelColNameTypeExtMap[compare.StartTime.ID]; ok {
-									startVal, err = TimeConvertExt(extVal, eleRaw)
-									if err != nil {
-										counter++
-										continue logicLoop5
-									}
-								} else {
-									counter++
-									continue logicLoop5
-								}
-							}
-						} else if compare.StartTime.Value != "" {
-							if eleTimeRaw, ok := compare.StartTime.Value.(string); ok {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								startVal = eleTime.Unix()
-							}
-						}
-						if compare.EndTime.ID != "" {
-							if eleTimeRaw, ok := data[compare.EndTime.ID].(string); ok {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								endVal = eleTime.Unix()
-							}
-						} else if compare.EndTime.Value != "" {
-							if eleTimeRaw, ok := compare.EndTime.Value.(string); ok {
-								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(eleTimeRaw), eleTimeRaw, time.Local)
-								if err != nil {
-									counter++
-									continue logicLoop5
-								}
-								endVal = eleTime.Unix()
-							}
-						}
-						if logicVal < startVal || logicVal > endVal {
-							counter++
-							continue logicLoop5
-						}
-					case "为空":
-						if data[logic.ID] != nil {
-							counter++
-							continue logicLoop5
-						}
-					case "不为空":
-						if data[logic.ID] == nil {
-							counter++
-							continue logicLoop5
-						}
-					}
-				case "布尔值", "附件", "定位":
-					switch logic.Relation {
-					case "为空":
-						if data[logic.ID] != nil {
-							counter++
-							continue logicLoop5
-						}
-					case "不为空":
-						if data[logic.ID] == nil {
-							counter++
-							continue logicLoop5
-						}
-					}
-				case "关联字段":
-					switch logic.Relation {
-					case "是":
-						var dataVal interface{}
-						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-							eleRaw, ok := data[logic.ID].(map[string]interface{})
-							if !ok {
-								counter++
-								continue logicLoop5
-							} else {
-								if eleRaw != nil {
-									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-										dataVal = relateVal
-									} else {
-										counter++
-										continue logicLoop5
-									}
-								}
-							}
-						}
-						if compare.ID != "" {
-							var compareValue interface{}
-							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-								eleRaw, ok := data[compare.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop5
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											compareValue = relateVal
-										} else {
-											counter++
-											continue logicLoop5
-										}
-									}
-								}
-							}
-							if dataVal != compareValue {
-								counter++
-								continue logicLoop5
-							}
-						} else if dataVal != compare.Value {
-							counter++
-							continue logicLoop5
-						}
-					case "不是":
-						var dataVal interface{}
-						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-							eleRaw, ok := data[logic.ID].(map[string]interface{})
-							if !ok {
-								counter++
-								continue logicLoop5
-							} else {
-								if eleRaw != nil {
-									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-										dataVal = relateVal
-									} else {
-										counter++
-										continue logicLoop5
-									}
-								}
-							}
-						}
-						if compare.ID == "" {
-							var compareValue interface{}
-							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-								eleRaw, ok := data[compare.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop5
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											compareValue = relateVal
-										} else {
-											counter++
-											continue logicLoop5
-										}
-									}
-								}
-							}
-							if dataVal != compareValue {
-								counter++
-								continue logicLoop5
-							}
-						} else if dataVal == compare.Value {
-							counter++
-							continue logicLoop5
-						}
-					case "包含":
-						compareInValue := ""
-						if ele, ok := compare.Value.(string); ok {
-							compareInValue = ele
-						}
-						dataVal := ""
-						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-							eleRaw, ok := data[logic.ID].(map[string]interface{})
-							if !ok {
-								counter++
-								continue logicLoop5
-							} else {
-								if eleRaw != nil {
-									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-										if relateValString, ok := relateVal.(string); ok {
-											dataVal = relateValString
-										} else {
-											counter++
-											continue logicLoop5
-										}
-									} else {
-										counter++
-										continue logicLoop5
-									}
-								}
-							}
-						}
-						if compare.ID != "" {
-							compareVal := ""
-							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-								eleRaw, ok := data[compare.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop5
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											if relateValString, ok := relateVal.(string); ok {
-												compareVal = relateValString
-											} else {
-												counter++
-												continue logicLoop5
+			if filter, ok := settings.Query["filter"]; ok {
+				if filterM, ok := filter.(map[string]interface{}); ok {
+					for key, val := range filterM {
+						if extRaw, ok := excelColNameTypeExtMap[key]; ok {
+							if extRaw.Format != "" {
+								if timeMapRaw, ok := val.(map[string]interface{}); ok {
+									for k, v := range timeMapRaw {
+										if originTime, ok := v.(string); ok {
+											var queryTime string
+											var startPoint string
+											var endPoint string
+											timeMap := map[string]interface{}{}
+											switch originTime {
+											case "今天":
+												startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "昨天":
+												startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "明天":
+												startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "本周":
+												week := int(time.Now().Weekday())
+												if week == 0 {
+													week = 7
+												}
+												startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "上周":
+												week := int(time.Now().Weekday())
+												if week == 0 {
+													week = 7
+												}
+												startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "今年":
+												startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "去年":
+												startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "明年":
+												startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											default:
+												if originTime != "" {
+													eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+													if err != nil {
+														continue
+													}
+													queryTime = eleTime.Format("2006-01-02 15:04:05")
+												}
 											}
-										} else {
-											counter++
-											continue logicLoop5
-										}
-									}
-								}
-							}
-							if !strings.Contains(dataVal, compareVal) {
-								counter++
-								continue logicLoop5
-							}
-						} else if !strings.Contains(dataVal, compareInValue) {
-							counter++
-							continue logicLoop5
-						}
-					case "不包含":
-						compareInValue := ""
-						if ele, ok := compare.Value.(string); ok {
-							compareInValue = ele
-						}
-						dataVal := ""
-						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-							eleRaw, ok := data[logic.ID].(map[string]interface{})
-							if !ok {
-								counter++
-								continue logicLoop5
-							} else {
-								if eleRaw != nil {
-									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-										if relateValString, ok := relateVal.(string); ok {
-											dataVal = relateValString
-										} else {
-											counter++
-											continue logicLoop5
-										}
-									} else {
-										counter++
-										continue logicLoop5
-									}
-								}
-							}
-						}
-						if compare.ID != "" {
-							compareVal := ""
-							if extVal, ok := excelColNameTypeExtMap[compare.ID]; ok {
-								eleRaw, ok := data[compare.ID].(map[string]interface{})
-								if !ok {
-									counter++
-									continue logicLoop5
-								} else {
-									if eleRaw != nil {
-										if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-											if relateValString, ok := relateVal.(string); ok {
-												compareVal = relateValString
+											if len(timeMap) != 0 {
+												timeMapRaw[k] = timeMap
 											} else {
-												counter++
-												continue logicLoop5
+												timeMapRaw[k] = queryTime
 											}
+										}
+									}
+								} else if originTime, ok := val.(string); ok {
+									var queryTime string
+									var startPoint string
+									var endPoint string
+									timeMap := map[string]interface{}{}
+									switch originTime {
+									case "今天":
+										startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "昨天":
+										startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "明天":
+										startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "本周":
+										week := int(time.Now().Weekday())
+										if week == 0 {
+											week = 7
+										}
+										startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "上周":
+										week := int(time.Now().Weekday())
+										if week == 0 {
+											week = 7
+										}
+										startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "今年":
+										startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "去年":
+										startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									case "明年":
+										startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+										endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+										timeMap = map[string]interface{}{
+											"$gte": startPoint,
+											"$lt":  endPoint,
+										}
+									default:
+										if originTime != "" {
+											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+											if err != nil {
+												continue
+											}
+											queryTime = eleTime.Format("2006-01-02 15:04:05")
+										}
+									}
+									if len(timeMap) != 0 {
+										filterM[key] = timeMap
+									} else {
+										filterM[key] = queryTime
+									}
+								}
+							}
+						} else if key == "createTime" || key == "modifyTime" {
+							if timeMapRaw, ok := val.(map[string]interface{}); ok {
+								for k, v := range timeMapRaw {
+									if originTime, ok := v.(string); ok {
+										var queryTime string
+										var startPoint string
+										var endPoint string
+										timeMap := map[string]interface{}{}
+										switch originTime {
+										case "今天":
+											startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "昨天":
+											startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "明天":
+											startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "本周":
+											week := int(time.Now().Weekday())
+											if week == 0 {
+												week = 7
+											}
+											startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "上周":
+											week := int(time.Now().Weekday())
+											if week == 0 {
+												week = 7
+											}
+											startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "今年":
+											startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "去年":
+											startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "明年":
+											startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										default:
+											if originTime != "" {
+												eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+												if err != nil {
+													continue
+												}
+												queryTime = eleTime.Format("2006-01-02 15:04:05")
+											}
+										}
+										if len(timeMap) != 0 {
+											timeMapRaw[k] = timeMap
 										} else {
-											counter++
-											continue logicLoop5
+											timeMapRaw[k] = queryTime
 										}
 									}
 								}
-							}
-							if strings.Contains(dataVal, compareVal) {
-								counter++
-								continue logicLoop5
-							}
-						} else if strings.Contains(dataVal, compareInValue) {
-							counter++
-							continue logicLoop5
-						}
-					case "为空":
-						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-							eleRaw, ok := data[logic.ID].(map[string]interface{})
-							if ok {
-								if eleRaw != nil {
-									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-										if relateVal != nil {
-											counter++
-											continue logicLoop5
-										}
-									} else {
-										counter++
-										continue logicLoop5
+							} else if originTime, ok := val.(string); ok {
+								var queryTime string
+								var startPoint string
+								var endPoint string
+								timeMap := map[string]interface{}{}
+								switch originTime {
+								case "今天":
+									startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+									endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+									timeMap = map[string]interface{}{
+										"$gte": startPoint,
+										"$lt":  endPoint,
 									}
+								case "昨天":
+									startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+									endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+									timeMap = map[string]interface{}{
+										"$gte": startPoint,
+										"$lt":  endPoint,
+									}
+								case "明天":
+									startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+									endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+									timeMap = map[string]interface{}{
+										"$gte": startPoint,
+										"$lt":  endPoint,
+									}
+								case "本周":
+									week := int(time.Now().Weekday())
+									if week == 0 {
+										week = 7
+									}
+									startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+									endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+									timeMap = map[string]interface{}{
+										"$gte": startPoint,
+										"$lt":  endPoint,
+									}
+								case "上周":
+									week := int(time.Now().Weekday())
+									if week == 0 {
+										week = 7
+									}
+									startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+									endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+									timeMap = map[string]interface{}{
+										"$gte": startPoint,
+										"$lt":  endPoint,
+									}
+								case "今年":
+									startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+									endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+									timeMap = map[string]interface{}{
+										"$gte": startPoint,
+										"$lt":  endPoint,
+									}
+								case "去年":
+									startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+									endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+									timeMap = map[string]interface{}{
+										"$gte": startPoint,
+										"$lt":  endPoint,
+									}
+								case "明年":
+									startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+									endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+									timeMap = map[string]interface{}{
+										"$gte": startPoint,
+										"$lt":  endPoint,
+									}
+								default:
+									if originTime != "" {
+										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+										if err != nil {
+											continue
+										}
+										queryTime = eleTime.Format("2006-01-02 15:04:05")
+									}
+								}
+								if len(timeMap) != 0 {
+									filterM[key] = timeMap
 								} else {
-									counter++
-									continue logicLoop5
+									filterM[key] = queryTime
 								}
-							} else {
-								counter++
-								continue logicLoop5
 							}
 						}
-					case "不为空":
-						if extVal, ok := excelColNameTypeExtMap[logic.ID]; ok {
-							eleRaw, ok := data[logic.ID].(map[string]interface{})
-							if ok {
-								if eleRaw != nil {
-									if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-										if relateVal == nil {
-											counter++
-											continue logicLoop5
+						if key == "$or" {
+							if orList, ok := val.([]interface{}); ok {
+								for _, orEle := range orList {
+									if orEleMap, ok := orEle.(map[string]interface{}); ok {
+										for orKey, orVal := range orEleMap {
+											if orKey == "$and" {
+												if orList, ok := orVal.([]interface{}); ok {
+													for _, orEle := range orList {
+														if orEleMap, ok := orEle.(map[string]interface{}); ok {
+															for orKey, orVal := range orEleMap {
+																if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
+																	if extRaw.Format != "" {
+																		if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+																			for k, v := range timeMapRaw {
+																				if originTime, ok := v.(string); ok {
+																					var queryTime string
+																					var startPoint string
+																					var endPoint string
+																					timeMap := map[string]interface{}{}
+																					switch originTime {
+																					case "今天":
+																						startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "昨天":
+																						startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "明天":
+																						startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "本周":
+																						week := int(time.Now().Weekday())
+																						if week == 0 {
+																							week = 7
+																						}
+																						startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "上周":
+																						week := int(time.Now().Weekday())
+																						if week == 0 {
+																							week = 7
+																						}
+																						startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "今年":
+																						startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "去年":
+																						startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "明年":
+																						startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					default:
+																						if originTime != "" {
+																							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																							if err != nil {
+																								continue
+																							}
+																							queryTime = eleTime.Format("2006-01-02 15:04:05")
+																						}
+																					}
+																					if len(timeMap) != 0 {
+																						timeMapRaw[k] = timeMap
+																					} else {
+																						timeMapRaw[k] = queryTime
+																					}
+																				}
+																			}
+																		} else if originTime, ok := orVal.(string); ok {
+																			var queryTime string
+																			var startPoint string
+																			var endPoint string
+																			timeMap := map[string]interface{}{}
+																			switch originTime {
+																			case "今天":
+																				startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "昨天":
+																				startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "明天":
+																				startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "本周":
+																				week := int(time.Now().Weekday())
+																				if week == 0 {
+																					week = 7
+																				}
+																				startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "上周":
+																				week := int(time.Now().Weekday())
+																				if week == 0 {
+																					week = 7
+																				}
+																				startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "今年":
+																				startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "去年":
+																				startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			case "明年":
+																				startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			default:
+																				if originTime != "" {
+																					eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																					if err != nil {
+																						continue
+																					}
+																					queryTime = eleTime.Format("2006-01-02 15:04:05")
+																				}
+																			}
+																			if len(timeMap) != 0 {
+																				orEleMap[orKey] = timeMap
+																			} else {
+																				orEleMap[orKey] = queryTime
+																			}
+																		}
+																	}
+																} else if orKey == "createTime" || orKey == "modifyTime" {
+																	if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+																		for k, v := range timeMapRaw {
+																			if originTime, ok := v.(string); ok {
+																				var queryTime string
+																				var startPoint string
+																				var endPoint string
+																				timeMap := map[string]interface{}{}
+																				switch originTime {
+																				case "今天":
+																					startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "昨天":
+																					startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "明天":
+																					startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "本周":
+																					week := int(time.Now().Weekday())
+																					if week == 0 {
+																						week = 7
+																					}
+																					startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "上周":
+																					week := int(time.Now().Weekday())
+																					if week == 0 {
+																						week = 7
+																					}
+																					startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "今年":
+																					startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "去年":
+																					startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "明年":
+																					startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				default:
+																					if originTime != "" {
+																						eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																						if err != nil {
+																							continue
+																						}
+																						queryTime = eleTime.Format("2006-01-02 15:04:05")
+																					}
+																				}
+																				if len(timeMap) != 0 {
+																					timeMapRaw[k] = timeMap
+																				} else {
+																					timeMapRaw[k] = queryTime
+																				}
+																			}
+																		}
+																	} else if originTime, ok := orVal.(string); ok {
+																		var queryTime string
+																		var startPoint string
+																		var endPoint string
+																		timeMap := map[string]interface{}{}
+																		switch originTime {
+																		case "今天":
+																			startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "昨天":
+																			startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "明天":
+																			startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "本周":
+																			week := int(time.Now().Weekday())
+																			if week == 0 {
+																				week = 7
+																			}
+																			startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "上周":
+																			week := int(time.Now().Weekday())
+																			if week == 0 {
+																				week = 7
+																			}
+																			startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "今年":
+																			startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "去年":
+																			startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "明年":
+																			startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		default:
+																			if originTime != "" {
+																				eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																				if err != nil {
+																					continue
+																				}
+																				queryTime = eleTime.Format("2006-01-02 15:04:05")
+																			}
+																		}
+																		if len(timeMap) != 0 {
+																			orEleMap[orKey] = timeMap
+																		} else {
+																			orEleMap[orKey] = queryTime
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}else if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
+												if extRaw.Format != "" {
+													if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+														for k, v := range timeMapRaw {
+															if originTime, ok := v.(string); ok {
+																var queryTime string
+																var startPoint string
+																var endPoint string
+																timeMap := map[string]interface{}{}
+																switch originTime {
+																case "今天":
+																	startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "昨天":
+																	startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "明天":
+																	startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "本周":
+																	week := int(time.Now().Weekday())
+																	if week == 0 {
+																		week = 7
+																	}
+																	startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "上周":
+																	week := int(time.Now().Weekday())
+																	if week == 0 {
+																		week = 7
+																	}
+																	startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "今年":
+																	startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "去年":
+																	startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "明年":
+																	startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																default:
+																	if originTime != "" {
+																		eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																		if err != nil {
+																			continue
+																		}
+																		queryTime = eleTime.Format("2006-01-02 15:04:05")
+																	}
+																}
+																if len(timeMap) != 0 {
+																	timeMapRaw[k] = timeMap
+																} else {
+																	timeMapRaw[k] = queryTime
+																}
+															}
+														}
+													} else if originTime, ok := orVal.(string); ok {
+														var queryTime string
+														var startPoint string
+														var endPoint string
+														timeMap := map[string]interface{}{}
+														switch originTime {
+														case "今天":
+															startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "昨天":
+															startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "明天":
+															startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "本周":
+															week := int(time.Now().Weekday())
+															if week == 0 {
+																week = 7
+															}
+															startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "上周":
+															week := int(time.Now().Weekday())
+															if week == 0 {
+																week = 7
+															}
+															startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "今年":
+															startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "去年":
+															startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														case "明年":
+															startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														default:
+															if originTime != "" {
+																eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																if err != nil {
+																	continue
+																}
+																queryTime = eleTime.Format("2006-01-02 15:04:05")
+															}
+														}
+														if len(timeMap) != 0 {
+															orEleMap[orKey] = timeMap
+														} else {
+															orEleMap[orKey] = queryTime
+														}
+													}
+												}
+											} else if orKey == "createTime" || orKey == "modifyTime" {
+												if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+													for k, v := range timeMapRaw {
+														if originTime, ok := v.(string); ok {
+															var queryTime string
+															var startPoint string
+															var endPoint string
+															timeMap := map[string]interface{}{}
+															switch originTime {
+															case "今天":
+																startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "昨天":
+																startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "明天":
+																startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "本周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "上周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "今年":
+																startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "去年":
+																startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "明年":
+																startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															default:
+																if originTime != "" {
+																	eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																	if err != nil {
+																		continue
+																	}
+																	queryTime = eleTime.Format("2006-01-02 15:04:05")
+																}
+															}
+															if len(timeMap) != 0 {
+																timeMapRaw[k] = timeMap
+															} else {
+																timeMapRaw[k] = queryTime
+															}
+														}
+													}
+												} else if originTime, ok := orVal.(string); ok {
+													var queryTime string
+													var startPoint string
+													var endPoint string
+													timeMap := map[string]interface{}{}
+													switch originTime {
+													case "今天":
+														startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													case "昨天":
+														startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													case "明天":
+														startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													case "本周":
+														week := int(time.Now().Weekday())
+														if week == 0 {
+															week = 7
+														}
+														startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													case "上周":
+														week := int(time.Now().Weekday())
+														if week == 0 {
+															week = 7
+														}
+														startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													case "今年":
+														startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													case "去年":
+														startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													case "明年":
+														startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													default:
+														if originTime != "" {
+															eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+															if err != nil {
+																continue
+															}
+															queryTime = eleTime.Format("2006-01-02 15:04:05")
+														}
+													}
+													if len(timeMap) != 0 {
+														orEleMap[orKey] = timeMap
+													} else {
+														orEleMap[orKey] = queryTime
+													}
+												}
+											}
 										}
-									} else {
-										counter++
-										continue logicLoop5
 									}
-								} else {
-									counter++
-									continue logicLoop5
 								}
-							} else {
-								counter++
-								continue logicLoop5
 							}
 						}
 					}
 				}
-			}
-			if len(settings.Logic) > 1 {
-				if settings.Logic[len(settings.Logic)-2].LogicType == "且" && counter != 0 {
-					continue flowloop
-				}
-			}
-			if counter >= orCounter+1 {
-				continue flowloop
 			}
 		}
-		//=================
-		isValid = true
-		if isValid {
-			//for key, dataM := range data {
-			//	//if valMap, ok := valRaw.(map[string]interface{}); ok {
-			//	if extVal, ok := excelColNameTypeExtMap[key]; ok {
-			//		//if id, ok := valMap["id"].(string); ok {
-			//		//data["#$"+key] = bson.M{"id": id, "_tableName": extVal.RelateTo}
-			//		eleRaw, ok := dataM.(map[string]interface{})
-			//		if ok {
-			//			if eleRaw != nil {
-			//				if relateVal, ok := eleRaw[extVal.RelateField]; ok {
-			//					if relateVal != nil {
-			//						data[key] = relateVal
-			//					}
-			//				}
-			//			}
-			//		}
-			//		//}
-			//	}
-			//	//}
-			//}
 
-			//if loginTimeRaw, ok := data["time"].(string); ok {
-			//	loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
-			//	if err != nil {
-			//		continue
-			//	}
-			//	data["time"] = loginTime.UnixNano() / 1e6
-			//}
-			//fmt.Println("projectName ;", projectName, "data:", data)
+		tempTable,err := uuid.NewUUID()
+		if err != nil {
+			logger.Errorf("流程(%s)中生成临时表失败:%s", flowID, err.Error())
+			continue
+		}
+
+		var result interface{}
+		err = apiClient.SaveExt(headerMap, tempTable.String(), data, &result)
+		if err != nil {
+			logger.Errorf("存储临时工作表记录失败:%s", err.Error())
+			continue
+		}
+
+		queryResult := make([]interface{},0)
+		err = apiClient.FindExtQuery(headerMap, tempTable.String(), settings.Query, &result)
+		if err != nil {
+			logger.Errorf("查询临时工作表记录失败:%s", err.Error())
+			continue
+		}
+
+		if len(queryResult) != 0{
+			isValid = true
+		}
+		//=================
+		if isValid {
 			err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, data)
 			if err != nil {
 				logger.Errorf("流程推进到下一阶段失败:%s", err.Error())
