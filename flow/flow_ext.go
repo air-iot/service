@@ -160,6 +160,19 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			continue
 		}
 		//fmt.Println("excelColNameTypeExtMap：", excelColNameTypeExtMap)
+		b,err := json.Marshal(settings.Query)
+		if err != nil {
+			logger.Errorf("流程(%s)中序列化过滤参数失败:%s", flowID, err.Error())
+			continue
+		}
+		formatQueryString := strings.ReplaceAll(string(b),"@#$","$")
+		formatQuery := map[string]interface{}{}
+		err = json.Unmarshal([]byte(formatQueryString),&formatQuery)
+		if err != nil {
+			logger.Errorf("流程(%s)中解序列化过滤参数失败:%s", flowID, err.Error())
+			continue
+		}
+		settings.Query = formatQuery
 
 		//=================
 		//fmt.Println("settings:", settings)
