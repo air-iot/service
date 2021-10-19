@@ -15,12 +15,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"github.com/air-iot/service/util/uuid"
 	"github.com/air-iot/service/api"
 	"github.com/air-iot/service/gin/ginx"
 	"github.com/air-iot/service/init/mq"
 	"github.com/air-iot/service/init/redisdb"
 	"github.com/air-iot/service/util/timex"
+	"github.com/air-iot/service/util/uuid"
 )
 
 var flowExtModifyLog = map[string]interface{}{"name": "工作表流程触发"}
@@ -170,9 +170,9 @@ flowloop:
 			logger.Errorf("流程(%s)中替换模板变量失败:%s", flowID, err.Error())
 			continue
 		}
-		if formatMap,ok := formatVal.(map[string]interface{});ok{
+		if formatMap, ok := formatVal.(map[string]interface{}); ok {
 			settings.Query = formatMap
-		}else{
+		} else {
 			logger.Errorf("流程(%s)中替换后的模板变量类型不是对象", flowID)
 			continue
 		}
@@ -897,7 +897,7 @@ flowloop:
 														}
 													}
 												}
-											}else if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
+											} else if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
 												if extRaw.Format != "" {
 													if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
 														for k, v := range timeMapRaw {
@@ -1993,7 +1993,7 @@ flowloop:
 															}
 														}
 													}
-												}else if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
+												} else if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
 													if extRaw.Format != "" {
 														if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
 															for k, v := range timeMapRaw {
@@ -2353,7 +2353,7 @@ flowloop:
 					}
 				}
 			}
-		case "更新记录时","添加或更新记录时":
+		case "更新记录时", "添加或更新记录时":
 			//fmt.Println("新增或更新记录时 projectName ;", projectName, "data:", data)
 			for _, update := range settings.UpdateField {
 				if _, ok := data[update.ID]; !ok {
@@ -3079,7 +3079,7 @@ flowloop:
 														}
 													}
 												}
-											}else if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
+											} else if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
 												if extRaw.Format != "" {
 													if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
 														for k, v := range timeMapRaw {
@@ -3440,7 +3440,7 @@ flowloop:
 			}
 		}
 
-		tempTable,err := uuid.NewUUID()
+		tempTable, err := uuid.NewUUID()
 		if err != nil {
 			logger.Errorf("流程(%s)中生成临时表失败:%s", flowID, err.Error())
 			continue
@@ -3453,14 +3453,22 @@ flowloop:
 			continue
 		}
 
-		queryResult := make([]interface{},0)
+		defer func() {
+			var result interface{}
+			err := apiClient.DelExtAll(headerMap, tempTable.String(), result)
+			if err != nil {
+				logger.Errorf("删除临时工作表(%s)失败:%s", tempTable.String(),err.Error())
+			}
+		}()
+
+		queryResult := make([]interface{}, 0)
 		err = apiClient.FindExtQuery(headerMap, tempTable.String(), settings.Query, &result)
 		if err != nil {
 			logger.Errorf("查询临时工作表记录失败:%s", err.Error())
 			continue
 		}
 
-		if len(queryResult) != 0{
+		if len(queryResult) != 0 {
 			isValid = true
 		}
 		//=================
