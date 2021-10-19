@@ -2361,6 +2361,9 @@ flowloop:
 					break
 				}
 			}
+			if len(settings.Field) == 0 && settings.EventType != "更新记录时"{
+				hasValidField = true
+			}
 			if !hasValidField{
 				continue
 			}
