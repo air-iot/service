@@ -70,6 +70,7 @@ type ExtFlowSettings struct {
 	//ValidTime    string             `json:"validTime"`
 	//StartTime    string             `json:"startTime"`
 	//EndTime      string             `json:"endTime"`
+	Field       []string             `json:"field"`
 	UpdateField []GeneralIDNameValue `json:"updateField"`
 }
 

@@ -2354,12 +2354,21 @@ flowloop:
 				}
 			}
 		case "更新记录时", "添加或更新记录时":
-			//fmt.Println("新增或更新记录时 projectName ;", projectName, "data:", data)
-			for _, update := range settings.UpdateField {
-				if _, ok := data[update.ID]; !ok {
-					continue flowloop
+			hasValidField := false
+			for _,ele := range settings.Field{
+				if _,ok := data[ele];ok{
+					hasValidField = true
 				}
 			}
+			if !hasValidField{
+				continue
+			}
+			//fmt.Println("新增或更新记录时 projectName ;", projectName, "data:", data)
+			//for _, update := range settings.UpdateField {
+			//	if _, ok := data[update.ID]; !ok {
+			//		continue flowloop
+			//	}
+			//}
 			if filter, ok := settings.Query["filter"]; ok {
 				if filterM, ok := filter.(map[string]interface{}); ok {
 					for key, val := range filterM {
