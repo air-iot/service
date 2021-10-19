@@ -2358,6 +2358,7 @@ flowloop:
 			for _,ele := range settings.Field{
 				if _,ok := data[ele];ok{
 					hasValidField = true
+					break
 				}
 			}
 			if !hasValidField{
