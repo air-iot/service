@@ -84,7 +84,6 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 	}
 	//fmt.Println("flowInfoList:", len(flowInfoList))
 	////logger.Debugf(eventDeviceModifyLog, "开始遍历流程列表")
-flowloop:
 	for _, flowInfo := range flowInfoList {
 
 		//logger.Debugf(eventDeviceModifyLog, "开始分析流程")
