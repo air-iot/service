@@ -15,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"github.com/air-iot/service/api"
 	"github.com/air-iot/service/gin/ginx"
 	"github.com/air-iot/service/init/mq"
@@ -82,7 +83,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 	if err != nil {
 		return err
 	}
-	//fmt.Println("flowInfoList:", len(flowInfoList))
+	////fmt.Println("flowInfoList:", len(flowInfoList))
 	////logger.Debugf(eventDeviceModifyLog, "开始遍历流程列表")
 	for _, flowInfo := range flowInfoList {
 
@@ -159,7 +160,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			logger.Errorf("流程(%s)中解析工作表字段失败:%s", flowID, err.Error())
 			continue
 		}
-		//fmt.Println("excelColNameTypeExtMap：", excelColNameTypeExtMap)
+		////fmt.Println("excelColNameTypeExtMap：", excelColNameTypeExtMap)
 		b,err := json.Marshal(settings.Query)
 		if err != nil {
 			logger.Errorf("流程(%s)中序列化过滤参数失败:%s", flowID, err.Error())
@@ -175,8 +176,8 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 		settings.Query = formatQuery
 
 		//=================
-		//fmt.Println("settings:", settings)
-		//fmt.Println("settings.EventType:", settings.EventType)
+		////fmt.Println("settings:", settings)
+		////fmt.Println("settings.EventType:", settings.EventType)
 		formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, settings.Query)
 		if err != nil {
 			logger.Errorf("流程(%s)中替换模板变量失败:%s", flowID, err.Error())
@@ -188,6 +189,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			logger.Errorf("流程(%s)中替换后的模板变量类型不是对象", flowID)
 			continue
 		}
+		//fmt.Println("after settings.EventType")
 		switch settings.EventType {
 		case "新增记录时":
 			if filter, ok := settings.Query["filter"]; ok {
@@ -2376,10 +2378,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			if len(settings.Field) == 0 && settings.EventType != "更新记录时"{
 				hasValidField = true
 			}
+			//fmt.Println("hasValidField:",hasValidField)
 			if !hasValidField{
 				continue
 			}
-			//fmt.Println("新增或更新记录时 projectName ;", projectName, "data:", data)
+			////fmt.Println("新增或更新记录时 projectName ;", projectName, "data:", data)
 			//for _, update := range settings.UpdateField {
 			//	if _, ok := data[update.ID]; !ok {
 			//		continue flowloop
@@ -3465,14 +3468,35 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			}
 		}
 
+		//fmt.Println("after settings.EventType")
+
 		tempTable, err := uuid.NewUUID()
 		if err != nil {
 			logger.Errorf("流程(%s)中生成临时表失败:%s", flowID, err.Error())
 			continue
 		}
 
+		resultTable := map[string]interface{}{}
+		err = table.Get(ctx,redisClient,mongoClient,projectName,settings.Table.ID,&resultTable)
+		if err != nil {
+			logger.Errorf("获取工作表定义失败:%s", err.Error())
+			continue
+		}
+
+		tempTableName := settings.Table.Name + tempTable.String()
+		tempID := primitive.NewObjectID().Hex()
+		resultTable["id"] = tempID
+		resultTable["name"] = tempTableName
+		saveReturn := map[string]interface{}{}
+		err = apiClient.SaveTable(headerMap, resultTable, &saveReturn)
+		if err != nil {
+			logger.Errorf("存储临时工作表定义失败:%s", err.Error())
+			continue
+		}
+
+		//fmt.Println("data:",data)
 		var result interface{}
-		err = apiClient.SaveExt(headerMap, tempTable.String(), data, &result)
+		err = apiClient.SaveExt(headerMap,tempTableName, data, &result)
 		if err != nil {
 			logger.Errorf("存储临时工作表记录失败:%s", err.Error())
 			continue
@@ -3480,18 +3504,26 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 
 		defer func() {
 			var result interface{}
-			err := apiClient.DelExtAll(headerMap, tempTable.String(), result)
+			err := apiClient.DelExtAll(headerMap, tempTableName, &result)
 			if err != nil {
-				logger.Errorf("删除临时工作表(%s)失败:%s", tempTable.String(),err.Error())
+				logger.Errorf("删除临时工作表(%s)失败:%s", tempTableName,err.Error())
+			}
+
+			err = apiClient.DelTableById(headerMap, tempID, &result)
+			if err != nil {
+				logger.Errorf("删除临时工作表定义(%s)失败:%s", tempTableName,err.Error())
 			}
 		}()
 
+		//fmt.Println("settings.Query:",settings.Query)
+
 		queryResult := make([]interface{}, 0)
-		err = apiClient.FindExtQuery(headerMap, tempTable.String(), settings.Query, &result)
+		err = apiClient.FindExtQuery(headerMap, tempTableName, settings.Query, &queryResult)
 		if err != nil {
 			logger.Errorf("查询临时工作表记录失败:%s", err.Error())
 			continue
 		}
+		//fmt.Println("queryResult:",queryResult)
 
 		if len(queryResult) != 0 {
 			isValid = true
