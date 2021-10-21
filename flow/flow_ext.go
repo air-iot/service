@@ -10,6 +10,7 @@ import (
 	"github.com/air-iot/service/util/json"
 	"github.com/air-iot/service/util/numberx"
 	"github.com/camunda-cloud/zeebe/clients/go/pkg/zbc"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -8063,7 +8064,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			hasValidField := false
 			for _, ele := range settings.Field {
 				if val, ok := data[ele]; ok {
-					if val != oldInfo[ele] {
+					if !reflect.DeepEqual(val,oldInfo[ele]){
 						hasValidField = true
 						break
 					}
