@@ -216,3 +216,86 @@ func FormatTimeFormat(data string) string {
 	}
 	return formatLayout
 }
+
+
+func GetFutureDayTimeSpecific(referTime *time.Time, i, hour, minute, second int) *time.Time {
+	day := referTime.Day()
+
+	newDay := day + i
+	t := time.Date(referTime.Year(), referTime.Month(), newDay, hour, minute, second, 0, time.Local)
+	//cstZone := time.FixedZone("UTC", 0) // 0时区
+	//res := t.In(cstZone)
+	return &t
+}
+
+func GetFutureMinuteTimeSpecific(referTime *time.Time, i, second int) *time.Time {
+	ele := referTime.Minute()
+
+	newEle := ele + i
+	t := time.Date(referTime.Year(), referTime.Month(), referTime.Day(), referTime.Hour(), newEle, second, 0, time.Local)
+	//cstZone := time.FixedZone("UTC", 0) // 0时区
+	//res := t.In(cstZone)
+	return &t
+}
+
+func GetFutureHourTimeSpecific(referTime *time.Time, i, minute, second int) *time.Time {
+	ele := referTime.Hour()
+
+	newEle := ele + i
+	t := time.Date(referTime.Year(), referTime.Month(), referTime.Day(), newEle, minute, second, 0, time.Local)
+	//cstZone := time.FixedZone("UTC", 0) // 0时区
+	//res := t.In(cstZone)
+	return &t
+}
+
+func GetFutureMonthTimeSpecific(referTime *time.Time, i, day, hour, minute, second int) *time.Time {
+	month := referTime.Month()
+
+	newMonth := int(month) + i
+	t := time.Date(referTime.Year(), time.Month(newMonth), day, hour, minute, second, 0, time.Local)
+	//cstZone := time.FixedZone("UTC", 0) // 0时区
+	//res := t.In(cstZone)
+	return &t
+}
+
+func GetFutureYearTimeSpecific(referTime *time.Time, i, month, day, hour, minute, second int) *time.Time {
+	year := referTime.Year()
+
+	newYear := int(year) + i
+	t := time.Date(newYear, time.Month(month), day, hour, minute, second, 0, time.Local)
+	//cstZone := time.FixedZone("UTC", 0) // 0时区
+	//res := t.In(cstZone)
+	return &t
+}
+
+
+func GetFutureDayTime(referTime *time.Time, i int) *time.Time {
+	day := referTime.Day()
+
+	newDay := day + i
+	t := time.Date(referTime.Year(), referTime.Month(), newDay, referTime.Hour(), referTime.Minute(), referTime.Second(), 0, time.Local)
+	//cstZone := time.FixedZone("UTC", 0) // 0时区
+	//res := t.In(cstZone)
+	return &t
+}
+
+func GetFutureMinuteTime(referTime *time.Time, i int) *time.Time {
+	ele := referTime.Minute()
+
+	newEle := ele + i
+	t := time.Date(referTime.Year(), referTime.Month(), referTime.Day(), referTime.Hour(), newEle, referTime.Second(), 0, time.Local)
+	//cstZone := time.FixedZone("UTC", 0) // 0时区
+	//res := t.In(cstZone)
+	return &t
+}
+
+func GetFutureHourTime(referTime *time.Time, i int) *time.Time {
+	ele := referTime.Hour()
+
+	newEle := ele + i
+	t := time.Date(referTime.Year(), referTime.Month(), referTime.Day(), newEle, referTime.Minute(), referTime.Second(), 0, time.Local)
+	//cstZone := time.FixedZone("UTC", 0) // 0时区
+	//res := t.In(cstZone)
+	return &t
+}
+

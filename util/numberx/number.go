@@ -156,3 +156,8 @@ func HasNumberExp(data string) string {
 	pattern, _ := regexp.Compile("^\\d+\\.?\\d*")
 	return pattern.FindString(data)
 }
+
+func GetNumberExp(data string) string {
+	pattern, _ := regexp.Compile("-?\\d+(\\.\\d+)?")
+	return pattern.FindString(data)
+}
