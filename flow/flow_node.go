@@ -1166,7 +1166,7 @@ flowloop:
 						logger.Errorf("流程(%s)的xml不存在或类型错误", flowID)
 						continue
 					}
-					logger.Errorf("流程(%s)推进到下一阶段成功:%s", flowID, err.Error())
+					logger.Errorf("流程(%s)推进到下一阶段成功:%s", flowID)
 					hasExecute = true
 				}
 
