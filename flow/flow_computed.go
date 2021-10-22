@@ -369,6 +369,21 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 							dataMapInLoop["custom"] = customDataMap
 						}
 						dataMap[nodeUIDNodeMap[uidInMap]] = dataMapInLoop
+						for key,val := range nodeUIDNodeMap{
+							if val != nodeUIDNodeMap[uidInMap]{
+								dataMap[val] = map[string]interface{}{
+									"time":         sendTime,
+									"#$model":      bson.M{"id": nodeUIDModelMap[key], "_tableName": "model"},
+									"#$department": deptMap,
+									"#$node":       bson.M{"id": val, "_tableName": "node", "uid": val},
+									//"modelId":        nodeUIDModelMap[uidInMap],
+									//"nodeId":         nodeUIDNodeMap[uidInMap],
+									//"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
+									//"modelName":      formatx.FormatKeyInfo(modelInfoMap, "name"),
+									//"nodeName":       formatx.FormatKeyInfo(nodeInfoMap, "name"),
+								}
+							}
+						}
 					}
 
 					err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, dataMap)
