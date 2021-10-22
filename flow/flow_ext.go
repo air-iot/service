@@ -12027,27 +12027,20 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			logger.Errorf("存储临时工作表定义失败:%s", err.Error())
 			continue
 		}
-
-		//fmt.Println("data:",data)
 		var result interface{}
-		err = apiClient.SaveExt(headerMap, tempTableName, data, &result)
-		if err != nil {
-			logger.Errorf("存储临时工作表记录失败:%s", err.Error())
-			continue
-		}
-
 		defer func() {
-			var result interface{}
-			err := apiClient.DelExtAll(headerMap, tempTableName, &result)
-			if err != nil {
-				logger.Errorf("删除临时工作表(%s)失败:%s", tempTableName, err.Error())
-			}
-
 			err = apiClient.DelTableById(headerMap, tempID, &result)
 			if err != nil {
 				logger.Errorf("删除临时工作表定义(%s)失败:%s", tempTableName, err.Error())
 			}
 		}()
+
+		//fmt.Println("data:",data)
+		err = apiClient.SaveExt(headerMap, tempTableName, data, &result)
+		if err != nil {
+			logger.Errorf("存储临时工作表记录失败:%s", err.Error())
+			continue
+		}
 
 		//fmt.Println("settings.Query:",settings.Query)
 
