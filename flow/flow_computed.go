@@ -138,6 +138,7 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 		//判断流程是否已经触发
 		hasExecute := false
 
+		hasSendMap := map[string]bool{}
 		if tags, ok := settings["tags"].([]interface{}); ok {
 			nodeUIDFieldsMap := map[string][]string{}
 			nodeUIDModelMap := map[string]string{}
@@ -325,9 +326,9 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 						}
 						dataMapInLoop = map[string]interface{}{
 							"time":         sendTime,
-							"#$model":      bson.M{"id": modelID, "_tableName": "model"},
+							"#$model":      bson.M{"id": modelIDInMap, "_tableName": "model"},
 							"#$department": deptMap,
-							"#$node":       bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
+							"#$node":       bson.M{"id": uidInMap, "_tableName": "node", "uid": uidInMap},
 							//"modelId":        nodeUIDModelMap[uidInMap],
 							//"nodeId":         nodeUIDNodeMap[uidInMap],
 							//"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
@@ -369,18 +370,16 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 							dataMapInLoop["custom"] = customDataMap
 						}
 						dataMap[nodeUIDNodeMap[uidInMap]] = dataMapInLoop
-						for key,val := range nodeUIDNodeMap{
-							if val != nodeUIDNodeMap[uidInMap]{
-								dataMap[val] = map[string]interface{}{
-									"time":         sendTime,
-									"#$model":      bson.M{"id": nodeUIDModelMap[key], "_tableName": "model"},
-									"#$department": deptMap,
-									"#$node":       bson.M{"id": val, "_tableName": "node", "uid": val},
-									//"modelId":        nodeUIDModelMap[uidInMap],
-									//"nodeId":         nodeUIDNodeMap[uidInMap],
-									//"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
-									//"modelName":      formatx.FormatKeyInfo(modelInfoMap, "name"),
-									//"nodeName":       formatx.FormatKeyInfo(nodeInfoMap, "name"),
+						hasSendMap[nodeUIDNodeMap[uidInMap]] = true
+						for key, val := range nodeUIDNodeMap {
+							if val != nodeUIDNodeMap[uidInMap] {
+								if _, ok := hasSendMap[val]; !ok {
+									dataMap[val] = map[string]interface{}{
+										"time":         sendTime,
+										"#$model":      bson.M{"id": nodeUIDModelMap[key], "_tableName": "model"},
+										"#$department": deptMap,
+										"#$node":       bson.M{"id": val, "_tableName": "node", "uid": val},
+									}
 								}
 							}
 						}
