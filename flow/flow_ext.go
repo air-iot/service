@@ -12035,6 +12035,28 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			}
 		}()
 
+		for key, val := range data {
+			if extRaw, ok := excelColNameTypeExtMap[key]; ok {
+				if extRaw.Format != "" {
+					if originTime, ok := val.(string); ok {
+						eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+						if err != nil {
+							continue
+						}
+						switch extRaw.Format {
+						case "date":
+							data[key] = eleTime.Format("2006-01-02")
+						case "datetime":
+							data[key] = eleTime.Format("2006-01-02 15:04:05")
+						case "time":
+							data[key] = eleTime.Format("15:04:05")
+						case "custom":
+							data[key] = eleTime.Format(extRaw.Layout)
+						}
+					}
+				}
+			}
+		}
 		//fmt.Println("data:",data)
 		err = apiClient.SaveExt(headerMap, tempTableName, data, &result)
 		if err != nil {
@@ -12057,28 +12079,6 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 		}
 		//=================
 		if isValid {
-			for key, val := range data {
-				if extRaw, ok := excelColNameTypeExtMap[key]; ok {
-					if extRaw.Format != "" {
-						if originTime, ok := val.(string); ok {
-							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
-							if err != nil {
-								continue
-							}
-							switch extRaw.Format {
-							case "date":
-								data[key] = eleTime.Format("2006-01-02")
-							case "datetime":
-								data[key] = eleTime.Format("2006-01-02 15:04:05")
-							case "time":
-								data[key] = eleTime.Format("15:04:05")
-							case "custom":
-								data[key] = eleTime.Format(extRaw.Layout)
-							}
-						}
-					}
-				}
-			}
 
 			err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, data)
 			if err != nil {
