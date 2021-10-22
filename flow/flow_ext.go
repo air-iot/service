@@ -29,7 +29,7 @@ import (
 
 var flowExtModifyLog = map[string]interface{}{"name": "工作表流程触发"}
 
-func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, zbClient zbc.Client, projectName, tableName string, data map[string]interface{}, oldInfo bson.M) error {
+func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, zbClient zbc.Client, projectName, tableName string, data map[string]interface{}, oldInfo bson.M,operateType string) error {
 	////logger.Debugf(eventDeviceModifyLog, "开始执行资产修改流程触发器")
 	////logger.Debugf(eventDeviceModifyLog, "传入参数为:%+v", data)
 	//ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30)*time.Second)
@@ -467,21 +467,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 														interval := strings.ReplaceAll(originTime, "当前", "")
 														switch interval {
 														case "天":
-															startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 														case "周":
 															weekDay := int(timeNow.Weekday())
 															if weekDay == 0 {
 																weekDay = 7
 															}
-															startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 														case "月":
-															startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 														case "年":
-															startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 														case "季度":
 															timeNowMonth := int(timeNow.Month())
 															quarter1 := timeNowMonth - 1
@@ -495,14 +495,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																	min = v
 																}
 															}
-															startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 														case "时":
-															startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 														case "分":
-															startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 														case "秒":
 															endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 															startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -790,21 +790,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 												interval := strings.ReplaceAll(originTime, "当前", "")
 												switch interval {
 												case "天":
-													startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 												case "周":
 													weekDay := int(timeNow.Weekday())
 													if weekDay == 0 {
 														weekDay = 7
 													}
-													startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 												case "月":
-													startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 												case "年":
-													startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 												case "季度":
 													timeNowMonth := int(timeNow.Month())
 													quarter1 := timeNowMonth - 1
@@ -818,14 +818,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 															min = v
 														}
 													}
-													startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 												case "时":
-													startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 												case "分":
-													startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 												case "秒":
 													endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 													startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -1116,21 +1116,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 													interval := strings.ReplaceAll(originTime, "当前", "")
 													switch interval {
 													case "天":
-														startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 													case "周":
 														weekDay := int(timeNow.Weekday())
 														if weekDay == 0 {
 															weekDay = 7
 														}
-														startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 													case "月":
-														startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 													case "年":
-														startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 													case "季度":
 														timeNowMonth := int(timeNow.Month())
 														quarter1 := timeNowMonth - 1
@@ -1144,14 +1144,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																min = v
 															}
 														}
-														startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 													case "时":
-														startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 													case "分":
-														startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 													case "秒":
 														endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 														startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -1439,21 +1439,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 											interval := strings.ReplaceAll(originTime, "当前", "")
 											switch interval {
 											case "天":
-												startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+												startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 											case "周":
 												weekDay := int(timeNow.Weekday())
 												if weekDay == 0 {
 													weekDay = 7
 												}
-												startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+												startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 											case "月":
-												startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+												startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 											case "年":
-												startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+												startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 											case "季度":
 												timeNowMonth := int(timeNow.Month())
 												quarter1 := timeNowMonth - 1
@@ -1467,14 +1467,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 														min = v
 													}
 												}
-												startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+												startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 											case "时":
-												startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+												startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 											case "分":
-												startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+												startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 											case "秒":
 												endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 												startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -1776,21 +1776,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																								interval := strings.ReplaceAll(originTime, "当前", "")
 																								switch interval {
 																								case "天":
-																									startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																								case "周":
 																									weekDay := int(timeNow.Weekday())
 																									if weekDay == 0 {
 																										weekDay = 7
 																									}
-																									startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																								case "月":
-																									startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																								case "年":
-																									startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																								case "季度":
 																									timeNowMonth := int(timeNow.Month())
 																									quarter1 := timeNowMonth - 1
@@ -1804,14 +1804,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																											min = v
 																										}
 																									}
-																									startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																								case "时":
-																									startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																								case "分":
-																									startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																								case "秒":
 																									endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																									startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -2099,21 +2099,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																						interval := strings.ReplaceAll(originTime, "当前", "")
 																						switch interval {
 																						case "天":
-																							startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																						case "周":
 																							weekDay := int(timeNow.Weekday())
 																							if weekDay == 0 {
 																								weekDay = 7
 																							}
-																							startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																						case "月":
-																							startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																						case "年":
-																							startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																						case "季度":
 																							timeNowMonth := int(timeNow.Month())
 																							quarter1 := timeNowMonth - 1
@@ -2127,14 +2127,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																									min = v
 																								}
 																							}
-																							startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																						case "时":
-																							startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																						case "分":
-																							startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																						case "秒":
 																							endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																							startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -2425,21 +2425,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																							interval := strings.ReplaceAll(originTime, "当前", "")
 																							switch interval {
 																							case "天":
-																								startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																							case "周":
 																								weekDay := int(timeNow.Weekday())
 																								if weekDay == 0 {
 																									weekDay = 7
 																								}
-																								startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																							case "月":
-																								startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																							case "年":
-																								startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																							case "季度":
 																								timeNowMonth := int(timeNow.Month())
 																								quarter1 := timeNowMonth - 1
@@ -2453,14 +2453,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																										min = v
 																									}
 																								}
-																								startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																							case "时":
-																								startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																							case "分":
-																								startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																							case "秒":
 																								endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																								startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -2748,21 +2748,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																					interval := strings.ReplaceAll(originTime, "当前", "")
 																					switch interval {
 																					case "天":
-																						startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																					case "周":
 																						weekDay := int(timeNow.Weekday())
 																						if weekDay == 0 {
 																							weekDay = 7
 																						}
-																						startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																					case "月":
-																						startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																					case "年":
-																						startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																					case "季度":
 																						timeNowMonth := int(timeNow.Month())
 																						quarter1 := timeNowMonth - 1
@@ -2776,14 +2776,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																								min = v
 																							}
 																						}
-																						startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																					case "时":
-																						startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																					case "分":
-																						startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																					case "秒":
 																						endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																						startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -3079,21 +3079,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																			interval := strings.ReplaceAll(originTime, "当前", "")
 																			switch interval {
 																			case "天":
-																				startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																			case "周":
 																				weekDay := int(timeNow.Weekday())
 																				if weekDay == 0 {
 																					weekDay = 7
 																				}
-																				startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																			case "月":
-																				startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																			case "年":
-																				startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																			case "季度":
 																				timeNowMonth := int(timeNow.Month())
 																				quarter1 := timeNowMonth - 1
@@ -3107,14 +3107,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																						min = v
 																					}
 																				}
-																				startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																			case "时":
-																				startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																			case "分":
-																				startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																			case "秒":
 																				endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																				startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -3402,21 +3402,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																	interval := strings.ReplaceAll(originTime, "当前", "")
 																	switch interval {
 																	case "天":
-																		startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																	case "周":
 																		weekDay := int(timeNow.Weekday())
 																		if weekDay == 0 {
 																			weekDay = 7
 																		}
-																		startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																	case "月":
-																		startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																	case "年":
-																		startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																	case "季度":
 																		timeNowMonth := int(timeNow.Month())
 																		quarter1 := timeNowMonth - 1
@@ -3430,14 +3430,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																				min = v
 																			}
 																		}
-																		startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																	case "时":
-																		startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																	case "分":
-																		startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																	case "秒":
 																		endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																		startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -3728,21 +3728,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																		interval := strings.ReplaceAll(originTime, "当前", "")
 																		switch interval {
 																		case "天":
-																			startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																		case "周":
 																			weekDay := int(timeNow.Weekday())
 																			if weekDay == 0 {
 																				weekDay = 7
 																			}
-																			startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																		case "月":
-																			startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																		case "年":
-																			startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																		case "季度":
 																			timeNowMonth := int(timeNow.Month())
 																			quarter1 := timeNowMonth - 1
@@ -3756,14 +3756,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																					min = v
 																				}
 																			}
-																			startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																		case "时":
-																			startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																		case "分":
-																			startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																		case "秒":
 																			endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																			startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -4051,21 +4051,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																interval := strings.ReplaceAll(originTime, "当前", "")
 																switch interval {
 																case "天":
-																	startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																	endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																case "周":
 																	weekDay := int(timeNow.Weekday())
 																	if weekDay == 0 {
 																		weekDay = 7
 																	}
-																	startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																	endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																case "月":
-																	startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																	endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																case "年":
-																	startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																	endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																case "季度":
 																	timeNowMonth := int(timeNow.Month())
 																	quarter1 := timeNowMonth - 1
@@ -4079,14 +4079,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																			min = v
 																		}
 																	}
-																	startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																	endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																case "时":
-																	startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																	endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																case "分":
-																	startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																	endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																case "秒":
 																	endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																	startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -4407,21 +4407,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 															interval := strings.ReplaceAll(originTime, "当前", "")
 															switch interval {
 															case "天":
-																startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 															case "周":
 																weekDay := int(timeNow.Weekday())
 																if weekDay == 0 {
 																	weekDay = 7
 																}
-																startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 															case "月":
-																startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 															case "年":
-																startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 															case "季度":
 																timeNowMonth := int(timeNow.Month())
 																quarter1 := timeNowMonth - 1
@@ -4435,14 +4435,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																		min = v
 																	}
 																}
-																startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 															case "时":
-																startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 															case "分":
-																startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 															case "秒":
 																endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -4730,21 +4730,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 													interval := strings.ReplaceAll(originTime, "当前", "")
 													switch interval {
 													case "天":
-														startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 													case "周":
 														weekDay := int(timeNow.Weekday())
 														if weekDay == 0 {
 															weekDay = 7
 														}
-														startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 													case "月":
-														startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 													case "年":
-														startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 													case "季度":
 														timeNowMonth := int(timeNow.Month())
 														quarter1 := timeNowMonth - 1
@@ -4758,14 +4758,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																min = v
 															}
 														}
-														startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 													case "时":
-														startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 													case "分":
-														startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 													case "秒":
 														endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 														startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -5056,21 +5056,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 														interval := strings.ReplaceAll(originTime, "当前", "")
 														switch interval {
 														case "天":
-															startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 														case "周":
 															weekDay := int(timeNow.Weekday())
 															if weekDay == 0 {
 																weekDay = 7
 															}
-															startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 														case "月":
-															startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 														case "年":
-															startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 														case "季度":
 															timeNowMonth := int(timeNow.Month())
 															quarter1 := timeNowMonth - 1
@@ -5084,14 +5084,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																	min = v
 																}
 															}
-															startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 														case "时":
-															startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 														case "分":
-															startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 														case "秒":
 															endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 															startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -5379,21 +5379,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 												interval := strings.ReplaceAll(originTime, "当前", "")
 												switch interval {
 												case "天":
-													startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 												case "周":
 													weekDay := int(timeNow.Weekday())
 													if weekDay == 0 {
 														weekDay = 7
 													}
-													startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 												case "月":
-													startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 												case "年":
-													startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 												case "季度":
 													timeNowMonth := int(timeNow.Month())
 													quarter1 := timeNowMonth - 1
@@ -5407,14 +5407,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 															min = v
 														}
 													}
-													startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 												case "时":
-													startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 												case "分":
-													startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 												case "秒":
 													endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 													startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -5716,21 +5716,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																									interval := strings.ReplaceAll(originTime, "当前", "")
 																									switch interval {
 																									case "天":
-																										startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																										endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																										startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																									case "周":
 																										weekDay := int(timeNow.Weekday())
 																										if weekDay == 0 {
 																											weekDay = 7
 																										}
-																										startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																										endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																										startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																									case "月":
-																										startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																										endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																										startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																									case "年":
-																										startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																										endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																										startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																									case "季度":
 																										timeNowMonth := int(timeNow.Month())
 																										quarter1 := timeNowMonth - 1
@@ -5744,14 +5744,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																												min = v
 																											}
 																										}
-																										startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																										endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																										startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																									case "时":
-																										startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																										endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																										startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																									case "分":
-																										startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																										endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																										startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																									case "秒":
 																										endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																										startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -6039,21 +6039,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																							interval := strings.ReplaceAll(originTime, "当前", "")
 																							switch interval {
 																							case "天":
-																								startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																							case "周":
 																								weekDay := int(timeNow.Weekday())
 																								if weekDay == 0 {
 																									weekDay = 7
 																								}
-																								startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																							case "月":
-																								startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																							case "年":
-																								startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																							case "季度":
 																								timeNowMonth := int(timeNow.Month())
 																								quarter1 := timeNowMonth - 1
@@ -6067,14 +6067,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																										min = v
 																									}
 																								}
-																								startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																							case "时":
-																								startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																							case "分":
-																								startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																							case "秒":
 																								endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																								startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -6365,21 +6365,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																								interval := strings.ReplaceAll(originTime, "当前", "")
 																								switch interval {
 																								case "天":
-																									startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																								case "周":
 																									weekDay := int(timeNow.Weekday())
 																									if weekDay == 0 {
 																										weekDay = 7
 																									}
-																									startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																								case "月":
-																									startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																								case "年":
-																									startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																								case "季度":
 																									timeNowMonth := int(timeNow.Month())
 																									quarter1 := timeNowMonth - 1
@@ -6393,14 +6393,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																											min = v
 																										}
 																									}
-																									startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																								case "时":
-																									startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																								case "分":
-																									startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																								case "秒":
 																									endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																									startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -6688,21 +6688,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																						interval := strings.ReplaceAll(originTime, "当前", "")
 																						switch interval {
 																						case "天":
-																							startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																						case "周":
 																							weekDay := int(timeNow.Weekday())
 																							if weekDay == 0 {
 																								weekDay = 7
 																							}
-																							startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																						case "月":
-																							startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																						case "年":
-																							startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																						case "季度":
 																							timeNowMonth := int(timeNow.Month())
 																							quarter1 := timeNowMonth - 1
@@ -6716,14 +6716,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																									min = v
 																								}
 																							}
-																							startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																						case "时":
-																							startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																						case "分":
-																							startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																						case "秒":
 																							endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																							startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -7019,21 +7019,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																				interval := strings.ReplaceAll(originTime, "当前", "")
 																				switch interval {
 																				case "天":
-																					startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																					endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																					startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																				case "周":
 																					weekDay := int(timeNow.Weekday())
 																					if weekDay == 0 {
 																						weekDay = 7
 																					}
-																					startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																					endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																					startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																				case "月":
-																					startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																					endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																					startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																				case "年":
-																					startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																					endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																					startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																				case "季度":
 																					timeNowMonth := int(timeNow.Month())
 																					quarter1 := timeNowMonth - 1
@@ -7047,14 +7047,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																							min = v
 																						}
 																					}
-																					startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																					endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																					startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																				case "时":
-																					startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																					endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																					startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																				case "分":
-																					startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																					endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																					startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																				case "秒":
 																					endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																					startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -7342,21 +7342,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																		interval := strings.ReplaceAll(originTime, "当前", "")
 																		switch interval {
 																		case "天":
-																			startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																		case "周":
 																			weekDay := int(timeNow.Weekday())
 																			if weekDay == 0 {
 																				weekDay = 7
 																			}
-																			startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																		case "月":
-																			startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																		case "年":
-																			startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																		case "季度":
 																			timeNowMonth := int(timeNow.Month())
 																			quarter1 := timeNowMonth - 1
@@ -7370,14 +7370,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																					min = v
 																				}
 																			}
-																			startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																		case "时":
-																			startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																		case "分":
-																			startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																		case "秒":
 																			endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																			startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -7668,21 +7668,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																			interval := strings.ReplaceAll(originTime, "当前", "")
 																			switch interval {
 																			case "天":
-																				startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																			case "周":
 																				weekDay := int(timeNow.Weekday())
 																				if weekDay == 0 {
 																					weekDay = 7
 																				}
-																				startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																			case "月":
-																				startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																			case "年":
-																				startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																			case "季度":
 																				timeNowMonth := int(timeNow.Month())
 																				quarter1 := timeNowMonth - 1
@@ -7696,14 +7696,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																						min = v
 																					}
 																				}
-																				startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																			case "时":
-																				startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																			case "分":
-																				startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																			case "秒":
 																				endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																				startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -7991,21 +7991,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																	interval := strings.ReplaceAll(originTime, "当前", "")
 																	switch interval {
 																	case "天":
-																		startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																	case "周":
 																		weekDay := int(timeNow.Weekday())
 																		if weekDay == 0 {
 																			weekDay = 7
 																		}
-																		startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																	case "月":
-																		startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																	case "年":
-																		startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																	case "季度":
 																		timeNowMonth := int(timeNow.Month())
 																		quarter1 := timeNowMonth - 1
@@ -8019,14 +8019,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																				min = v
 																			}
 																		}
-																		startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																	case "时":
-																		startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																	case "分":
-																		startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																	case "秒":
 																		endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																		startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -8062,16 +8062,17 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			}
 		case "更新记录时", "添加或更新记录时":
 			hasValidField := false
-			for _, ele := range settings.Field {
-				if val, ok := data[ele]; ok {
-					if !reflect.DeepEqual(val,oldInfo[ele]){
-						hasValidField = true
-						break
+			if operateType == "add" {
+				hasValidField = true
+			} else {
+				for _, ele := range settings.Field {
+					if val, ok := data[ele]; ok {
+						if !reflect.DeepEqual(val, oldInfo[ele]) {
+							hasValidField = true
+							break
+						}
 					}
 				}
-			}
-			if len(settings.Field) == 0 && settings.EventType != "更新记录时" {
-				hasValidField = true
 			}
 			//fmt.Println("hasValidField:",hasValidField)
 			if !hasValidField {
@@ -8347,21 +8348,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 														interval := strings.ReplaceAll(originTime, "当前", "")
 														switch interval {
 														case "天":
-															startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 														case "周":
 															weekDay := int(timeNow.Weekday())
 															if weekDay == 0 {
 																weekDay = 7
 															}
-															startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 														case "月":
-															startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 														case "年":
-															startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 														case "季度":
 															timeNowMonth := int(timeNow.Month())
 															quarter1 := timeNowMonth - 1
@@ -8375,14 +8376,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																	min = v
 																}
 															}
-															startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 														case "时":
-															startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 														case "分":
-															startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 														case "秒":
 															endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 															startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -8670,21 +8671,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 												interval := strings.ReplaceAll(originTime, "当前", "")
 												switch interval {
 												case "天":
-													startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 												case "周":
 													weekDay := int(timeNow.Weekday())
 													if weekDay == 0 {
 														weekDay = 7
 													}
-													startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 												case "月":
-													startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 												case "年":
-													startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 												case "季度":
 													timeNowMonth := int(timeNow.Month())
 													quarter1 := timeNowMonth - 1
@@ -8698,14 +8699,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 															min = v
 														}
 													}
-													startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 												case "时":
-													startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 												case "分":
-													startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+													startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 												case "秒":
 													endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 													startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -8996,21 +8997,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 													interval := strings.ReplaceAll(originTime, "当前", "")
 													switch interval {
 													case "天":
-														startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 													case "周":
 														weekDay := int(timeNow.Weekday())
 														if weekDay == 0 {
 															weekDay = 7
 														}
-														startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 													case "月":
-														startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 													case "年":
-														startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 													case "季度":
 														timeNowMonth := int(timeNow.Month())
 														quarter1 := timeNowMonth - 1
@@ -9024,14 +9025,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																min = v
 															}
 														}
-														startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 													case "时":
-														startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 													case "分":
-														startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+														startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 													case "秒":
 														endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 														startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -9319,21 +9320,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 											interval := strings.ReplaceAll(originTime, "当前", "")
 											switch interval {
 											case "天":
-												startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+												startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 											case "周":
 												weekDay := int(timeNow.Weekday())
 												if weekDay == 0 {
 													weekDay = 7
 												}
-												startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+												startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 											case "月":
-												startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+												startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 											case "年":
-												startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+												startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 											case "季度":
 												timeNowMonth := int(timeNow.Month())
 												quarter1 := timeNowMonth - 1
@@ -9347,14 +9348,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 														min = v
 													}
 												}
-												startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+												startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 											case "时":
-												startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+												startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 											case "分":
-												startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+												startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 											case "秒":
 												endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 												startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -9656,21 +9657,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																								interval := strings.ReplaceAll(originTime, "当前", "")
 																								switch interval {
 																								case "天":
-																									startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																								case "周":
 																									weekDay := int(timeNow.Weekday())
 																									if weekDay == 0 {
 																										weekDay = 7
 																									}
-																									startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																								case "月":
-																									startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																								case "年":
-																									startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																								case "季度":
 																									timeNowMonth := int(timeNow.Month())
 																									quarter1 := timeNowMonth - 1
@@ -9684,14 +9685,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																											min = v
 																										}
 																									}
-																									startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																								case "时":
-																									startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																								case "分":
-																									startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																								case "秒":
 																									endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																									startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -9979,21 +9980,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																						interval := strings.ReplaceAll(originTime, "当前", "")
 																						switch interval {
 																						case "天":
-																							startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																						case "周":
 																							weekDay := int(timeNow.Weekday())
 																							if weekDay == 0 {
 																								weekDay = 7
 																							}
-																							startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																						case "月":
-																							startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																						case "年":
-																							startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																						case "季度":
 																							timeNowMonth := int(timeNow.Month())
 																							quarter1 := timeNowMonth - 1
@@ -10007,14 +10008,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																									min = v
 																								}
 																							}
-																							startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																						case "时":
-																							startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																						case "分":
-																							startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																						case "秒":
 																							endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																							startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -10305,21 +10306,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																							interval := strings.ReplaceAll(originTime, "当前", "")
 																							switch interval {
 																							case "天":
-																								startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																							case "周":
 																								weekDay := int(timeNow.Weekday())
 																								if weekDay == 0 {
 																									weekDay = 7
 																								}
-																								startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																							case "月":
-																								startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																							case "年":
-																								startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																							case "季度":
 																								timeNowMonth := int(timeNow.Month())
 																								quarter1 := timeNowMonth - 1
@@ -10333,14 +10334,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																										min = v
 																									}
 																								}
-																								startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																							case "时":
-																								startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																							case "分":
-																								startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																								startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																							case "秒":
 																								endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																								startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -10628,21 +10629,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																					interval := strings.ReplaceAll(originTime, "当前", "")
 																					switch interval {
 																					case "天":
-																						startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																					case "周":
 																						weekDay := int(timeNow.Weekday())
 																						if weekDay == 0 {
 																							weekDay = 7
 																						}
-																						startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																					case "月":
-																						startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																					case "年":
-																						startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																					case "季度":
 																						timeNowMonth := int(timeNow.Month())
 																						quarter1 := timeNowMonth - 1
@@ -10656,14 +10657,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																								min = v
 																							}
 																						}
-																						startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																					case "时":
-																						startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																					case "分":
-																						startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																					case "秒":
 																						endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																						startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -10959,21 +10960,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																			interval := strings.ReplaceAll(originTime, "当前", "")
 																			switch interval {
 																			case "天":
-																				startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																			case "周":
 																				weekDay := int(timeNow.Weekday())
 																				if weekDay == 0 {
 																					weekDay = 7
 																				}
-																				startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																			case "月":
-																				startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																			case "年":
-																				startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																			case "季度":
 																				timeNowMonth := int(timeNow.Month())
 																				quarter1 := timeNowMonth - 1
@@ -10987,14 +10988,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																						min = v
 																					}
 																				}
-																				startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																			case "时":
-																				startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																			case "分":
-																				startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																			case "秒":
 																				endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																				startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -11282,21 +11283,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																	interval := strings.ReplaceAll(originTime, "当前", "")
 																	switch interval {
 																	case "天":
-																		startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																	case "周":
 																		weekDay := int(timeNow.Weekday())
 																		if weekDay == 0 {
 																			weekDay = 7
 																		}
-																		startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																	case "月":
-																		startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																	case "年":
-																		startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																	case "季度":
 																		timeNowMonth := int(timeNow.Month())
 																		quarter1 := timeNowMonth - 1
@@ -11310,14 +11311,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																				min = v
 																			}
 																		}
-																		startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																	case "时":
-																		startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																	case "分":
-																		startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																		endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																		startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																	case "秒":
 																		endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																		startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -11608,21 +11609,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																		interval := strings.ReplaceAll(originTime, "当前", "")
 																		switch interval {
 																		case "天":
-																			startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																		case "周":
 																			weekDay := int(timeNow.Weekday())
 																			if weekDay == 0 {
 																				weekDay = 7
 																			}
-																			startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																		case "月":
-																			startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																		case "年":
-																			startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																		case "季度":
 																			timeNowMonth := int(timeNow.Month())
 																			quarter1 := timeNowMonth - 1
@@ -11636,14 +11637,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																					min = v
 																				}
 																			}
-																			startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																		case "时":
-																			startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																		case "分":
-																			startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																			startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																		case "秒":
 																			endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																			startPoint = timeNow.Format("2006-01-02 15:04:05")
@@ -11931,21 +11932,21 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																interval := strings.ReplaceAll(originTime, "当前", "")
 																switch interval {
 																case "天":
-																	startPoint = timex.GetFutureDayTime(timeNow,0).Format("2006-01-02 15:04:05")
-																	endPoint = timex.GetFutureDayTime(timeNow,1).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																case "周":
 																	weekDay := int(timeNow.Weekday())
 																	if weekDay == 0 {
 																		weekDay = 7
 																	}
-																	startPoint = timex.GetFutureDayTime(timeNow,-weekDay + 1).Format("2006-01-02 15:04:05")
-																	endPoint = timex.GetFutureDayTime(timeNow,7-weekDay + 1).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
 																case "月":
-																	startPoint = timex.GetFutureMonthTime(timeNow,0).Format("2006-01-02 15:04:05")
-																	endPoint = timex.GetFutureMonthTime(timeNow,1).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																case "年":
-																	startPoint = timex.GetFutureYearTime(timeNow,0).Format("2006-01-02 15:04:05")
-																	endPoint = timex.GetFutureYearTime(timeNow,1).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																case "季度":
 																	timeNowMonth := int(timeNow.Month())
 																	quarter1 := timeNowMonth - 1
@@ -11959,14 +11960,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																			min = v
 																		}
 																	}
-																	startPoint = timex.GetFutureMonthTime(timeNow,-min).Format("2006-01-02 15:04:05")
-																	endPoint = timex.GetFutureMonthTime(timeNow,3-min).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
 																case "时":
-																	startPoint = timex.GetFutureHourTime(timeNow,0).Format("2006-01-02 15:04:05")
-																	endPoint = timex.GetFutureHourTime(timeNow,1).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																case "分":
-																	startPoint = timex.GetFutureMinuteTime(timeNow,0).Format("2006-01-02 15:04:05")
-																	endPoint = timex.GetFutureMinuteTime(timeNow,1).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
 																case "秒":
 																	endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
 																	startPoint = timeNow.Format("2006-01-02 15:04:05")
