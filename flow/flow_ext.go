@@ -29,7 +29,7 @@ import (
 
 var flowExtModifyLog = map[string]interface{}{"name": "工作表流程触发"}
 
-func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, zbClient zbc.Client, projectName, tableName string, data map[string]interface{}, oldInfo bson.M, operateType string) error {
+func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, zbClient zbc.Client, projectName, tableName string, data map[string]interface{}, oldInfoRaw bson.M, operateType string) error {
 	////logger.Debugf(eventDeviceModifyLog, "开始执行资产修改流程触发器")
 	////logger.Debugf(eventDeviceModifyLog, "传入参数为:%+v", data)
 	//ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30)*time.Second)
@@ -193,6 +193,19 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 		} else {
 			logger.Errorf("流程(%s)中替换后的模板变量类型不是对象", flowID)
 			continue
+		}
+		oldInfo := map[string]interface{}{}
+		if oldInfoRaw != nil && len(oldInfoRaw) != 0 {
+			oldByte, err := json.Marshal(oldInfoRaw)
+			if err != nil {
+				logger.Errorf("流程(%s)中序列化旧值失败:%s", flowID, err.Error())
+				continue
+			}
+			err = json.Unmarshal(oldByte, &oldInfo)
+			if err != nil {
+				logger.Errorf("流程(%s)中解序列化旧值失败:%s", flowID, err.Error())
+				continue
+			}
 		}
 		//fmt.Println("after settings.EventType")
 		switch settings.EventType {
@@ -12036,32 +12049,54 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 		}()
 
 		for key, val := range data {
-			if extRaw, ok := excelColNameTypeExtMap[key]; ok {
-				if extRaw.Format != "" {
-					if originTime, ok := val.(string); ok {
-						eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
-						if err != nil {
-							continue
-						}
-						switch extRaw.Format {
-						case "date":
-							data[key] = eleTime.Format("2006-01-02")
-						case "datetime":
-							data[key] = eleTime.Format("2006-01-02 15:04:05")
-						case "time":
-							data[key] = eleTime.Format("15:04:05")
-						case "custom":
-							data[key] = eleTime.Format(extRaw.Layout)
+			if val != nil {
+				if extRaw, ok := excelColNameTypeExtMap[key]; ok {
+					if extRaw.Format != "" {
+						if originTime, ok := val.(string); ok {
+							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+							if err != nil {
+								continue
+							}
+							switch extRaw.Format {
+							case "date":
+								data[key] = eleTime.Format("2006-01-02")
+							case "datetime":
+								data[key] = eleTime.Format("2006-01-02 15:04:05")
+							case "time":
+								data[key] = eleTime.Format("15:04:05")
+							case "custom":
+								data[key] = eleTime.Format(extRaw.Layout)
+							}
 						}
 					}
 				}
 			}
 		}
-		//fmt.Println("data:",data)
+
 		err = apiClient.SaveExt(headerMap, tempTableName, data, &result)
 		if err != nil {
 			logger.Errorf("存储临时工作表记录失败:%s", err.Error())
 			continue
+		}
+
+		//增加关联字段处理
+		for key, val := range data {
+			if val != nil {
+				if extRaw, ok := excelColNameTypeExtMap[key]; ok {
+					eleRaw, ok := val.(map[string]interface{})
+					if ok {
+						if extRaw.RelateField != "" {
+							if relateVal, ok := eleRaw[extRaw.RelateField]; ok {
+								data[key] = relateVal
+							}
+						} else if extRaw.RelateTo != "" {
+							if relateVal, ok := eleRaw["name"]; ok {
+								data[key] = relateVal
+							}
+						}
+					}
+				}
+			}
 		}
 
 		//fmt.Println("settings.Query:",settings.Query)
