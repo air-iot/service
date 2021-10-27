@@ -86,7 +86,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 	if err != nil {
 		return err
 	}
-	////fmt.Println("flowInfoList:", len(flowInfoList))
+	//////fmt.Println("flowInfoList:", len(flowInfoList))
 	////logger.Debugf(eventDeviceModifyLog, "开始遍历流程列表")
 	timeNowRaw := time.Now()
 	timeNow := &timeNowRaw
@@ -165,7 +165,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			logger.Errorf("流程(%s)中解析工作表字段失败:%s", flowID, err.Error())
 			continue
 		}
-		////fmt.Println("excelColNameTypeExtMap：", excelColNameTypeExtMap)
+		//////fmt.Println("excelColNameTypeExtMap：", excelColNameTypeExtMap)
 		b, err := json.Marshal(settings.Query)
 		if err != nil {
 			logger.Errorf("流程(%s)中序列化过滤参数失败:%s", flowID, err.Error())
@@ -181,8 +181,8 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 		settings.Query = formatQuery
 
 		//=================
-		////fmt.Println("settings:", settings)
-		////fmt.Println("settings.EventType:", settings.EventType)
+		//////fmt.Println("settings:", settings)
+		//////fmt.Println("settings.EventType:", settings.EventType)
 		formatVal, err := ConvertVariable(ctx, apiClient, variablesBytes, settings.Query)
 		if err != nil {
 			logger.Errorf("流程(%s)中替换模板变量失败:%s", flowID, err.Error())
@@ -207,14 +207,14 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 				continue
 			}
 		}
-		//fmt.Println("after settings.EventType")
+		////fmt.Println("after settings.EventType")
 		switch settings.EventType {
 		case "新增记录时":
 			if filter, ok := settings.Query["filter"]; ok {
 				if filterM, ok := filter.(map[string]interface{}); ok {
 					for key, val := range filterM {
 						if extRaw, ok := excelColNameTypeExtMap[key]; ok {
-							fmt.Println("excelColNameTypeExtMap[key] in:", key)
+							//fmt.Println("excelColNameTypeExtMap[key] in:", key)
 							if extRaw.Format != "" {
 								if timeMapRaw, ok := val.(map[string]interface{}); ok {
 									for k, v := range timeMapRaw {
@@ -292,11 +292,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 												if originTime != "" {
 													fromNow := false
 													if strings.HasPrefix(originTime, "前") {
-														fmt.Println("originTime:", originTime)
+														//fmt.Println("originTime:", originTime)
 														if strings.HasSuffix(originTime, "当前") {
 															fromNow = true
 															originTime = strings.ReplaceAll(originTime, "当前", "")
-															fmt.Println("originTime after 当前:", originTime)
+															//fmt.Println("originTime after 当前:", originTime)
 														}
 														intervalNumberString := numberx.GetNumberExp(originTime)
 														intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -305,12 +305,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 															continue
 														}
 														interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-														fmt.Println("intervalNumber:", intervalNumber)
-														fmt.Println("interval:", interval)
+														//fmt.Println("intervalNumber:", intervalNumber)
+														//fmt.Println("interval:", interval)
 														switch interval {
 														case "天":
 															if fromNow {
-																fmt.Println("fromNow")
+																//fmt.Println("fromNow")
 																startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																endPoint = timeNow.Format("2006-01-02 15:04:05")
 															} else {
@@ -620,11 +620,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 										if originTime != "" {
 											fromNow := false
 											if strings.HasPrefix(originTime, "前") {
-												fmt.Println("originTime:", originTime)
+												//fmt.Println("originTime:", originTime)
 												if strings.HasSuffix(originTime, "当前") {
 													fromNow = true
 													originTime = strings.ReplaceAll(originTime, "当前", "")
-													fmt.Println("originTime after 当前:", originTime)
+													//fmt.Println("originTime after 当前:", originTime)
 												}
 												intervalNumberString := numberx.GetNumberExp(originTime)
 												intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -633,12 +633,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 													continue
 												}
 												interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-												fmt.Println("intervalNumber:", intervalNumber)
-												fmt.Println("interval:", interval)
+												//fmt.Println("intervalNumber:", intervalNumber)
+												//fmt.Println("interval:", interval)
 												switch interval {
 												case "天":
 													if fromNow {
-														fmt.Println("fromNow")
+														//fmt.Println("fromNow")
 														startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 														endPoint = timeNow.Format("2006-01-02 15:04:05")
 													} else {
@@ -875,7 +875,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 								}
 							}
 						} else if key == "createTime" || key == "modifyTime" {
-							fmt.Println("createTime[key] in:", key, "val:", val)
+							//fmt.Println("createTime[key] in:", key, "val:", val)
 							if timeMapRaw, ok := val.(map[string]interface{}); ok {
 								for k, v := range timeMapRaw {
 									if originTime, ok := v.(string); ok {
@@ -952,11 +952,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 											if originTime != "" {
 												fromNow := false
 												if strings.HasPrefix(originTime, "前") {
-													fmt.Println("originTime:", originTime)
+													//fmt.Println("originTime:", originTime)
 													if strings.HasSuffix(originTime, "当前") {
 														fromNow = true
 														originTime = strings.ReplaceAll(originTime, "当前", "")
-														fmt.Println("originTime after 当前:", originTime)
+														//fmt.Println("originTime after 当前:", originTime)
 													}
 													intervalNumberString := numberx.GetNumberExp(originTime)
 													intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -965,12 +965,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 														continue
 													}
 													interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-													fmt.Println("intervalNumber:", intervalNumber)
-													fmt.Println("interval:", interval)
+													//fmt.Println("intervalNumber:", intervalNumber)
+													//fmt.Println("interval:", interval)
 													switch interval {
 													case "天":
 														if fromNow {
-															fmt.Println("fromNow")
+															//fmt.Println("fromNow")
 															startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 															endPoint = timeNow.Format("2006-01-02 15:04:05")
 														} else {
@@ -1207,7 +1207,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 									}
 								}
 							} else if originTime, ok := val.(string); ok {
-								fmt.Println("val.(string):", val.(string))
+								//fmt.Println("val.(string):", val.(string))
 								var queryTime string
 								var startPoint string
 								var endPoint string
@@ -1281,11 +1281,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 									if originTime != "" {
 										fromNow := false
 										if strings.HasPrefix(originTime, "前") {
-											fmt.Println("originTime:", originTime)
+											//fmt.Println("originTime:", originTime)
 											if strings.HasSuffix(originTime, "当前") {
 												fromNow = true
 												originTime = strings.ReplaceAll(originTime, "当前", "")
-												fmt.Println("originTime after 当前:", originTime)
+												//fmt.Println("originTime after 当前:", originTime)
 											}
 											intervalNumberString := numberx.GetNumberExp(originTime)
 											intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -1294,12 +1294,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 												continue
 											}
 											interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-											fmt.Println("intervalNumber:", intervalNumber)
-											fmt.Println("interval:", interval)
+											//fmt.Println("intervalNumber:", intervalNumber)
+											//fmt.Println("interval:", interval)
 											switch interval {
 											case "天":
 												if fromNow {
-													fmt.Println("fromNow")
+													//fmt.Println("fromNow")
 													startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 													endPoint = timeNow.Format("2006-01-02 15:04:05")
 												} else {
@@ -1623,11 +1623,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																						if originTime != "" {
 																							fromNow := false
 																							if strings.HasPrefix(originTime, "前") {
-																								fmt.Println("originTime:", originTime)
+																								//fmt.Println("originTime:", originTime)
 																								if strings.HasSuffix(originTime, "当前") {
 																									fromNow = true
 																									originTime = strings.ReplaceAll(originTime, "当前", "")
-																									fmt.Println("originTime after 当前:", originTime)
+																									//fmt.Println("originTime after 当前:", originTime)
 																								}
 																								intervalNumberString := numberx.GetNumberExp(originTime)
 																								intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -1636,12 +1636,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																									continue
 																								}
 																								interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																								fmt.Println("intervalNumber:", intervalNumber)
-																								fmt.Println("interval:", interval)
+																								//fmt.Println("intervalNumber:", intervalNumber)
+																								//fmt.Println("interval:", interval)
 																								switch interval {
 																								case "天":
 																									if fromNow {
-																										fmt.Println("fromNow")
+																										//fmt.Println("fromNow")
 																										startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																										endPoint = timeNow.Format("2006-01-02 15:04:05")
 																									} else {
@@ -1951,11 +1951,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																				if originTime != "" {
 																					fromNow := false
 																					if strings.HasPrefix(originTime, "前") {
-																						fmt.Println("originTime:", originTime)
+																						//fmt.Println("originTime:", originTime)
 																						if strings.HasSuffix(originTime, "当前") {
 																							fromNow = true
 																							originTime = strings.ReplaceAll(originTime, "当前", "")
-																							fmt.Println("originTime after 当前:", originTime)
+																							//fmt.Println("originTime after 当前:", originTime)
 																						}
 																						intervalNumberString := numberx.GetNumberExp(originTime)
 																						intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -1964,12 +1964,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																							continue
 																						}
 																						interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																						fmt.Println("intervalNumber:", intervalNumber)
-																						fmt.Println("interval:", interval)
+																						//fmt.Println("intervalNumber:", intervalNumber)
+																						//fmt.Println("interval:", interval)
 																						switch interval {
 																						case "天":
 																							if fromNow {
-																								fmt.Println("fromNow")
+																								//fmt.Println("fromNow")
 																								startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																								endPoint = timeNow.Format("2006-01-02 15:04:05")
 																							} else {
@@ -2282,11 +2282,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																					if originTime != "" {
 																						fromNow := false
 																						if strings.HasPrefix(originTime, "前") {
-																							fmt.Println("originTime:", originTime)
+																							//fmt.Println("originTime:", originTime)
 																							if strings.HasSuffix(originTime, "当前") {
 																								fromNow = true
 																								originTime = strings.ReplaceAll(originTime, "当前", "")
-																								fmt.Println("originTime after 当前:", originTime)
+																								//fmt.Println("originTime after 当前:", originTime)
 																							}
 																							intervalNumberString := numberx.GetNumberExp(originTime)
 																							intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -2295,12 +2295,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																								continue
 																							}
 																							interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																							fmt.Println("intervalNumber:", intervalNumber)
-																							fmt.Println("interval:", interval)
+																							//fmt.Println("intervalNumber:", intervalNumber)
+																							//fmt.Println("interval:", interval)
 																							switch interval {
 																							case "天":
 																								if fromNow {
-																									fmt.Println("fromNow")
+																									//fmt.Println("fromNow")
 																									startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																									endPoint = timeNow.Format("2006-01-02 15:04:05")
 																								} else {
@@ -2610,11 +2610,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																			if originTime != "" {
 																				fromNow := false
 																				if strings.HasPrefix(originTime, "前") {
-																					fmt.Println("originTime:", originTime)
+																					//fmt.Println("originTime:", originTime)
 																					if strings.HasSuffix(originTime, "当前") {
 																						fromNow = true
 																						originTime = strings.ReplaceAll(originTime, "当前", "")
-																						fmt.Println("originTime after 当前:", originTime)
+																						//fmt.Println("originTime after 当前:", originTime)
 																					}
 																					intervalNumberString := numberx.GetNumberExp(originTime)
 																					intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -2623,12 +2623,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																						continue
 																					}
 																					interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																					fmt.Println("intervalNumber:", intervalNumber)
-																					fmt.Println("interval:", interval)
+																					//fmt.Println("intervalNumber:", intervalNumber)
+																					//fmt.Println("interval:", interval)
 																					switch interval {
 																					case "天":
 																						if fromNow {
-																							fmt.Println("fromNow")
+																							//fmt.Println("fromNow")
 																							startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																							endPoint = timeNow.Format("2006-01-02 15:04:05")
 																						} else {
@@ -2946,11 +2946,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																	if originTime != "" {
 																		fromNow := false
 																		if strings.HasPrefix(originTime, "前") {
-																			fmt.Println("originTime:", originTime)
+																			//fmt.Println("originTime:", originTime)
 																			if strings.HasSuffix(originTime, "当前") {
 																				fromNow = true
 																				originTime = strings.ReplaceAll(originTime, "当前", "")
-																				fmt.Println("originTime after 当前:", originTime)
+																				//fmt.Println("originTime after 当前:", originTime)
 																			}
 																			intervalNumberString := numberx.GetNumberExp(originTime)
 																			intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -2959,12 +2959,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																				continue
 																			}
 																			interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																			fmt.Println("intervalNumber:", intervalNumber)
-																			fmt.Println("interval:", interval)
+																			//fmt.Println("intervalNumber:", intervalNumber)
+																			//fmt.Println("interval:", interval)
 																			switch interval {
 																			case "天":
 																				if fromNow {
-																					fmt.Println("fromNow")
+																					//fmt.Println("fromNow")
 																					startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																					endPoint = timeNow.Format("2006-01-02 15:04:05")
 																				} else {
@@ -3274,11 +3274,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 															if originTime != "" {
 																fromNow := false
 																if strings.HasPrefix(originTime, "前") {
-																	fmt.Println("originTime:", originTime)
+																	//fmt.Println("originTime:", originTime)
 																	if strings.HasSuffix(originTime, "当前") {
 																		fromNow = true
 																		originTime = strings.ReplaceAll(originTime, "当前", "")
-																		fmt.Println("originTime after 当前:", originTime)
+																		//fmt.Println("originTime after 当前:", originTime)
 																	}
 																	intervalNumberString := numberx.GetNumberExp(originTime)
 																	intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -3287,12 +3287,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																		continue
 																	}
 																	interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																	fmt.Println("intervalNumber:", intervalNumber)
-																	fmt.Println("interval:", interval)
+																	//fmt.Println("intervalNumber:", intervalNumber)
+																	//fmt.Println("interval:", interval)
 																	switch interval {
 																	case "天":
 																		if fromNow {
-																			fmt.Println("fromNow")
+																			//fmt.Println("fromNow")
 																			startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																			endPoint = timeNow.Format("2006-01-02 15:04:05")
 																		} else {
@@ -3605,11 +3605,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																if originTime != "" {
 																	fromNow := false
 																	if strings.HasPrefix(originTime, "前") {
-																		fmt.Println("originTime:", originTime)
+																		//fmt.Println("originTime:", originTime)
 																		if strings.HasSuffix(originTime, "当前") {
 																			fromNow = true
 																			originTime = strings.ReplaceAll(originTime, "当前", "")
-																			fmt.Println("originTime after 当前:", originTime)
+																			//fmt.Println("originTime after 当前:", originTime)
 																		}
 																		intervalNumberString := numberx.GetNumberExp(originTime)
 																		intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -3618,12 +3618,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																			continue
 																		}
 																		interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																		fmt.Println("intervalNumber:", intervalNumber)
-																		fmt.Println("interval:", interval)
+																		//fmt.Println("intervalNumber:", intervalNumber)
+																		//fmt.Println("interval:", interval)
 																		switch interval {
 																		case "天":
 																			if fromNow {
-																				fmt.Println("fromNow")
+																				//fmt.Println("fromNow")
 																				startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																				endPoint = timeNow.Format("2006-01-02 15:04:05")
 																			} else {
@@ -3933,11 +3933,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 														if originTime != "" {
 															fromNow := false
 															if strings.HasPrefix(originTime, "前") {
-																fmt.Println("originTime:", originTime)
+																//fmt.Println("originTime:", originTime)
 																if strings.HasSuffix(originTime, "当前") {
 																	fromNow = true
 																	originTime = strings.ReplaceAll(originTime, "当前", "")
-																	fmt.Println("originTime after 当前:", originTime)
+																	//fmt.Println("originTime after 当前:", originTime)
 																}
 																intervalNumberString := numberx.GetNumberExp(originTime)
 																intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -3946,12 +3946,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																	continue
 																}
 																interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																fmt.Println("intervalNumber:", intervalNumber)
-																fmt.Println("interval:", interval)
+																//fmt.Println("intervalNumber:", intervalNumber)
+																//fmt.Println("interval:", interval)
 																switch interval {
 																case "天":
 																	if fromNow {
-																		fmt.Println("fromNow")
+																		//fmt.Println("fromNow")
 																		startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																		endPoint = timeNow.Format("2006-01-02 15:04:05")
 																	} else {
@@ -4217,7 +4217,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 					if filterM, ok := filter.(map[string]interface{}); ok {
 						for key, val := range filterM {
 							if extRaw, ok := excelColNameTypeExtMap[key]; ok {
-								fmt.Println("excelColNameTypeExtMap[key] in:", key)
+								//fmt.Println("excelColNameTypeExtMap[key] in:", key)
 								if extRaw.Format != "" {
 									if timeMapRaw, ok := val.(map[string]interface{}); ok {
 										for k, v := range timeMapRaw {
@@ -4295,11 +4295,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 													if originTime != "" {
 														fromNow := false
 														if strings.HasPrefix(originTime, "前") {
-															fmt.Println("originTime:", originTime)
+															//fmt.Println("originTime:", originTime)
 															if strings.HasSuffix(originTime, "当前") {
 																fromNow = true
 																originTime = strings.ReplaceAll(originTime, "当前", "")
-																fmt.Println("originTime after 当前:", originTime)
+																//fmt.Println("originTime after 当前:", originTime)
 															}
 															intervalNumberString := numberx.GetNumberExp(originTime)
 															intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -4308,12 +4308,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																continue
 															}
 															interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-															fmt.Println("intervalNumber:", intervalNumber)
-															fmt.Println("interval:", interval)
+															//fmt.Println("intervalNumber:", intervalNumber)
+															//fmt.Println("interval:", interval)
 															switch interval {
 															case "天":
 																if fromNow {
-																	fmt.Println("fromNow")
+																	//fmt.Println("fromNow")
 																	startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																	endPoint = timeNow.Format("2006-01-02 15:04:05")
 																} else {
@@ -4623,11 +4623,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 											if originTime != "" {
 												fromNow := false
 												if strings.HasPrefix(originTime, "前") {
-													fmt.Println("originTime:", originTime)
+													//fmt.Println("originTime:", originTime)
 													if strings.HasSuffix(originTime, "当前") {
 														fromNow = true
 														originTime = strings.ReplaceAll(originTime, "当前", "")
-														fmt.Println("originTime after 当前:", originTime)
+														//fmt.Println("originTime after 当前:", originTime)
 													}
 													intervalNumberString := numberx.GetNumberExp(originTime)
 													intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -4636,12 +4636,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 														continue
 													}
 													interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-													fmt.Println("intervalNumber:", intervalNumber)
-													fmt.Println("interval:", interval)
+													//fmt.Println("intervalNumber:", intervalNumber)
+													//fmt.Println("interval:", interval)
 													switch interval {
 													case "天":
 														if fromNow {
-															fmt.Println("fromNow")
+															//fmt.Println("fromNow")
 															startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 															endPoint = timeNow.Format("2006-01-02 15:04:05")
 														} else {
@@ -4878,7 +4878,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 									}
 								}
 							} else if key == "createTime" || key == "modifyTime" {
-								fmt.Println("createTime[key] in:", key, "val:", val)
+								//fmt.Println("createTime[key] in:", key, "val:", val)
 								if timeMapRaw, ok := val.(map[string]interface{}); ok {
 									for k, v := range timeMapRaw {
 										if originTime, ok := v.(string); ok {
@@ -4955,11 +4955,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 												if originTime != "" {
 													fromNow := false
 													if strings.HasPrefix(originTime, "前") {
-														fmt.Println("originTime:", originTime)
+														//fmt.Println("originTime:", originTime)
 														if strings.HasSuffix(originTime, "当前") {
 															fromNow = true
 															originTime = strings.ReplaceAll(originTime, "当前", "")
-															fmt.Println("originTime after 当前:", originTime)
+															//fmt.Println("originTime after 当前:", originTime)
 														}
 														intervalNumberString := numberx.GetNumberExp(originTime)
 														intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -4968,12 +4968,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 															continue
 														}
 														interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-														fmt.Println("intervalNumber:", intervalNumber)
-														fmt.Println("interval:", interval)
+														//fmt.Println("intervalNumber:", intervalNumber)
+														//fmt.Println("interval:", interval)
 														switch interval {
 														case "天":
 															if fromNow {
-																fmt.Println("fromNow")
+																//fmt.Println("fromNow")
 																startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																endPoint = timeNow.Format("2006-01-02 15:04:05")
 															} else {
@@ -5210,7 +5210,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 										}
 									}
 								} else if originTime, ok := val.(string); ok {
-									fmt.Println("val.(string):", val.(string))
+									//fmt.Println("val.(string):", val.(string))
 									var queryTime string
 									var startPoint string
 									var endPoint string
@@ -5284,11 +5284,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 										if originTime != "" {
 											fromNow := false
 											if strings.HasPrefix(originTime, "前") {
-												fmt.Println("originTime:", originTime)
+												//fmt.Println("originTime:", originTime)
 												if strings.HasSuffix(originTime, "当前") {
 													fromNow = true
 													originTime = strings.ReplaceAll(originTime, "当前", "")
-													fmt.Println("originTime after 当前:", originTime)
+													//fmt.Println("originTime after 当前:", originTime)
 												}
 												intervalNumberString := numberx.GetNumberExp(originTime)
 												intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -5297,12 +5297,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 													continue
 												}
 												interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-												fmt.Println("intervalNumber:", intervalNumber)
-												fmt.Println("interval:", interval)
+												//fmt.Println("intervalNumber:", intervalNumber)
+												//fmt.Println("interval:", interval)
 												switch interval {
 												case "天":
 													if fromNow {
-														fmt.Println("fromNow")
+														//fmt.Println("fromNow")
 														startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 														endPoint = timeNow.Format("2006-01-02 15:04:05")
 													} else {
@@ -5626,11 +5626,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																							if originTime != "" {
 																								fromNow := false
 																								if strings.HasPrefix(originTime, "前") {
-																									fmt.Println("originTime:", originTime)
+																									//fmt.Println("originTime:", originTime)
 																									if strings.HasSuffix(originTime, "当前") {
 																										fromNow = true
 																										originTime = strings.ReplaceAll(originTime, "当前", "")
-																										fmt.Println("originTime after 当前:", originTime)
+																										//fmt.Println("originTime after 当前:", originTime)
 																									}
 																									intervalNumberString := numberx.GetNumberExp(originTime)
 																									intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -5639,12 +5639,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																										continue
 																									}
 																									interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																									fmt.Println("intervalNumber:", intervalNumber)
-																									fmt.Println("interval:", interval)
+																									//fmt.Println("intervalNumber:", intervalNumber)
+																									//fmt.Println("interval:", interval)
 																									switch interval {
 																									case "天":
 																										if fromNow {
-																											fmt.Println("fromNow")
+																											//fmt.Println("fromNow")
 																											startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																											endPoint = timeNow.Format("2006-01-02 15:04:05")
 																										} else {
@@ -5954,11 +5954,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																					if originTime != "" {
 																						fromNow := false
 																						if strings.HasPrefix(originTime, "前") {
-																							fmt.Println("originTime:", originTime)
+																							//fmt.Println("originTime:", originTime)
 																							if strings.HasSuffix(originTime, "当前") {
 																								fromNow = true
 																								originTime = strings.ReplaceAll(originTime, "当前", "")
-																								fmt.Println("originTime after 当前:", originTime)
+																								//fmt.Println("originTime after 当前:", originTime)
 																							}
 																							intervalNumberString := numberx.GetNumberExp(originTime)
 																							intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -5967,12 +5967,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																								continue
 																							}
 																							interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																							fmt.Println("intervalNumber:", intervalNumber)
-																							fmt.Println("interval:", interval)
+																							//fmt.Println("intervalNumber:", intervalNumber)
+																							//fmt.Println("interval:", interval)
 																							switch interval {
 																							case "天":
 																								if fromNow {
-																									fmt.Println("fromNow")
+																									//fmt.Println("fromNow")
 																									startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																									endPoint = timeNow.Format("2006-01-02 15:04:05")
 																								} else {
@@ -6285,11 +6285,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																						if originTime != "" {
 																							fromNow := false
 																							if strings.HasPrefix(originTime, "前") {
-																								fmt.Println("originTime:", originTime)
+																								//fmt.Println("originTime:", originTime)
 																								if strings.HasSuffix(originTime, "当前") {
 																									fromNow = true
 																									originTime = strings.ReplaceAll(originTime, "当前", "")
-																									fmt.Println("originTime after 当前:", originTime)
+																									//fmt.Println("originTime after 当前:", originTime)
 																								}
 																								intervalNumberString := numberx.GetNumberExp(originTime)
 																								intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -6298,12 +6298,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																									continue
 																								}
 																								interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																								fmt.Println("intervalNumber:", intervalNumber)
-																								fmt.Println("interval:", interval)
+																								//fmt.Println("intervalNumber:", intervalNumber)
+																								//fmt.Println("interval:", interval)
 																								switch interval {
 																								case "天":
 																									if fromNow {
-																										fmt.Println("fromNow")
+																										//fmt.Println("fromNow")
 																										startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																										endPoint = timeNow.Format("2006-01-02 15:04:05")
 																									} else {
@@ -6613,11 +6613,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																				if originTime != "" {
 																					fromNow := false
 																					if strings.HasPrefix(originTime, "前") {
-																						fmt.Println("originTime:", originTime)
+																						//fmt.Println("originTime:", originTime)
 																						if strings.HasSuffix(originTime, "当前") {
 																							fromNow = true
 																							originTime = strings.ReplaceAll(originTime, "当前", "")
-																							fmt.Println("originTime after 当前:", originTime)
+																							//fmt.Println("originTime after 当前:", originTime)
 																						}
 																						intervalNumberString := numberx.GetNumberExp(originTime)
 																						intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -6626,12 +6626,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																							continue
 																						}
 																						interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																						fmt.Println("intervalNumber:", intervalNumber)
-																						fmt.Println("interval:", interval)
+																						//fmt.Println("intervalNumber:", intervalNumber)
+																						//fmt.Println("interval:", interval)
 																						switch interval {
 																						case "天":
 																							if fromNow {
-																								fmt.Println("fromNow")
+																								//fmt.Println("fromNow")
 																								startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																								endPoint = timeNow.Format("2006-01-02 15:04:05")
 																							} else {
@@ -6949,11 +6949,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																		if originTime != "" {
 																			fromNow := false
 																			if strings.HasPrefix(originTime, "前") {
-																				fmt.Println("originTime:", originTime)
+																				//fmt.Println("originTime:", originTime)
 																				if strings.HasSuffix(originTime, "当前") {
 																					fromNow = true
 																					originTime = strings.ReplaceAll(originTime, "当前", "")
-																					fmt.Println("originTime after 当前:", originTime)
+																					//fmt.Println("originTime after 当前:", originTime)
 																				}
 																				intervalNumberString := numberx.GetNumberExp(originTime)
 																				intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -6962,12 +6962,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																					continue
 																				}
 																				interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																				fmt.Println("intervalNumber:", intervalNumber)
-																				fmt.Println("interval:", interval)
+																				//fmt.Println("intervalNumber:", intervalNumber)
+																				//fmt.Println("interval:", interval)
 																				switch interval {
 																				case "天":
 																					if fromNow {
-																						fmt.Println("fromNow")
+																						//fmt.Println("fromNow")
 																						startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																						endPoint = timeNow.Format("2006-01-02 15:04:05")
 																					} else {
@@ -7277,11 +7277,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																if originTime != "" {
 																	fromNow := false
 																	if strings.HasPrefix(originTime, "前") {
-																		fmt.Println("originTime:", originTime)
+																		//fmt.Println("originTime:", originTime)
 																		if strings.HasSuffix(originTime, "当前") {
 																			fromNow = true
 																			originTime = strings.ReplaceAll(originTime, "当前", "")
-																			fmt.Println("originTime after 当前:", originTime)
+																			//fmt.Println("originTime after 当前:", originTime)
 																		}
 																		intervalNumberString := numberx.GetNumberExp(originTime)
 																		intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -7290,12 +7290,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																			continue
 																		}
 																		interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																		fmt.Println("intervalNumber:", intervalNumber)
-																		fmt.Println("interval:", interval)
+																		//fmt.Println("intervalNumber:", intervalNumber)
+																		//fmt.Println("interval:", interval)
 																		switch interval {
 																		case "天":
 																			if fromNow {
-																				fmt.Println("fromNow")
+																				//fmt.Println("fromNow")
 																				startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																				endPoint = timeNow.Format("2006-01-02 15:04:05")
 																			} else {
@@ -7608,11 +7608,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																	if originTime != "" {
 																		fromNow := false
 																		if strings.HasPrefix(originTime, "前") {
-																			fmt.Println("originTime:", originTime)
+																			//fmt.Println("originTime:", originTime)
 																			if strings.HasSuffix(originTime, "当前") {
 																				fromNow = true
 																				originTime = strings.ReplaceAll(originTime, "当前", "")
-																				fmt.Println("originTime after 当前:", originTime)
+																				//fmt.Println("originTime after 当前:", originTime)
 																			}
 																			intervalNumberString := numberx.GetNumberExp(originTime)
 																			intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -7621,12 +7621,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																				continue
 																			}
 																			interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																			fmt.Println("intervalNumber:", intervalNumber)
-																			fmt.Println("interval:", interval)
+																			//fmt.Println("intervalNumber:", intervalNumber)
+																			//fmt.Println("interval:", interval)
 																			switch interval {
 																			case "天":
 																				if fromNow {
-																					fmt.Println("fromNow")
+																					//fmt.Println("fromNow")
 																					startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																					endPoint = timeNow.Format("2006-01-02 15:04:05")
 																				} else {
@@ -7936,11 +7936,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 															if originTime != "" {
 																fromNow := false
 																if strings.HasPrefix(originTime, "前") {
-																	fmt.Println("originTime:", originTime)
+																	//fmt.Println("originTime:", originTime)
 																	if strings.HasSuffix(originTime, "当前") {
 																		fromNow = true
 																		originTime = strings.ReplaceAll(originTime, "当前", "")
-																		fmt.Println("originTime after 当前:", originTime)
+																		//fmt.Println("originTime after 当前:", originTime)
 																	}
 																	intervalNumberString := numberx.GetNumberExp(originTime)
 																	intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -7949,12 +7949,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																		continue
 																	}
 																	interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																	fmt.Println("intervalNumber:", intervalNumber)
-																	fmt.Println("interval:", interval)
+																	//fmt.Println("intervalNumber:", intervalNumber)
+																	//fmt.Println("interval:", interval)
 																	switch interval {
 																	case "天":
 																		if fromNow {
-																			fmt.Println("fromNow")
+																			//fmt.Println("fromNow")
 																			startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																			endPoint = timeNow.Format("2006-01-02 15:04:05")
 																		} else {
@@ -8213,7 +8213,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 					}
 				}
 			}
-			//fmt.Println("hasValidField:",hasValidField)
+			////fmt.Println("hasValidField:",hasValidField)
 			if !hasValidField {
 				continue
 			}
@@ -8221,7 +8221,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 				if filterM, ok := filter.(map[string]interface{}); ok {
 					for key, val := range filterM {
 						if extRaw, ok := excelColNameTypeExtMap[key]; ok {
-							fmt.Println("excelColNameTypeExtMap[key] in:", key)
+							//fmt.Println("excelColNameTypeExtMap[key] in:", key)
 							if extRaw.Format != "" {
 								if timeMapRaw, ok := val.(map[string]interface{}); ok {
 									for k, v := range timeMapRaw {
@@ -8299,11 +8299,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 												if originTime != "" {
 													fromNow := false
 													if strings.HasPrefix(originTime, "前") {
-														fmt.Println("originTime:", originTime)
+														//fmt.Println("originTime:", originTime)
 														if strings.HasSuffix(originTime, "当前") {
 															fromNow = true
 															originTime = strings.ReplaceAll(originTime, "当前", "")
-															fmt.Println("originTime after 当前:", originTime)
+															//fmt.Println("originTime after 当前:", originTime)
 														}
 														intervalNumberString := numberx.GetNumberExp(originTime)
 														intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -8312,12 +8312,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 															continue
 														}
 														interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-														fmt.Println("intervalNumber:", intervalNumber)
-														fmt.Println("interval:", interval)
+														//fmt.Println("intervalNumber:", intervalNumber)
+														//fmt.Println("interval:", interval)
 														switch interval {
 														case "天":
 															if fromNow {
-																fmt.Println("fromNow")
+																//fmt.Println("fromNow")
 																startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																endPoint = timeNow.Format("2006-01-02 15:04:05")
 															} else {
@@ -8627,11 +8627,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 										if originTime != "" {
 											fromNow := false
 											if strings.HasPrefix(originTime, "前") {
-												fmt.Println("originTime:", originTime)
+												//fmt.Println("originTime:", originTime)
 												if strings.HasSuffix(originTime, "当前") {
 													fromNow = true
 													originTime = strings.ReplaceAll(originTime, "当前", "")
-													fmt.Println("originTime after 当前:", originTime)
+													//fmt.Println("originTime after 当前:", originTime)
 												}
 												intervalNumberString := numberx.GetNumberExp(originTime)
 												intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -8640,12 +8640,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 													continue
 												}
 												interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-												fmt.Println("intervalNumber:", intervalNumber)
-												fmt.Println("interval:", interval)
+												//fmt.Println("intervalNumber:", intervalNumber)
+												//fmt.Println("interval:", interval)
 												switch interval {
 												case "天":
 													if fromNow {
-														fmt.Println("fromNow")
+														//fmt.Println("fromNow")
 														startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 														endPoint = timeNow.Format("2006-01-02 15:04:05")
 													} else {
@@ -8882,7 +8882,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 								}
 							}
 						} else if key == "createTime" || key == "modifyTime" {
-							fmt.Println("createTime[key] in:", key, "val:", val)
+							//fmt.Println("createTime[key] in:", key, "val:", val)
 							if timeMapRaw, ok := val.(map[string]interface{}); ok {
 								for k, v := range timeMapRaw {
 									if originTime, ok := v.(string); ok {
@@ -8959,11 +8959,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 											if originTime != "" {
 												fromNow := false
 												if strings.HasPrefix(originTime, "前") {
-													fmt.Println("originTime:", originTime)
+													//fmt.Println("originTime:", originTime)
 													if strings.HasSuffix(originTime, "当前") {
 														fromNow = true
 														originTime = strings.ReplaceAll(originTime, "当前", "")
-														fmt.Println("originTime after 当前:", originTime)
+														//fmt.Println("originTime after 当前:", originTime)
 													}
 													intervalNumberString := numberx.GetNumberExp(originTime)
 													intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -8972,12 +8972,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 														continue
 													}
 													interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-													fmt.Println("intervalNumber:", intervalNumber)
-													fmt.Println("interval:", interval)
+													//fmt.Println("intervalNumber:", intervalNumber)
+													//fmt.Println("interval:", interval)
 													switch interval {
 													case "天":
 														if fromNow {
-															fmt.Println("fromNow")
+															//fmt.Println("fromNow")
 															startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 															endPoint = timeNow.Format("2006-01-02 15:04:05")
 														} else {
@@ -9214,7 +9214,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 									}
 								}
 							} else if originTime, ok := val.(string); ok {
-								fmt.Println("val.(string):", val.(string))
+								//fmt.Println("val.(string):", val.(string))
 								var queryTime string
 								var startPoint string
 								var endPoint string
@@ -9288,11 +9288,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 									if originTime != "" {
 										fromNow := false
 										if strings.HasPrefix(originTime, "前") {
-											fmt.Println("originTime:", originTime)
+											//fmt.Println("originTime:", originTime)
 											if strings.HasSuffix(originTime, "当前") {
 												fromNow = true
 												originTime = strings.ReplaceAll(originTime, "当前", "")
-												fmt.Println("originTime after 当前:", originTime)
+												//fmt.Println("originTime after 当前:", originTime)
 											}
 											intervalNumberString := numberx.GetNumberExp(originTime)
 											intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -9301,12 +9301,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 												continue
 											}
 											interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-											fmt.Println("intervalNumber:", intervalNumber)
-											fmt.Println("interval:", interval)
+											//fmt.Println("intervalNumber:", intervalNumber)
+											//fmt.Println("interval:", interval)
 											switch interval {
 											case "天":
 												if fromNow {
-													fmt.Println("fromNow")
+													//fmt.Println("fromNow")
 													startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 													endPoint = timeNow.Format("2006-01-02 15:04:05")
 												} else {
@@ -9630,11 +9630,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																						if originTime != "" {
 																							fromNow := false
 																							if strings.HasPrefix(originTime, "前") {
-																								fmt.Println("originTime:", originTime)
+																								//fmt.Println("originTime:", originTime)
 																								if strings.HasSuffix(originTime, "当前") {
 																									fromNow = true
 																									originTime = strings.ReplaceAll(originTime, "当前", "")
-																									fmt.Println("originTime after 当前:", originTime)
+																									//fmt.Println("originTime after 当前:", originTime)
 																								}
 																								intervalNumberString := numberx.GetNumberExp(originTime)
 																								intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -9643,12 +9643,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																									continue
 																								}
 																								interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																								fmt.Println("intervalNumber:", intervalNumber)
-																								fmt.Println("interval:", interval)
+																								//fmt.Println("intervalNumber:", intervalNumber)
+																								//fmt.Println("interval:", interval)
 																								switch interval {
 																								case "天":
 																									if fromNow {
-																										fmt.Println("fromNow")
+																										//fmt.Println("fromNow")
 																										startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																										endPoint = timeNow.Format("2006-01-02 15:04:05")
 																									} else {
@@ -9958,11 +9958,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																				if originTime != "" {
 																					fromNow := false
 																					if strings.HasPrefix(originTime, "前") {
-																						fmt.Println("originTime:", originTime)
+																						//fmt.Println("originTime:", originTime)
 																						if strings.HasSuffix(originTime, "当前") {
 																							fromNow = true
 																							originTime = strings.ReplaceAll(originTime, "当前", "")
-																							fmt.Println("originTime after 当前:", originTime)
+																							//fmt.Println("originTime after 当前:", originTime)
 																						}
 																						intervalNumberString := numberx.GetNumberExp(originTime)
 																						intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -9971,12 +9971,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																							continue
 																						}
 																						interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																						fmt.Println("intervalNumber:", intervalNumber)
-																						fmt.Println("interval:", interval)
+																						//fmt.Println("intervalNumber:", intervalNumber)
+																						//fmt.Println("interval:", interval)
 																						switch interval {
 																						case "天":
 																							if fromNow {
-																								fmt.Println("fromNow")
+																								//fmt.Println("fromNow")
 																								startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																								endPoint = timeNow.Format("2006-01-02 15:04:05")
 																							} else {
@@ -10289,11 +10289,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																					if originTime != "" {
 																						fromNow := false
 																						if strings.HasPrefix(originTime, "前") {
-																							fmt.Println("originTime:", originTime)
+																							//fmt.Println("originTime:", originTime)
 																							if strings.HasSuffix(originTime, "当前") {
 																								fromNow = true
 																								originTime = strings.ReplaceAll(originTime, "当前", "")
-																								fmt.Println("originTime after 当前:", originTime)
+																								//fmt.Println("originTime after 当前:", originTime)
 																							}
 																							intervalNumberString := numberx.GetNumberExp(originTime)
 																							intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -10302,12 +10302,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																								continue
 																							}
 																							interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																							fmt.Println("intervalNumber:", intervalNumber)
-																							fmt.Println("interval:", interval)
+																							//fmt.Println("intervalNumber:", intervalNumber)
+																							//fmt.Println("interval:", interval)
 																							switch interval {
 																							case "天":
 																								if fromNow {
-																									fmt.Println("fromNow")
+																									//fmt.Println("fromNow")
 																									startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																									endPoint = timeNow.Format("2006-01-02 15:04:05")
 																								} else {
@@ -10617,11 +10617,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																			if originTime != "" {
 																				fromNow := false
 																				if strings.HasPrefix(originTime, "前") {
-																					fmt.Println("originTime:", originTime)
+																					//fmt.Println("originTime:", originTime)
 																					if strings.HasSuffix(originTime, "当前") {
 																						fromNow = true
 																						originTime = strings.ReplaceAll(originTime, "当前", "")
-																						fmt.Println("originTime after 当前:", originTime)
+																						//fmt.Println("originTime after 当前:", originTime)
 																					}
 																					intervalNumberString := numberx.GetNumberExp(originTime)
 																					intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -10630,12 +10630,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																						continue
 																					}
 																					interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																					fmt.Println("intervalNumber:", intervalNumber)
-																					fmt.Println("interval:", interval)
+																					//fmt.Println("intervalNumber:", intervalNumber)
+																					//fmt.Println("interval:", interval)
 																					switch interval {
 																					case "天":
 																						if fromNow {
-																							fmt.Println("fromNow")
+																							//fmt.Println("fromNow")
 																							startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																							endPoint = timeNow.Format("2006-01-02 15:04:05")
 																						} else {
@@ -10953,11 +10953,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																	if originTime != "" {
 																		fromNow := false
 																		if strings.HasPrefix(originTime, "前") {
-																			fmt.Println("originTime:", originTime)
+																			//fmt.Println("originTime:", originTime)
 																			if strings.HasSuffix(originTime, "当前") {
 																				fromNow = true
 																				originTime = strings.ReplaceAll(originTime, "当前", "")
-																				fmt.Println("originTime after 当前:", originTime)
+																				//fmt.Println("originTime after 当前:", originTime)
 																			}
 																			intervalNumberString := numberx.GetNumberExp(originTime)
 																			intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -10966,12 +10966,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																				continue
 																			}
 																			interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																			fmt.Println("intervalNumber:", intervalNumber)
-																			fmt.Println("interval:", interval)
+																			//fmt.Println("intervalNumber:", intervalNumber)
+																			//fmt.Println("interval:", interval)
 																			switch interval {
 																			case "天":
 																				if fromNow {
-																					fmt.Println("fromNow")
+																					//fmt.Println("fromNow")
 																					startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																					endPoint = timeNow.Format("2006-01-02 15:04:05")
 																				} else {
@@ -11281,11 +11281,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 															if originTime != "" {
 																fromNow := false
 																if strings.HasPrefix(originTime, "前") {
-																	fmt.Println("originTime:", originTime)
+																	//fmt.Println("originTime:", originTime)
 																	if strings.HasSuffix(originTime, "当前") {
 																		fromNow = true
 																		originTime = strings.ReplaceAll(originTime, "当前", "")
-																		fmt.Println("originTime after 当前:", originTime)
+																		//fmt.Println("originTime after 当前:", originTime)
 																	}
 																	intervalNumberString := numberx.GetNumberExp(originTime)
 																	intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -11294,12 +11294,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																		continue
 																	}
 																	interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																	fmt.Println("intervalNumber:", intervalNumber)
-																	fmt.Println("interval:", interval)
+																	//fmt.Println("intervalNumber:", intervalNumber)
+																	//fmt.Println("interval:", interval)
 																	switch interval {
 																	case "天":
 																		if fromNow {
-																			fmt.Println("fromNow")
+																			//fmt.Println("fromNow")
 																			startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																			endPoint = timeNow.Format("2006-01-02 15:04:05")
 																		} else {
@@ -11612,11 +11612,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																if originTime != "" {
 																	fromNow := false
 																	if strings.HasPrefix(originTime, "前") {
-																		fmt.Println("originTime:", originTime)
+																		//fmt.Println("originTime:", originTime)
 																		if strings.HasSuffix(originTime, "当前") {
 																			fromNow = true
 																			originTime = strings.ReplaceAll(originTime, "当前", "")
-																			fmt.Println("originTime after 当前:", originTime)
+																			//fmt.Println("originTime after 当前:", originTime)
 																		}
 																		intervalNumberString := numberx.GetNumberExp(originTime)
 																		intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -11625,12 +11625,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																			continue
 																		}
 																		interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																		fmt.Println("intervalNumber:", intervalNumber)
-																		fmt.Println("interval:", interval)
+																		//fmt.Println("intervalNumber:", intervalNumber)
+																		//fmt.Println("interval:", interval)
 																		switch interval {
 																		case "天":
 																			if fromNow {
-																				fmt.Println("fromNow")
+																				//fmt.Println("fromNow")
 																				startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																				endPoint = timeNow.Format("2006-01-02 15:04:05")
 																			} else {
@@ -11940,11 +11940,11 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 														if originTime != "" {
 															fromNow := false
 															if strings.HasPrefix(originTime, "前") {
-																fmt.Println("originTime:", originTime)
+																//fmt.Println("originTime:", originTime)
 																if strings.HasSuffix(originTime, "当前") {
 																	fromNow = true
 																	originTime = strings.ReplaceAll(originTime, "当前", "")
-																	fmt.Println("originTime after 当前:", originTime)
+																	//fmt.Println("originTime after 当前:", originTime)
 																}
 																intervalNumberString := numberx.GetNumberExp(originTime)
 																intervalNumber, err := strconv.Atoi(intervalNumberString)
@@ -11953,12 +11953,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																	continue
 																}
 																interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																fmt.Println("intervalNumber:", intervalNumber)
-																fmt.Println("interval:", interval)
+																//fmt.Println("intervalNumber:", intervalNumber)
+																//fmt.Println("interval:", interval)
 																switch interval {
 																case "天":
 																	if fromNow {
-																		fmt.Println("fromNow")
+																		//fmt.Println("fromNow")
 																		startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																		endPoint = timeNow.Format("2006-01-02 15:04:05")
 																	} else {
@@ -12204,7 +12204,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			}
 		}
 
-		//fmt.Println("after settings.EventType")
+		////fmt.Println("after settings.EventType")
 
 		tempTable, err := uuid.NewUUID()
 		if err != nil {
@@ -12288,7 +12288,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			}
 		}
 
-		//fmt.Println("settings.Query:",settings.Query)
+		////fmt.Println("settings.Query:",settings.Query)
 
 		queryResult := make([]interface{}, 0)
 		err = apiClient.FindExtQuery(headerMap, tempTableName, settings.Query, &queryResult)
@@ -12296,7 +12296,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			logger.Errorf("查询临时工作表记录失败:%s", err.Error())
 			continue
 		}
-		//fmt.Println("queryResult:",queryResult)
+		////fmt.Println("queryResult:",queryResult)
 
 		if len(queryResult) != 0 {
 			isValid = true
