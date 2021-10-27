@@ -220,7 +220,7 @@ func NewApp() App {
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if c.Request().Method == http.MethodOptions {
-				return c.NoContent(http.StatusNoContent)
+				return c.NoContent(http.StatusOK)
 			}
 			if err := next(c); err != nil {
 				return err
