@@ -611,8 +611,8 @@ flowloop:
 												deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
 											}
 											data["#$department"] = deptMap
-											data["#$model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
-											data["#$node"] = bson.M{nodeID: bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID}}
+											data["#$model"] = bson.M{"id": modelID, "_tableName": "model"}
+											data["#$node"] =  bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID}
 											//if loginTimeRaw, ok := data["time"].(string); ok {
 											//	loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
 											//	if err != nil {
@@ -1146,8 +1146,8 @@ flowloop:
 						deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
 					}
 					data["#$department"] = deptMap
-					data["#$model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
-					data["#$node"] = bson.M{nodeID: bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID}}
+					data["#$model"] = bson.M{"id": modelID, "_tableName": "model"}
+					data["#$node"] = bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID}
 					//if loginTimeRaw, ok := data["time"].(string); ok {
 					//	loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
 					//	if err != nil {
@@ -1465,7 +1465,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 						deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
 					}
 					data["#$department"] = deptMap
-					data["#$model"] = bson.M{modelID: bson.M{"id": modelID, "_tableName": "model"}}
+					data["#$model"] = bson.M{"id": modelID, "_tableName": "model"}
 					//if loginTimeRaw, ok := data["time"].(string); ok {
 					//	loginTime, err := timex.ConvertStringToTime("2006-01-02 15:04:05", loginTimeRaw, time.Local)
 					//	if err != nil {
