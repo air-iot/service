@@ -17,10 +17,10 @@ type DataQueryMapWebsocket struct {
 }
 
 type WarnQueryWebsocket struct {
-	ModelID      string `json:"modelId"`
-	NodeId       string `json:"nodeId"`
-	DepartmentId string `json:"departmentId"`
-	Level        string `json:"level"`
+	ModelID      []string `json:"modelId"`
+	NodeId       []string `json:"nodeId"`
+	DepartmentId []string `json:"departmentId"`
+	Level        []string `json:"level"`
 }
 
 type LogQueryWebsocket struct {
