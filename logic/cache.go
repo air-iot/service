@@ -412,6 +412,7 @@ func cacheSetting() error {
 		for _, warnKind := range result.Setting.Warning.WarningKind {
 			if warnKind.ID != "" {
 				SettingLogic.warnTypeMap.Store(warnKind.ID, warnKind.Name)
+				SettingLogic.warnTypeMap.Store(warnKind.Name, warnKind.ID)
 			}
 		}
 
