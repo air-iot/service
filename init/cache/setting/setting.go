@@ -32,6 +32,21 @@ func GetByWarnKindID(ctx context.Context, redisClient redisdb.Client, mongoClien
 	return "", fmt.Errorf("未找到数据")
 }
 
+// GetByWarnKindName 根据项目ID和资产ID查询数据
+func GetByWarnKindName(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, project, warnKindName string) (string, error) {
+	settingInfo := entity.Setting{}
+	if err := Get(ctx, redisClient, mongoClient, project, &settingInfo); err != nil {
+		return "", err
+	}
+	for _, warnKind := range settingInfo.Warning.WarningKind {
+		if warnKind.Name == warnKindName {
+			return warnKind.ID, nil
+		}
+	}
+	return "", fmt.Errorf("未找到数据")
+}
+
+
 // TriggerUpdate 更新redis资产数据,并发送消息通知
 func TriggerUpdate(ctx context.Context, redisClient redisdb.Client, project,id string, setting interface{}) error {
 	return cache.Update(ctx, redisClient, project, entity.T_SETTING, id, setting)
