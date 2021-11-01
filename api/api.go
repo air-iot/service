@@ -3,6 +3,8 @@ package api
 import (
 	"net/url"
 	"time"
+
+	"github.com/go-resty/resty/v2"
 )
 
 type AuthToken struct {
@@ -15,10 +17,15 @@ type Client interface {
 	FindToken(project string) (*AuthToken, error)
 
 	Get(url url.URL, headers map[string]string, result interface{}) error
+	GetResp(url url.URL, headers map[string]string, result interface{}) (*resty.Response, error)
 	Post(url url.URL, headers map[string]string, data, result interface{}) error
+	PostResp(url url.URL, headers map[string]string, data, result interface{}) (*resty.Response, error)
 	Delete(url url.URL, headers map[string]string, result interface{}) error
+	DeleteResp(url url.URL, headers map[string]string, result interface{}) (*resty.Response, error)
 	Put(url url.URL, headers map[string]string, data, result interface{}) error
+	PutResp(url url.URL, headers map[string]string, data, result interface{}) (*resty.Response, error)
 	Patch(url url.URL, headers map[string]string, data, result interface{}) error
+	PatchResp(url url.URL, headers map[string]string, data, result interface{}) (*resty.Response, error)
 
 	GetLatest(headers map[string]string, query, result interface{}) error
 	PostLatest(headers map[string]string, data, result interface{}) error

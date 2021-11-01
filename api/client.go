@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -14,6 +13,7 @@ import (
 	"github.com/air-iot/service/gin/ginx"
 	"github.com/air-iot/service/init/redisdb"
 	"github.com/air-iot/service/util/json"
+	"github.com/go-redis/redis/v8"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -106,6 +106,31 @@ func (p *client) Get(url url.URL, headers map[string]string, result interface{})
 
 }
 
+func (p *client) GetResp(url url.URL, headers map[string]string, result interface{}) (*resty.Response, error) {
+	project, ok := headers[ginx.XRequestProject]
+	if !ok {
+		project = ginx.XRequestProjectDefault
+		headers[ginx.XRequestProject] = ginx.XRequestProjectDefault
+	}
+
+	token, err := p.FindToken(project)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range p.headers {
+		if _, ok := headers[k]; !ok {
+			headers[k] = v
+		}
+	}
+	headers[ginx.XRequestHeaderAuthorization] = fmt.Sprintf("%s %s", token.TokenType, token.AccessToken)
+	resp, err := resty.New().SetTimeout(time.Second * time.Duration(p.cfg.Timeout)).R().
+		SetHeaders(headers).
+		SetResult(result).
+		Get(url.String())
+
+	return resp, err
+}
+
 func (p *client) Post(url url.URL, headers map[string]string, data, result interface{}) error {
 	project, ok := headers[ginx.XRequestProject]
 	if !ok {
@@ -138,6 +163,32 @@ func (p *client) Post(url url.URL, headers map[string]string, data, result inter
 	return errors.New(resp.String())
 }
 
+func (p *client) PostResp(url url.URL, headers map[string]string, data, result interface{}) (*resty.Response, error) {
+	project, ok := headers[ginx.XRequestProject]
+	if !ok {
+		project = ginx.XRequestProjectDefault
+		headers[ginx.XRequestProject] = ginx.XRequestProjectDefault
+	}
+
+	token, err := p.FindToken(project)
+	if err != nil {
+		return nil, err
+	}
+	headers[ginx.XRequestHeaderAuthorization] = fmt.Sprintf("%s %s", token.TokenType, token.AccessToken)
+	for k, v := range p.headers {
+		if _, ok := headers[k]; !ok {
+			headers[k] = v
+		}
+	}
+	resp, err := resty.New().SetTimeout(time.Second * time.Duration(p.cfg.Timeout)).R().
+		SetHeaders(headers).
+		SetResult(result).
+		SetBody(data).
+		Post(url.String())
+
+	return resp, err
+}
+
 func (p *client) Delete(url url.URL, headers map[string]string, result interface{}) error {
 	project, ok := headers[ginx.XRequestProject]
 	if !ok {
@@ -167,6 +218,30 @@ func (p *client) Delete(url url.URL, headers map[string]string, result interface
 		return nil
 	}
 	return errors.New(resp.String())
+}
+
+func (p *client) DeleteResp(url url.URL, headers map[string]string, result interface{}) (*resty.Response, error) {
+	project, ok := headers[ginx.XRequestProject]
+	if !ok {
+		project = ginx.XRequestProjectDefault
+		headers[ginx.XRequestProject] = ginx.XRequestProjectDefault
+	}
+
+	token, err := p.FindToken(project)
+	if err != nil {
+		return nil, err
+	}
+
+	headers[ginx.XRequestHeaderAuthorization] = fmt.Sprintf("%s %s", token.TokenType, token.AccessToken)
+	for k, v := range p.headers {
+		if _, ok := headers[k]; !ok {
+			headers[k] = v
+		}
+	}
+	return resty.New().SetTimeout(time.Second * time.Duration(p.cfg.Timeout)).R().
+		SetHeaders(headers).
+		SetResult(result).
+		Delete(url.String())
 }
 
 func (p *client) Put(url url.URL, headers map[string]string, data, result interface{}) error {
@@ -201,6 +276,31 @@ func (p *client) Put(url url.URL, headers map[string]string, data, result interf
 	return errors.New(resp.String())
 }
 
+func (p *client) PutResp(url url.URL, headers map[string]string, data, result interface{}) (*resty.Response, error) {
+	project, ok := headers[ginx.XRequestProject]
+	if !ok {
+		project = ginx.XRequestProjectDefault
+		headers[ginx.XRequestProject] = ginx.XRequestProjectDefault
+	}
+
+	token, err := p.FindToken(project)
+	if err != nil {
+		return nil, err
+	}
+
+	headers[ginx.XRequestHeaderAuthorization] = fmt.Sprintf("%s %s", token.TokenType, token.AccessToken)
+	for k, v := range p.headers {
+		if _, ok := headers[k]; !ok {
+			headers[k] = v
+		}
+	}
+	return resty.New().SetTimeout(time.Second * time.Duration(p.cfg.Timeout)).R().
+		SetHeaders(headers).
+		SetResult(result).
+		SetBody(data).
+		Put(url.String())
+}
+
 func (p *client) Patch(url url.URL, headers map[string]string, data, result interface{}) error {
 	project, ok := headers[ginx.XRequestProject]
 	if !ok {
@@ -230,6 +330,30 @@ func (p *client) Patch(url url.URL, headers map[string]string, data, result inte
 		return nil
 	}
 	return errors.New(resp.String())
+}
+
+func (p *client) PatchResp(url url.URL, headers map[string]string, data, result interface{}) (*resty.Response, error) {
+	project, ok := headers[ginx.XRequestProject]
+	if !ok {
+		project = ginx.XRequestProjectDefault
+		headers[ginx.XRequestProject] = ginx.XRequestProjectDefault
+	}
+
+	token, err := p.FindToken(project)
+	if err != nil {
+		return nil, err
+	}
+	headers[ginx.XRequestHeaderAuthorization] = fmt.Sprintf("%s %s", token.TokenType, token.AccessToken)
+	for k, v := range p.headers {
+		if _, ok := headers[k]; !ok {
+			headers[k] = v
+		}
+	}
+	return resty.New().SetTimeout(time.Second * time.Duration(p.cfg.Timeout)).R().
+		SetHeaders(headers).
+		SetResult(result).
+		SetBody(data).
+		Patch(url.String())
 }
 
 func (p *client) GetLatest(headers map[string]string, query, result interface{}) (err error) {
