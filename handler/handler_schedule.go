@@ -62,7 +62,7 @@ func TriggerAddSchedule(ctx context.Context, redisClient redisdb.Client, mongoCl
 				}
 			} else {
 				if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
-					cronExpression = formatx.GetCronExpression(scheduleType, startTime)
+					cronExpression, _ = formatx.GetCronExpression(scheduleType, startTime)
 				}
 			}
 		}
@@ -154,14 +154,14 @@ func TriggerAddSchedule(ctx context.Context, redisClient redisdb.Client, mongoCl
 			}
 		}
 		scheduleTypeMap := map[string]string{
-			"second":"每秒",
-			"minute":"每分钟",
-			"hour":  "每小时",
-			"day":   "每天",
-			"week":  "每周",
-			"month": "每月",
-			"year":  "每年",
-			"once":  "仅一次",
+			"second": "每秒",
+			"minute": "每分钟",
+			"hour":   "每小时",
+			"day":    "每天",
+			"week":   "每周",
+			"month":  "每月",
+			"year":   "每年",
+			"once":   "仅一次",
 		}
 		sendMap := map[string]interface{}{
 			"time":      timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
@@ -225,7 +225,7 @@ func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client
 		return fmt.Errorf("获取所有计划事件失败:%s", err.Error())
 	}
 
-	if len(eventInfoList) == 0{
+	if len(eventInfoList) == 0 {
 		return nil
 	}
 	c.Stop()
@@ -281,7 +281,7 @@ func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client
 				}
 			} else {
 				if startTime, ok := settings["startTime"].(primitive.M); ok {
-					cronExpression = formatx.GetCronExpression(scheduleType, startTime)
+					cronExpression, _ = formatx.GetCronExpression(scheduleType, startTime)
 				}
 			}
 		}
@@ -380,14 +380,14 @@ func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client
 				}
 			}
 			scheduleTypeMap := map[string]string{
-				"second":"每秒",
-				"minute":"每分钟",
-				"hour":  "每小时",
-				"day":   "每天",
-				"week":  "每周",
-				"month": "每月",
-				"year":  "每年",
-				"once":  "仅一次",
+				"second": "每秒",
+				"minute": "每分钟",
+				"hour":   "每小时",
+				"day":    "每天",
+				"week":   "每周",
+				"month":  "每月",
+				"year":   "每年",
+				"once":   "仅一次",
 			}
 			sendMap := map[string]interface{}{
 				"time":      timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),

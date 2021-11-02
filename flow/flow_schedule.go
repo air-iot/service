@@ -38,6 +38,7 @@ func TriggerAddScheduleFlow(ctx context.Context, redisClient redisdb.Client, mon
 		return fmt.Errorf("传入参数中流程名称不存在或类型错误")
 	}
 	cronExpression := ""
+	intervalNumInSetting := ""
 	if settings, ok := data["settings"].(map[string]interface{}); ok {
 		//判断是否已经失效
 		if invalid, ok := data["invalid"].(bool); ok {
@@ -70,13 +71,13 @@ func TriggerAddScheduleFlow(ctx context.Context, redisClient redisdb.Client, mon
 			}else{
 				if scheduleType, ok := settings["type"].(string); ok {
 					if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
-						cronExpression = formatx.GetCronExpression(scheduleType, startTime)
+						cronExpression,intervalNumInSetting = formatx.GetCronExpression(scheduleType, startTime)
 					}
 				}
 			}
 		} else if scheduleType, ok := settings["type"].(string); ok {
 			if startTime, ok := settings["startTime"].(map[string]interface{}); ok {
-				cronExpression = formatx.GetCronExpression(scheduleType, startTime)
+				cronExpression,intervalNumInSetting = formatx.GetCronExpression(scheduleType, startTime)
 			}
 		}
 		if endTime, ok := settings["endTime"].(time.Time); ok {
@@ -195,18 +196,18 @@ func TriggerAddScheduleFlow(ctx context.Context, redisClient redisdb.Client, mon
 			}
 		}
 		scheduleTypeMap := map[string]string{
-			"second": "每秒",
-			"minute": "每分钟",
-			"hour":   "每小时",
-			"day":    "每天",
-			"week":   "每周",
-			"month":  "每月",
-			"year":   "每年",
+			"second": "每%s秒",
+			"minute": "每%s分钟",
+			"hour":   "每%s小时",
+			"day":    "每%s天",
+			"week":   "每%s周",
+			"month":  "每%s月",
+			"year":   "每%s年",
 			"once":   "仅一次",
 		}
 		sendMap := map[string]interface{}{
 			"time":     timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
-			"interval": scheduleTypeMap[strings.ReplaceAll(scheduleType,numberx.HasNumberExp(scheduleType),"")],
+			"interval": fmt.Sprintf(scheduleTypeMap[strings.ReplaceAll(scheduleType,numberx.HasNumberExp(scheduleType),"")],intervalNumInSetting),
 			"flowName": flowName,
 		}
 		if flowXml, ok := data["flowXml"].(string); ok {
@@ -324,6 +325,7 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 		}
 
 		cronExpression := ""
+		intervalNumInSetting := ""
 		if scheduleType, ok := settings["selectType"].(string); ok {
 			if scheduleType == "fixed" || scheduleType == "once" {
 				if startTime, ok := settings["startValidTime"].(primitive.DateTime); ok {
@@ -333,13 +335,13 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 			}else{
 				if scheduleType, ok := settings["type"].(string); ok {
 					if startTime, ok := settings["startTime"].(primitive.M); ok {
-						cronExpression = formatx.GetCronExpression(scheduleType, startTime)
+						cronExpression,intervalNumInSetting = formatx.GetCronExpression(scheduleType, startTime)
 					}
 				}
 			}
 		} else if scheduleType, ok := settings["type"].(string); ok {
 			if startTime, ok := settings["startTime"].(primitive.M); ok {
-				cronExpression = formatx.GetCronExpression(scheduleType, startTime)
+				cronExpression,intervalNumInSetting = formatx.GetCronExpression(scheduleType, startTime)
 			}
 		}
 		if endTime, ok := settings["endTime"].(primitive.DateTime); ok {
@@ -367,6 +369,7 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 		flowInfoCron := flowInfo
 		flowIDCron := flowID
 		flowXml := flowInfo.FlowXml
+		intervalNumInSettingInLoop := intervalNumInSetting
 		entryID, _ := c.AddFunc(cronExpression, func() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30)*time.Second)
 			defer cancel()
@@ -461,18 +464,18 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 				}
 			}
 			scheduleTypeMap := map[string]string{
-				"second": "每秒",
-				"minute": "每分钟",
-				"hour":   "每小时",
-				"day":    "每天",
-				"week":   "每周",
-				"month":  "每月",
-				"year":   "每年",
+				"second": "每%s秒",
+				"minute": "每%s分钟",
+				"hour":   "每%s小时",
+				"day":    "每%s天",
+				"week":   "每%s周",
+				"month":  "每%s月",
+				"year":   "每%s年",
 				"once":   "仅一次",
 			}
 			sendMap := map[string]interface{}{
 				"time":     timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
-				"interval": scheduleTypeMap[strings.ReplaceAll(scheduleType,numberx.HasNumberExp(scheduleType),"")],
+				"interval": fmt.Sprintf(scheduleTypeMap[strings.ReplaceAll(scheduleType,numberx.HasNumberExp(scheduleType),"")],intervalNumInSettingInLoop),
 				"flowName": flowName,
 			}
 			err = flowx.StartFlow(zbClient, flowXml, projectName, sendMap)

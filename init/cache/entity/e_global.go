@@ -20,6 +20,13 @@ type (
 		Time     int64                  `json:"time"`
 		InputMap map[string]interface{} `json:"inputMap"`
 		Custom   map[string]interface{} `json:"custom"`
+		Mapping  MappingSetting         `json:"mapping"`
+	}
+
+	MappingSetting struct {
+		ModelID string `json:"modelId"`
+		NodeID  string `json:"nodeId"`
+		TagID   string `json:"tagID"`
 	}
 
 	DataMessageCustom struct {

@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func GetCronExpression(scheduleType string, data map[string]interface{}) string {
+func GetCronExpression(scheduleType string, data map[string]interface{}) (string,string) {
 	cronExpression := ""
 	numberInterval := numberx.HasNumberExp(scheduleType)
 	if len(numberInterval) != 0{
@@ -162,7 +162,7 @@ func GetCronExpression(scheduleType string, data map[string]interface{}) string 
 		cronExpression = secondString + " " + minuteString + " " + hourString + " " + dayString + " " + monthString + " ?"
 	default:
 	}
-	return cronExpression
+	return cronExpression,numberInterval
 }
 
 func GetCronExpressionOnce(scheduleType string, data *time.Time) string {
