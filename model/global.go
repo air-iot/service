@@ -19,6 +19,15 @@ type (
 		Uid      string                 `json:"uid"`
 		Time     int64                  `json:"time"`
 		InputMap map[string]interface{} `json:"inputMap"`
+		Custom   map[string]interface{} `json:"custom"`
+		Mapping  MappingSetting         `json:"mapping"`
+	}
+
+	MappingSetting struct {
+		ModelID string `json:"modelId"`
+		NodeID  string `json:"nodeId"`
+		TagID   string `json:"tagID"`
+		Uid     string `json:"uid"`
 	}
 
 	DataMessageCustom struct {
@@ -30,7 +39,6 @@ type (
 		InputMap map[string]interface{} `json:"inputMap"`
 		Custom   map[string]interface{} `json:"custom"`
 	}
-
 
 	DataMessageWebsocket struct {
 		ModelID string                 `json:"modelId"`
