@@ -7,7 +7,7 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/eclipse/paho.mqtt.golang v1.3.3
 	github.com/gin-contrib/cors v1.3.1
-	github.com/gin-gonic/gin v1.7.1
+	github.com/gin-gonic/gin v1.7.4
 	github.com/go-redis/redis/v8 v8.8.2
 	github.com/go-resty/resty/v2 v2.6.0
 	github.com/google/uuid v1.2.0
