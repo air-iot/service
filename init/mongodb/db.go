@@ -609,13 +609,13 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine *mongo.Pipeline, countPi
 							if k == "id" {
 								k = "_id"
 							}
-							if strings.HasSuffix(k, "Id") && k != "requestId" {
+							if strings.HasSuffix(k, "Id") && k != "requestId" && k != "value.bpmnProcessId" {
 								k = k[:len(k)-2]
 								k = k + "._id"
 							}
 							v = RemoveEmptyOrNilArray(v)
 							switch k {
-							case "$and","$or","$nor":
+							case "$and", "$or", "$nor":
 								if removeList, ok := v.([]interface{}); ok {
 									if len(removeList) == 0 {
 										continue
@@ -668,13 +668,13 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine *mongo.Pipeline, countPi
 							if k == "id" {
 								k = "_id"
 							}
-							if strings.HasSuffix(k, "Id") && k != "requestId" {
+							if strings.HasSuffix(k, "Id") && k != "requestId" && k != "value.bpmnProcessId" {
 								k = k[:len(k)-2]
 								k = k + "._id"
 							}
 							v = RemoveEmptyOrNilArray(v)
 							switch k {
-							case "$and","$or","$nor":
+							case "$and", "$or", "$nor":
 								if removeList, ok := v.([]interface{}); ok {
 									if len(removeList) == 0 {
 										continue
@@ -726,13 +726,13 @@ func QueryOptionToPipeline(query QueryOption) (pipeLine *mongo.Pipeline, countPi
 					if k == "id" {
 						k = "_id"
 					}
-					if strings.HasSuffix(k, "Id") && k != "requestId" {
+					if strings.HasSuffix(k, "Id") && k != "requestId" && k != "value.bpmnProcessId" {
 						k = k[:len(k)-2]
 						k = k + "._id"
 					}
 					v = RemoveEmptyOrNilArray(v)
 					switch k {
-					case "$and","$or","$nor":
+					case "$and", "$or", "$nor":
 						if removeList, ok := v.([]interface{}); ok {
 							if len(removeList) == 0 {
 								continue
@@ -1085,14 +1085,14 @@ func FindFilterOld(ctx context.Context, col *mongo.Collection, result *[]bson.M,
 					if hasGroup && k == "modelId" {
 						k = "model"
 					} else {
-						if strings.HasSuffix(k, "Id") && k != "requestId" {
+						if strings.HasSuffix(k, "Id") && k != "requestId" && k != "value.bpmnProcessId" {
 							k = k[:len(k)-2]
 							k = k + "._id"
 						}
 					}
 					v = RemoveEmptyOrNilArray(v)
 					switch k {
-					case "$and","$or","$nor":
+					case "$and", "$or", "$nor":
 						if removeList, ok := v.([]interface{}); ok {
 							if len(removeList) == 0 {
 								continue
@@ -1394,13 +1394,13 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 									if k == "id" {
 										k = "_id"
 									}
-									if strings.HasSuffix(k, "Id") && k != "requestId" {
+									if strings.HasSuffix(k, "Id") && k != "requestId" && k != "value.bpmnProcessId" {
 										k = k[:len(k)-2]
 										k = k + "._id"
 									}
 									v = RemoveEmptyOrNilArray(v)
 									switch k {
-									case "$and","$or","$nor":
+									case "$and", "$or", "$nor":
 										if removeList, ok := v.([]interface{}); ok {
 											if len(removeList) == 0 {
 												continue
@@ -1443,13 +1443,13 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 									if k == "id" {
 										k = "_id"
 									}
-									if strings.HasSuffix(k, "Id") && k != "requestId" {
+									if strings.HasSuffix(k, "Id") && k != "requestId" && k != "value.bpmnProcessId" {
 										k = k[:len(k)-2]
 										k = k + "._id"
 									}
 									v = RemoveEmptyOrNilArray(v)
 									switch k {
-									case "$and","$or","$nor":
+									case "$and", "$or", "$nor":
 										if removeList, ok := v.([]interface{}); ok {
 											if len(removeList) == 0 {
 												continue
@@ -1490,13 +1490,13 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 								if k == "id" {
 									k = "_id"
 								}
-								if strings.HasSuffix(k, "Id") && k != "requestId" {
+								if strings.HasSuffix(k, "Id") && k != "requestId" && k != "value.bpmnProcessId" {
 									k = k[:len(k)-2]
 									k = k + "._id"
 								}
 								v = RemoveEmptyOrNilArray(v)
 								switch k {
-								case "$and","$or","$nor":
+								case "$and", "$or", "$nor":
 									if removeList, ok := v.([]interface{}); ok {
 										if len(removeList) == 0 {
 											continue
@@ -1534,13 +1534,13 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 							if k == "id" {
 								k = "_id"
 							}
-							if strings.HasSuffix(k, "Id") && k != "requestId" {
+							if strings.HasSuffix(k, "Id") && k != "requestId" && k != "value.bpmnProcessId" {
 								k = k[:len(k)-2]
 								k = k + "._id"
 							}
 							v = RemoveEmptyOrNilArray(v)
 							switch k {
-							case "$and","$or","$nor":
+							case "$and", "$or", "$nor":
 								if removeList, ok := v.([]interface{}); ok {
 									if len(removeList) == 0 {
 										continue
@@ -1578,13 +1578,13 @@ func FindFilterLimitOld(ctx context.Context, col *mongo.Collection, result *[]bs
 						if k == "id" {
 							k = "_id"
 						}
-						if strings.HasSuffix(k, "Id") && k != "requestId" {
+						if strings.HasSuffix(k, "Id") && k != "requestId" && k != "value.bpmnProcessId" {
 							k = k[:len(k)-2]
 							k = k + "._id"
 						}
 						v = RemoveEmptyOrNilArray(v)
 						switch k {
-						case "$and","$or","$nor":
+						case "$and", "$or", "$nor":
 							if removeList, ok := v.([]interface{}); ok {
 								if len(removeList) == 0 {
 									continue
