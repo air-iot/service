@@ -13,14 +13,14 @@ type (
 	UpdateResult mongo.UpdateResult
 
 	DataMessage struct {
-		ModelID  string                 `json:"modelId"`
-		NodeID   string                 `json:"nodeId"`
-		Fields   map[string]interface{} `json:"fields"`
-		Uid      string                 `json:"uid"`
-		Time     int64                  `json:"time"`
-		InputMap map[string]interface{} `json:"inputMap"`
-		Custom   map[string]interface{} `json:"custom"`
-		Mapping  MappingSetting         `json:"mapping"`
+		ModelID  string                    `json:"modelId"`
+		NodeID   string                    `json:"nodeId"`
+		Fields   map[string]interface{}    `json:"fields"`
+		Uid      string                    `json:"uid"`
+		Time     int64                     `json:"time"`
+		InputMap map[string]interface{}    `json:"inputMap"`
+		Custom   map[string]interface{}    `json:"custom"`
+		Mapping  map[string]MappingSetting `json:"mapping"`
 	}
 
 	MappingSetting struct {
