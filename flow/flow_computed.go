@@ -370,6 +370,12 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 							dataMapInLoop["custom"] = customDataMap
 						}
 						dataMap[nodeUIDNodeMap[uidInMap]] = dataMapInLoop
+						if uidInMap == nodeID {
+							for k, v := range dataMapInLoop {
+								dataMap[k] = v
+							}
+						}
+
 						hasSendMap[nodeUIDNodeMap[uidInMap]] = true
 						for key, val := range nodeUIDNodeMap {
 							if val != nodeUIDNodeMap[uidInMap] {
