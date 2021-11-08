@@ -35,6 +35,7 @@ type Computed struct {
 	Auto      bool       `json:"auto"`
 	Tags      []Tag      `json:"tags"`
 	ExtraTags []ExtraTag `json:"extraTags"`
+	NotExtend bool       `json:"notExtend"`
 }
 
 type DeviceMongo struct {
