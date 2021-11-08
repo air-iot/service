@@ -200,7 +200,7 @@ func TriggerExecCmdFlow(ctx context.Context, redisClient redisdb.Client, mongoCl
 								//"nodeName":       formatx.FormatKeyInfo(nodeInfo, "name"),
 							}}
 
-							err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
+							err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName, string(CommandTrigger),sendMap,settings)
 							if err != nil {
 								logger.Errorf("流程推进到下一阶段失败:%s", err.Error())
 								break

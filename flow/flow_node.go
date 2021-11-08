@@ -636,7 +636,7 @@ flowloop:
 											}
 
 											if flowXml, ok := flowInfo["flowXml"].(string); ok {
-												err = flowx.StartFlow(zbClient, flowXml, projectName, data)
+												err = flowx.StartFlow(mongoClient,zbClient, flowXml, projectName,string(ModelNodeTrigger), data,settings)
 												if err != nil {
 													logger.Errorf("流程(%s)推进到下一阶段失败:%s",flowID, err.Error())
 												}
@@ -1157,7 +1157,7 @@ flowloop:
 					//}
 
 					if flowXml, ok := flowInfo["flowXml"].(string); ok {
-						err = flowx.StartFlow(zbClient, flowXml, projectName, data)
+						err = flowx.StartFlow(mongoClient,zbClient, flowXml, projectName,string(ModelNodeTrigger), data,settings)
 						if err != nil {
 							logger.Errorf("流程推进到下一阶段失败:%s", err.Error())
 							continue
@@ -1475,7 +1475,7 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 					//}
 
 					if flowXml, ok := flowInfo["flowXml"].(string); ok {
-						err = flowx.StartFlow(zbClient, flowXml, projectName, data)
+						err = flowx.StartFlow(mongoClient,zbClient, flowXml, projectName,string(ModelNodeTrigger), data,settings)
 						if err != nil {
 							logger.Errorf("流程推进到下一阶段失败:%s", err.Error())
 							continue
