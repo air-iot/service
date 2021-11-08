@@ -3,14 +3,15 @@ package node
 import (
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 
 	"go.mongodb.org/mongo-driver/mongo"
 
+	"github.com/air-iot/service/init/cache"
 	"github.com/air-iot/service/init/cache/entity"
 	"github.com/air-iot/service/init/mongodb"
 	"github.com/air-iot/service/init/redisdb"
 	"github.com/air-iot/service/util/json"
+	"github.com/go-redis/redis/v8"
 )
 
 // Get 根据项目ID和资产ID查询数据
@@ -23,6 +24,11 @@ func Get(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Cli
 		return err
 	}
 	return nil
+}
+
+// GetAll 根据项目ID查询所有资产信息
+func GetAll(ctx context.Context, cli redisdb.Client, mongoClient *mongo.Client, project string, result interface{}) (err error) {
+	return cache.GetAll(ctx, cli, mongoClient, project, entity.T_NODE, result)
 }
 
 func GetByDB(ctx context.Context, cli redisdb.Client, mongoClient *mongo.Client, project, tableName, id string) ([]byte, error) {
