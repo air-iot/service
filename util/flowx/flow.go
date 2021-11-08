@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func StartFlow(mongoClient *mongo.Client, zbClient zbc.Client, flowXml, project, flowType string, data, setting interface{}) error {
+func StartFlow(mongoClient *mongo.Client, zbClient zbc.Client, flowXml, project, flowType, flowID string, data, setting interface{}) error {
 	if flowXml == "" {
 		return fmt.Errorf("流程配置为空")
 	}
@@ -51,6 +51,7 @@ func StartFlow(mongoClient *mongo.Client, zbClient zbc.Client, flowXml, project,
 		TimeStamp:            timestamp,
 		Status:               "FAILED",
 		Setting:              setting,
+		FlowID:               flowID,
 	}
 	request, err := zbClient.NewCreateInstanceCommand().BPMNProcessId(response.GetProcesses()[0].GetBpmnProcessId()).LatestVersion().VariablesFromMap(variables)
 	if err != nil {
@@ -93,6 +94,7 @@ type FlowTriggerRecord struct {
 	TimeStamp            int64                  `json:"timestamp"`
 	Status               string                 `json:"status"` //COMPLETED  FAILED
 	Setting              interface{}            `json:"setting"`
+	FlowID               string                 `json:"flowid"`
 }
 
 func writeFlowTriggerLog(ctx context.Context, mongoClient *mongo.Client, data FlowTriggerRecord) error {

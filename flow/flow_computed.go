@@ -391,7 +391,7 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 						}
 					}
 
-					err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName,string(NodeDataTrigger), dataMap,settings)
+					err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName,string(NodeDataTrigger),flowID, dataMap,settings)
 					if err != nil {
 						logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 						continue
@@ -727,7 +727,7 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 							}
 						}
 
-						err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName,string(ModelDataTrigger), dataMap,settings)
+						err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName,string(ModelDataTrigger),flowID, dataMap,settings)
 						if err != nil {
 							logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 							continue

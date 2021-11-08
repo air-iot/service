@@ -12308,7 +12308,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 		//=================
 		if isValid {
 
-			err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName,string(ExtTrigger), data,settings)
+			err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName,string(ExtTrigger),flowID, data,settings)
 			if err != nil {
 				logger.Errorf("流程推进到下一阶段失败:%s", err.Error())
 				continue

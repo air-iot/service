@@ -154,7 +154,7 @@ func TriggerFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *m
 			flowTrigger = string(ShutdownTrigger)
 		}
 
-		err = flowx.StartFlow(mongoClient, zbClient, flowInfo.FlowXml, projectName, flowTrigger, data, flowInfo.Settings)
+		err = flowx.StartFlow(mongoClient, zbClient, flowInfo.FlowXml, projectName, flowTrigger,flowID,  data, flowInfo.Settings)
 		if err != nil {
 			logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 			continue

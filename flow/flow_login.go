@@ -279,7 +279,7 @@ func TriggerLoginFlow(ctx context.Context, redisClient redisdb.Client, mongoClie
 		//	data["time"] = loginTime.UnixNano() / 1e6
 		//}
 
-		err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName,string(LoginTrigger), data,settings)
+		err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName,string(LoginTrigger),flowID, data,settings)
 		if err != nil {
 			return fmt.Errorf("流程推进到下一阶段失败:%s", err.Error())
 		}

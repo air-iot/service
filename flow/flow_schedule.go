@@ -235,7 +235,7 @@ func TriggerAddScheduleFlow(ctx context.Context, redisClient redisdb.Client, mon
 			"flowName": flowName,
 		}
 		if flowXml, ok := data["flowXml"].(string); ok {
-			err := flowx.StartFlow(mongoClient,zbClient, flowXml, projectName,string(ScheduleTrigger), sendMap,data["settings"])
+			err := flowx.StartFlow(mongoClient,zbClient, flowXml, projectName,string(ScheduleTrigger), flowID,sendMap,data["settings"])
 			if err != nil {
 				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 				return
@@ -525,7 +525,7 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 				"interval": fmt.Sprintf(scheduleTypeMap[strings.ReplaceAll(scheduleType, numberx.HasNumberExp(scheduleType), "")], intervalNumInSettingInLoop),
 				"flowName": flowName,
 			}
-			err := flowx.StartFlow(mongoClient,zbClient, flowXml, projectName,string(ScheduleTrigger), sendMap,settings)
+			err := flowx.StartFlow(mongoClient,zbClient, flowXml, projectName,string(ScheduleTrigger), flowIDCron,sendMap,settings)
 			if err != nil {
 				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowIDCron, err.Error())
 				return
