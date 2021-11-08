@@ -33,6 +33,7 @@ type Computed struct {
 	Auto      bool       `json:"auto"`
 	Tags      []Tag      `json:"tags"`
 	ExtraTags []ExtraTag `json:"extraTags"`
+	NotExtend bool       `json:"notExtend"`
 }
 
 type DeviceMongo struct {
@@ -92,7 +93,7 @@ type Tag struct {
 	TimeBase  float64 `json:"timeBase"`
 	Filter    float64 `json:"filter"`
 
-	Fixed     float64 `json:"fixed"`
+	Fixed float64 `json:"fixed"`
 }
 
 type TagRules struct {

@@ -108,6 +108,7 @@ type ComputedMongo struct {
 	Auto      bool       `json:"auto" bson:"auto"`
 	Tags      []TagMongo `json:"tags" bson:"tags"`
 	ExtraTags []ExtraTag `json:"extraTags" bson:"extraTags"`
+	NotExtend bool       `json:"notExtend" bson:"notExtend"`
 }
 
 type ExtraTag struct {
