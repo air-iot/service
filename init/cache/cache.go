@@ -63,7 +63,7 @@ func GetByDB(ctx context.Context, cli redisdb.Client, mongoClient *mongo.Client,
 		if err != nil {
 			return "", err
 		}
-		err = Update(ctx, cli, project,tableName, id, modelTmp)
+		err = Update(ctx, cli, project, tableName, id, modelTmp)
 		if err != nil {
 			return "", fmt.Errorf("更新缓存数据错误, %v", err)
 		}
@@ -79,7 +79,7 @@ func GetByDBAll(ctx context.Context, cli redisdb.Client, mongoClient *mongo.Clie
 		return "", err
 	} else if err == redis.Nil {
 		col := mongoClient.Database(project).Collection(tableName)
-		modelTmp := make([]map[string]interface{},0)
+		modelTmp := make([]map[string]interface{}, 0)
 		err := mongodb.FindPipeline(ctx, col, &modelTmp, mongo.Pipeline{})
 		if err != nil {
 			return "", err
@@ -88,28 +88,28 @@ func GetByDBAll(ctx context.Context, cli redisdb.Client, mongoClient *mongo.Clie
 		if err != nil {
 			return "", err
 		}
-		for _,ele := range modelTmp {
-			if id,ok := ele["id"].(string);ok{
+		for _, ele := range modelTmp {
+			if id, ok := ele["id"].(string); ok {
 				eleBytes, err := json.Marshal(&ele)
 				if err != nil {
 					return "", err
 				}
-				err = Set(ctx, cli, project,tableName, id, eleBytes)
+				err = Set(ctx, cli, project, tableName, id, eleBytes)
 				if err != nil {
 					return "", fmt.Errorf("更新缓存数据错误, %v", err)
 				}
 			}
 		}
 		modelReturn = string(modelBytes)
-	}else{
-		modelTmp := make([]map[string]interface{},0)
-		eleTmp := map[string]interface{}{}
-		for _,ele :=  range model{
-			err := json.Unmarshal([]byte(ele),&eleTmp)
+	} else {
+		modelTmp := make([]map[string]interface{}, 0)
+		for _, ele := range model {
+			eleTmp := map[string]interface{}{}
+			err := json.Unmarshal([]byte(ele), &eleTmp)
 			if err != nil {
 				return "", err
 			}
-			modelTmp = append(modelTmp,eleTmp)
+			modelTmp = append(modelTmp, eleTmp)
 		}
 		eleBytes, err := json.Marshal(&modelTmp)
 		if err != nil {
@@ -127,7 +127,7 @@ func GetByDBAllToOne(ctx context.Context, cli redisdb.Client, mongoClient *mongo
 		return "", err
 	} else if err == redis.Nil {
 		col := mongoClient.Database(project).Collection(tableName)
-		modelTmp := make([]map[string]interface{},0)
+		modelTmp := make([]map[string]interface{}, 0)
 		err := mongodb.FindPipeline(ctx, col, &modelTmp, mongo.Pipeline{})
 		if err != nil {
 			return "", err
@@ -140,28 +140,28 @@ func GetByDBAllToOne(ctx context.Context, cli redisdb.Client, mongoClient *mongo
 		if err != nil {
 			return "", err
 		}
-		for _,ele := range modelTmp {
-			if id,ok := ele["id"].(string);ok{
+		for _, ele := range modelTmp {
+			if id, ok := ele["id"].(string); ok {
 				eleBytes, err := json.Marshal(&ele)
 				if err != nil {
 					return "", err
 				}
-				err = Set(ctx, cli, project,tableName, id, eleBytes)
+				err = Set(ctx, cli, project, tableName, id, eleBytes)
 				if err != nil {
 					return "", fmt.Errorf("更新缓存数据错误, %v", err)
 				}
 			}
 		}
 		modelReturn = string(modelBytes)
-	}else{
-		modelTmp := make([]map[string]interface{},0)
+	} else {
+		modelTmp := make([]map[string]interface{}, 0)
 		eleTmp := map[string]interface{}{}
-		for _,ele :=  range model{
-			err := json.Unmarshal([]byte(ele),&eleTmp)
+		for _, ele := range model {
+			err := json.Unmarshal([]byte(ele), &eleTmp)
 			if err != nil {
 				return "", err
 			}
-			modelTmp = append(modelTmp,eleTmp)
+			modelTmp = append(modelTmp, eleTmp)
 		}
 		modelTmpOne := map[string]interface{}{}
 		if len(modelTmp) != 0 {
@@ -175,7 +175,6 @@ func GetByDBAllToOne(ctx context.Context, cli redisdb.Client, mongoClient *mongo
 	}
 	return modelReturn, nil
 }
-
 
 func Set(ctx context.Context, cli redisdb.Client, project, tableName, id string, data interface{}) error {
 	dataBytes, err := json.Marshal(data)
