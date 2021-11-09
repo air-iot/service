@@ -21,6 +21,7 @@ import (
 
 type EventType string
 type EventHandlerType string
+type FlowTriggerType string
 
 const (
 	ComputeNodeLogic  EventType = "资产数据事件"
@@ -53,6 +54,17 @@ const (
 	HandlerScript    EventHandlerType = "执行脚本"
 	HandlerInputData EventHandlerType = "录入数据"
 	HandlerSystemCmd EventHandlerType = ""
+
+	CommandTrigger   FlowTriggerType = "command"
+	ModelDataTrigger FlowTriggerType = "modelData"
+	NodeDataTrigger  FlowTriggerType = "nodeData"
+	ScheduleTrigger  FlowTriggerType = "schedule"
+	ModelNodeTrigger FlowTriggerType = "modelNode"
+	WarningTrigger   FlowTriggerType = "warning"
+	LoginTrigger     FlowTriggerType = "login"
+	ShutdownTrigger  FlowTriggerType = "shutdown"
+	BootTrigger      FlowTriggerType = "boot"
+	ExtTrigger       FlowTriggerType = "worksheetRecord"
 )
 
 var flowLog = map[string]interface{}{"name": "通用流程触发"}
@@ -134,8 +146,15 @@ func TriggerFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *m
 		//	}
 		//	data["time"] = loginTime.UnixNano() / 1e6
 		//}
+        flowTrigger := string(flowType)
+		switch string(flowType) {
+		case "启动系统":
+			flowTrigger = string(BootTrigger)
+		case "关闭系统":
+			flowTrigger = string(ShutdownTrigger)
+		}
 
-		err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, data)
+		err = flowx.StartFlow(mongoClient, zbClient, flowInfo.FlowXml, projectName, flowTrigger,flowID,  data, flowInfo.Settings)
 		if err != nil {
 			logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 			continue

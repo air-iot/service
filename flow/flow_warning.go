@@ -375,7 +375,7 @@ flowloop:
 						sendMap = sendMapInner
 					}
 
-					err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
+					err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName,string(WarningTrigger),flowID, sendMap,settings)
 					if err != nil {
 						logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 						continue
@@ -765,7 +765,7 @@ flowloop:
 					sendMap = sendMapInner
 				}
 
-				err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
+				err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName,string(WarningTrigger),flowID, sendMap,settings)
 				if err != nil {
 					logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 					continue
@@ -1098,7 +1098,7 @@ flowloop:
 				"action":    actionType,
 			}
 
-			err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMapInner)
+			err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName,string(WarningTrigger),flowID,  sendMapInner,settings)
 			if err != nil {
 				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 				continue
@@ -1457,7 +1457,7 @@ flowloop:
 
 			sendMap := bson.M{nodeID: sendMapInner}
 
-			err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
+			err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName,string(WarningTrigger),flowID,  sendMap,settings)
 			if err != nil {
 				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 				continue
@@ -1679,7 +1679,7 @@ func TriggerWarningRulesFlowTimeout(ctx context.Context, redisClient redisdb.Cli
 													sendMap = sendMapInner
 												}
 
-												err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
+												err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName,string(WarningTrigger),flowID,  sendMap,settings)
 												if err != nil {
 													logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 													continue
@@ -1815,7 +1815,7 @@ func TriggerWarningRulesFlowTimeout(ctx context.Context, redisClient redisdb.Cli
 										sendMap = sendMapInner
 									}
 
-									err = flowx.StartFlow(zbClient, flowInfo.FlowXml, projectName, sendMap)
+									err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName, string(WarningTrigger),flowID, sendMap,settings)
 									if err != nil {
 										logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 										continue
