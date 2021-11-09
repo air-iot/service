@@ -10,11 +10,18 @@ type Setting struct {
 	// Email 邮件发送配置
 	Email Email `json:"email"`
 	// Wechat Wechat发送配置
-	Wechat      Wechat   `json:"wechat"`
-	PropTag     string   `json:"propTag"`
-	OnlineCheck bool     `json:"onlineCheck"`
-	Dingtalk    Dingtalk `json:"dingtalk"`
-	Sms         Sms      `json:"sms"`
+	Wechat               Wechat             `json:"wechat"`
+	PropTag              string             `json:"propTag"`
+	OnlineCheck          bool               `json:"onlineCheck"`
+	Dingtalk             Dingtalk           `json:"dingtalk"`
+	Sms                  Sms                `json:"sms"`
+	Rectption_login_page RectptionLoginPage `json:"rectption_login_page"`
+	ShowCode             bool               `json:"showCode"`
+}
+
+type RectptionLoginPage struct {
+	ID       string `json:"id"`
+	ShowCode bool   `json:"showCode"`
 }
 
 type Sms struct {

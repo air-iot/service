@@ -87,5 +87,5 @@ type Logic struct {
 type Table struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
-	Title string `json:"title"`
+	//Title string `json:"title"`
 }
