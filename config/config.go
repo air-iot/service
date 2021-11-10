@@ -78,6 +78,7 @@ type Config struct {
 	RabbitMQ    RabbitMQ
 	ApiGateway  ApiGateway
 	Zeebe       Zeebe
+	Minio       Minio
 }
 
 // IsDebugMode 是否是debug模式
@@ -350,4 +351,12 @@ type ApiGateway struct {
 type Zeebe struct {
 	GatewayAddress         string
 	UsePlaintextConnection bool
+}
+
+type Minio struct {
+	Endpoint        string
+	AccessKeyID     string
+	SecretAccessKey string
+	UseSSl          bool
+	ExpireIn        int
 }
