@@ -17,6 +17,7 @@ type Setting struct {
 	Sms                  Sms                `json:"sms"`
 	Rectption_login_page RectptionLoginPage `json:"rectption_login_page"`
 	ShowCode             bool               `json:"showCode"`
+	ShowCodeAdmin        bool               `json:"showCodeAdmin"`
 }
 
 type RectptionLoginPage struct {
