@@ -7,6 +7,7 @@ import (
 	"github.com/air-iot/service/init/cache/table"
 	"github.com/air-iot/service/logger"
 	"github.com/air-iot/service/util/flowx"
+	"github.com/air-iot/service/util/formatx"
 	"github.com/air-iot/service/util/json"
 	"github.com/air-iot/service/util/numberx"
 	"github.com/camunda-cloud/zeebe/clients/go/pkg/zbc"
@@ -12287,6 +12288,19 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 								data[key] = relateVal
 							}
 						}
+					} else {
+						if extRaw.FieldType == "select" {
+							if valString, ok := val.(string); ok {
+								for i, enum := range extRaw.Enum1 {
+									if enum == valString {
+										if len(extRaw.Enum_title1) > i {
+											data[key] = extRaw.Enum_title1[i]
+											break
+										}
+									}
+								}
+							}
+						}
 					}
 				}
 			}
@@ -12400,6 +12414,21 @@ func getTableSchemaColsNameMap(ctx context.Context, redisClient redisdb.Client, 
 										excelColNameTypeExt.Format = format
 									}
 								}
+								if fieldType, ok := propertyMap["fieldType"].(string); ok {
+									excelColNameTypeExt.FieldType = fieldType
+									if fieldType == "select" {
+										if enum1Raw,ok := propertyMap["enum1"];ok{
+											if enum1List, ok := enum1Raw.([]interface{}); ok {
+												excelColNameTypeExt.Enum1 = formatx.InterfaceListToStringList(enum1List)
+											}
+										}
+										if enumTitle1Raw,ok := propertyMap["enum_title1"];ok{
+											if enumTitle1List, ok := enumTitle1Raw.([]interface{}); ok {
+												excelColNameTypeExt.Enum_title1 = formatx.InterfaceListToStringList(enumTitle1List)
+											}
+										}
+									}
+								}
 							case "object":
 								if relateTo, ok := propertyMap["relateTo"].(string); ok {
 									excelColNameTypeExt.RelateTo = schemaTableMapping[relateTo]
@@ -12482,6 +12511,10 @@ type ExcelColNameTypeExt struct {
 	IsForeign bool `json:"isForeign" example:"true"`
 	//关联具体字段
 	RelateField string `json:"relateField" example:"relateField-1ASC"`
+	//选择器key
+	Enum1 []string `json:"enum1"`
+	//选择器value
+	Enum_title1 []string `json:"enum_title1"`
 }
 
 func TimeConvertExt(tableFormat ExcelColNameTypeExt, eleRaw string) (int64, error) {
