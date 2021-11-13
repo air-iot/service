@@ -229,13 +229,19 @@ func TriggerAddScheduleFlow(ctx context.Context, redisClient redisdb.Client, mon
 			"year":   "每%s年",
 			"once":   "仅一次",
 		}
+		intervalSend := ""
+		if scheduleTypeMap[strings.ReplaceAll(scheduleType, numberx.HasNumberExp(scheduleType), "")] == "仅一次" {
+			intervalSend = "仅一次"
+		} else {
+			intervalSend = fmt.Sprintf(scheduleTypeMap[strings.ReplaceAll(scheduleType, numberx.HasNumberExp(scheduleType), "")], intervalNumInSetting)
+		}
 		sendMap := map[string]interface{}{
 			"time":     timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
-			"interval": fmt.Sprintf(scheduleTypeMap[strings.ReplaceAll(scheduleType, numberx.HasNumberExp(scheduleType), "")], intervalNumInSetting),
+			"interval": intervalSend,
 			"flowName": flowName,
 		}
 		if flowXml, ok := data["flowXml"].(string); ok {
-			err := flowx.StartFlow(mongoClient,zbClient, flowXml, projectName,string(ScheduleTrigger), flowID,sendMap,data["settings"])
+			err := flowx.StartFlow(mongoClient, zbClient, flowXml, projectName, string(ScheduleTrigger), flowID, sendMap, data["settings"])
 			if err != nil {
 				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 				return
@@ -520,12 +526,18 @@ func TriggerEditOrDeleteScheduleFlow(ctx context.Context, redisClient redisdb.Cl
 				"year":   "每%s年",
 				"once":   "仅一次",
 			}
+			intervalSend := ""
+			if scheduleTypeMap[strings.ReplaceAll(scheduleType, numberx.HasNumberExp(scheduleType), "")] == "仅一次" {
+				intervalSend = "仅一次"
+			} else {
+				intervalSend = fmt.Sprintf(scheduleTypeMap[strings.ReplaceAll(scheduleType, numberx.HasNumberExp(scheduleType), "")], intervalNumInSettingInLoop)
+			}
 			sendMap := map[string]interface{}{
 				"time":     timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
-				"interval": fmt.Sprintf(scheduleTypeMap[strings.ReplaceAll(scheduleType, numberx.HasNumberExp(scheduleType), "")], intervalNumInSettingInLoop),
+				"interval": intervalSend,
 				"flowName": flowName,
 			}
-			err := flowx.StartFlow(mongoClient,zbClient, flowXml, projectName,string(ScheduleTrigger), flowIDCron,sendMap,settings)
+			err := flowx.StartFlow(mongoClient, zbClient, flowXml, projectName, string(ScheduleTrigger), flowIDCron, sendMap, settings)
 			if err != nil {
 				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowIDCron, err.Error())
 				return
