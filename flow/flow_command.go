@@ -189,7 +189,7 @@ func TriggerExecCmdFlow(ctx context.Context, redisClient redisdb.Client, mongoCl
 							for _, id := range departmentStringIDList {
 								deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
 							}
-							sendMap := bson.M{nodeID: bson.M{
+							sendMap := bson.M{
 								"time":         timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05"),
 								"#$model":      bson.M{"id": modelID, "_tableName": "model"},
 								"#$department": deptMap,
@@ -198,7 +198,7 @@ func TriggerExecCmdFlow(ctx context.Context, redisClient redisdb.Client, mongoCl
 								//"departmentName": departmentStringIDList,
 								//"modelName":      formatx.FormatKeyInfo(modelInfo, "name"),
 								//"nodeName":       formatx.FormatKeyInfo(nodeInfo, "name"),
-							}}
+							}
 
 							err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName, string(CommandTrigger),flowID,sendMap,settings)
 							if err != nil {
