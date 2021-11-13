@@ -138,7 +138,7 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 		//判断流程是否已经触发
 		hasExecute := false
 
-		hasSendMap := map[string]bool{}
+		//hasSendMap := map[string]bool{}
 		if tags, ok := settings["tags"].([]interface{}); ok {
 			nodeUIDFieldsMap := map[string][]string{}
 			nodeUIDModelMap := map[string]string{}
@@ -322,7 +322,7 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 						if data.Time == 0 {
 							sendTime = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 						} else {
-							time.Unix(data.Time, 0).Format("2006-01-02 15:04:05")
+							sendTime = time.Unix(data.Time, 0).Format("2006-01-02 15:04:05")
 						}
 						dataMapInLoop = map[string]interface{}{
 							"time":         sendTime,
@@ -376,19 +376,19 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 							}
 						}
 
-						hasSendMap[nodeUIDNodeMap[uidInMap]] = true
-						for key, val := range nodeUIDNodeMap {
-							if val != nodeUIDNodeMap[uidInMap] {
-								if _, ok := hasSendMap[val]; !ok {
-									dataMap[val] = map[string]interface{}{
-										"time":         sendTime,
-										"#$model":      bson.M{"id": nodeUIDModelMap[key], "_tableName": "model"},
-										"#$department": deptMap,
-										"#$node":       bson.M{"id": val, "_tableName": "node", "uid": val},
-									}
-								}
-							}
-						}
+						//hasSendMap[nodeUIDNodeMap[uidInMap]] = true
+						//for key, val := range nodeUIDNodeMap {
+						//	if val != nodeUIDNodeMap[uidInMap] {
+						//		if _, ok := hasSendMap[val]; !ok {
+						//			dataMap[val] = map[string]interface{}{
+						//				"time":         sendTime,
+						//				"#$model":      bson.M{"id": nodeUIDModelMap[key], "_tableName": "model"},
+						//				"#$department": deptMap,
+						//				"#$node":       bson.M{"id": val, "_tableName": "node", "uid": val},
+						//			}
+						//		}
+						//	}
+						//}
 					}
 
 					err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName,string(NodeDataTrigger),flowID, dataMap,settings)
@@ -685,7 +685,7 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 							if data.Time == 0 {
 								sendTime = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 							} else {
-								time.Unix(data.Time, 0).Format("2006-01-02 15:04:05")
+								sendTime = time.Unix(data.Time, 0).Format("2006-01-02 15:04:05")
 							}
 							dataMap = map[string]interface{}{
 								"time":         sendTime,
