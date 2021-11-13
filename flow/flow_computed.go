@@ -534,7 +534,7 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 
 		if tags, ok := settings["tags"].([]interface{}); ok {
 			nodeUIDFieldsMap := map[string][]string{}
-			nodeUIDModelMap := map[string]string{}
+			nodeUIDModelMap := map[string]bool{}
 			nodeUIDNodeMap := map[string]string{}
 			nodeUIDNodeMap[nodeUIDInData] = nodeID
 			//if modelInfoInMap, ok := settings["model"].(map[string]interface{}); ok {
@@ -548,7 +548,7 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 					if tagIDInMap, ok := tagMap["id"].(string); ok {
 						if modelInfoInMap, ok := tagMap["model"].(map[string]interface{}); ok {
 							if modelIDInInfo, ok := modelInfoInMap["id"].(string); ok {
-								nodeUIDModelMap[nodeUIDInData] = modelIDInInfo
+								nodeUIDModelMap[modelIDInInfo] = true
 							}
 						}
 						formatx.MergeDataMap(nodeUIDInData, tagIDInMap, &nodeUIDFieldsMap)
@@ -560,7 +560,7 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 					//}
 				}
 			}
-			if modelID == nodeUIDModelMap[nodeUIDInData] {
+			if _,ok := nodeUIDModelMap[modelID];ok{
 				if fields, ok := nodeUIDFieldsMap[data.Uid]; ok {
 					hasField := false
 				fieldLoopModel:
@@ -744,6 +744,190 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 					}
 				}
 			}
+			//if modelID == nodeUIDModelMap[nodeUIDInData] {
+			//	if fields, ok := nodeUIDFieldsMap[data.Uid]; ok {
+			//		hasField := false
+			//	fieldLoopModel:
+			//		for _, keyReq := range fields {
+			//			for k := range fieldsMap {
+			//				if keyReq == k {
+			//					hasField = true
+			//					break fieldLoopModel
+			//				}
+			//			}
+			//		}
+			//		if hasField {
+			//			dataMap := map[string]interface{}{}
+			//		ruleloopModel:
+			//			for uidInMap, tagIDList := range nodeUIDFieldsMap {
+			//				computeFieldsMap := map[string]interface{}{}
+			//
+			//				//判断是否存在纯数字的数据点ID
+			//				for _, tagIDInList := range tagIDList {
+			//					if numberx.IsNumber(tagIDInList) {
+			//						continue ruleloopModel
+			//					}
+			//				}
+			//				cmdList := make([]*redis.StringCmd, 0)
+			//				var pipe redis.Pipeliner
+			//				pipe = redisClient.Pipeline()
+			//				for _, tagIDInList := range tagIDList {
+			//					//不在fieldsMap中的tagId就去查redis
+			//					if nodeUIDNodeMap[uidInMap] != nodeID {
+			//						hashKey := uidInMap + "|" + tagIDInList
+			//						cmd := pipe.HGet(ctx, fmt.Sprintf("%s/data", projectName), hashKey)
+			//						cmdList = append(cmdList, cmd)
+			//					} else {
+			//						if fieldsVal, ok := fieldsMap[tagIDInList]; !ok {
+			//							//如果公式中的该参数为输入值类型则不用查Redis，直接套用
+			//							if inputVal, ok := inputMap[tagIDInList]; ok {
+			//								computeFieldsMap[tagIDInList] = inputVal
+			//								continue
+			//							} else {
+			//								hashKey := uidInMap + "|" + tagIDInList
+			//								cmd := pipe.HGet(ctx, fmt.Sprintf("%s/data", projectName), hashKey)
+			//								cmdList = append(cmdList, cmd)
+			//							}
+			//						} else {
+			//							computeFieldsMap[tagIDInList] = fieldsVal
+			//						}
+			//					}
+			//				}
+			//				_, err = pipe.Exec(context.Background())
+			//				if err != nil {
+			//					continue
+			//				}
+			//				resultIndex := 0
+			//				for _, tagIDInList := range tagIDList {
+			//					//if tagID != tagIDInList {
+			//					if resultIndex >= len(cmdList) {
+			//						break
+			//					}
+			//					if cmdList[resultIndex].Err() != nil {
+			//						continue ruleloopModel
+			//					} else {
+			//						if _, ok := fieldsMap[tagIDInList]; ok {
+			//							if nodeUIDNodeMap[uidInMap] == nodeID {
+			//								continue
+			//							}
+			//						}
+			//						//如果公式中的该参数为输入值类型则不用查Redis，直接套用
+			//						if _, ok := inputMap[tagIDInList]; ok {
+			//							//logicMap[tagIDInList] = inputVal
+			//							if nodeUIDNodeMap[uidInMap] == nodeID {
+			//								continue
+			//							}
+			//						}
+			//						redisData := map[string]interface{}{}
+			//						err = json.Unmarshal([]byte(cmdList[resultIndex].Val()), &redisData)
+			//						if err != nil {
+			//							logger.Errorf("Redis批量查询中查询条件为%+v的查询结果解序列化失败:%s", cmdList[resultIndex].Args(), err.Error())
+			//							continue ruleloopModel
+			//						}
+			//						resVal, err := numberx.GetFloat64NumberFromMongoDB(redisData, "value")
+			//						if err != nil {
+			//							logger.Errorf("Redis批量查询中查询条件为%+v的查询结果不是数字:%s", cmdList[resultIndex].Args(), err.Error())
+			//							continue ruleloopModel
+			//						}
+			//						computeFieldsMap[tagIDInList] = resVal
+			//						resultIndex++
+			//					}
+			//				}
+			//
+			//				//获取当前模型对应资产ID的资产
+			//				nodeInfoMap := map[string]interface{}{}
+			//				err = node.Get(ctx, redisClient, mongoClient, projectName, uidInMap, &nodeInfoMap)
+			//				if err != nil {
+			//					continue
+			//				}
+			//
+			//				modelInfoMap := map[string]interface{}{}
+			//				err = model.Get(ctx, redisClient, mongoClient, projectName, modelID, &modelInfoMap)
+			//				if err != nil {
+			//					continue
+			//				}
+			//
+			//				//生成发送消息
+			//				departmentStringIDList := make([]string, 0)
+			//				//var departmentObjectList primitive.A
+			//				if departmentIDList, ok := nodeInfoMap["department"].([]interface{}); ok {
+			//					departmentStringIDList = formatx.InterfaceListToStringList(departmentIDList)
+			//				} else {
+			//					//logger.Warnf(flowComputeLogicLog, "资产(%s)的部门字段不存在或类型错误", nodeID)
+			//				}
+			//
+			//				deptInfoList := make([]map[string]interface{}, 0)
+			//				if len(departmentStringIDList) != 0 {
+			//					err := department.GetByList(ctx, redisClient, mongoClient, projectName, departmentStringIDList, &deptInfoList)
+			//					if err != nil {
+			//						deptInfoList = make([]map[string]interface{}, 0)
+			//					}
+			//				}
+			//
+			//				fields := make([]map[string]interface{}, 0)
+			//				deptMap := bson.M{}
+			//				for _, id := range departmentStringIDList {
+			//					deptMap[id] = bson.M{"id": id, "_tableName": "dept"}
+			//				}
+			//				sendTime := ""
+			//				if data.Time == 0 {
+			//					sendTime = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
+			//				} else {
+			//					if data.Time > 1e12 {
+			//						sendTime = time.Unix(data.Time/1e3, 0).Format("2006-01-02 15:04:05")
+			//					} else {
+			//						sendTime = time.Unix(data.Time, 0).Format("2006-01-02 15:04:05")
+			//					}
+			//				}
+			//				dataMap = map[string]interface{}{
+			//					"time":         sendTime,
+			//					"#$model":      bson.M{"id": modelID, "_tableName": "model"},
+			//					"#$department": deptMap,
+			//					"#$node":       bson.M{"id": nodeID, "_tableName": "node", "uid": nodeID},
+			//					//"modelId":        nodeUIDModelMap[uidInMap],
+			//					//"nodeId":         nodeUIDNodeMap[uidInMap],
+			//					//"departmentName": formatx.FormatKeyInfoListMap(deptInfoList, "name"),
+			//					//"modelName":      formatx.FormatKeyInfo(modelInfoMap, "name"),
+			//					//"nodeName":       formatx.FormatKeyInfo(nodeInfoMap, "name"),
+			//				}
+			//				for k, v := range computeFieldsMap {
+			//					tagCache, err := tag.FindLocalCache(ctx, redisClient, mongoClient, projectName, modelID, nodeID, k)
+			//					if err != nil {
+			//						continue
+			//					}
+			//					formatVal := v
+			//					if tagCache.Fixed >= 0 {
+			//						formatVal, err = strconv.ParseFloat(fmt.Sprintf("%."+strconv.Itoa(int(tagCache.Fixed))+"f", v), 64)
+			//						if err != nil {
+			//							logger.Errorf("流程[%s]结果小数转化失败:%+v", flowID, v)
+			//							continue
+			//						}
+			//					} else {
+			//						formatVal, err = strconv.ParseFloat(fmt.Sprintf("%.3f", v), 64)
+			//						if err != nil {
+			//							logger.Errorf("流程[%s]结果3位小数转化失败:%+v", flowID, v)
+			//							continue
+			//						}
+			//					}
+			//					fields = append(fields, map[string]interface{}{
+			//						"id":    k,
+			//						"name":  tagCache.Name,
+			//						"value": formatVal,
+			//					})
+			//					dataMap[k] = formatVal
+			//					//dataMap["tagInfo"] = formatx.FormatDataInfoList(fields)
+			//				}
+			//			}
+			//
+			//			err = flowx.StartFlow(mongoClient, zbClient, flowInfo.FlowXml, projectName, string(ModelDataTrigger), flowID, dataMap, settings)
+			//			if err != nil {
+			//				logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
+			//				continue
+			//			}
+			//			hasExecute = true
+			//		}
+			//	}
+			//}
 		}
 
 		//对只能执行一次的流程进行失效
