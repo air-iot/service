@@ -322,9 +322,9 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 						if data.Time == 0 {
 							sendTime = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 						} else {
-							if data.Time > 1e12{
-								sendTime = time.Unix(data.Time/1e6, 0).Format("2006-01-02 15:04:05")
-							}else{
+							if data.Time > 1e12 {
+								sendTime = time.Unix(data.Time/1e3, 0).Format("2006-01-02 15:04:05")
+							} else {
 								sendTime = time.Unix(data.Time, 0).Format("2006-01-02 15:04:05")
 							}
 						}
@@ -395,7 +395,7 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 						//}
 					}
 
-					err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName,string(NodeDataTrigger),flowID, dataMap,settings)
+					err = flowx.StartFlow(mongoClient, zbClient, flowInfo.FlowXml, projectName, string(NodeDataTrigger), flowID, dataMap, settings)
 					if err != nil {
 						logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 						continue
@@ -689,11 +689,12 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 							if data.Time == 0 {
 								sendTime = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 							} else {
-								if data.Time > 1e12{
-									sendTime = time.Unix(data.Time/1e6, 0).Format("2006-01-02 15:04:05")
-								}else{
+								if data.Time > 1e12 {
+									sendTime = time.Unix(data.Time/1e3, 0).Format("2006-01-02 15:04:05")
+								} else {
 									sendTime = time.Unix(data.Time, 0).Format("2006-01-02 15:04:05")
-								}							}
+								}
+							}
 							dataMap = map[string]interface{}{
 								"time":         sendTime,
 								"#$model":      bson.M{"id": modelID, "_tableName": "model"},
@@ -734,7 +735,7 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 							}
 						}
 
-						err = flowx.StartFlow(mongoClient,zbClient, flowInfo.FlowXml, projectName,string(ModelDataTrigger),flowID, dataMap,settings)
+						err = flowx.StartFlow(mongoClient, zbClient, flowInfo.FlowXml, projectName, string(ModelDataTrigger), flowID, dataMap, settings)
 						if err != nil {
 							logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
 							continue
