@@ -322,7 +322,11 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 						if data.Time == 0 {
 							sendTime = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 						} else {
-							sendTime = time.Unix(data.Time, 0).Format("2006-01-02 15:04:05")
+							if data.Time > 1e12{
+								sendTime = time.Unix(data.Time/1e6, 0).Format("2006-01-02 15:04:05")
+							}else{
+								sendTime = time.Unix(data.Time, 0).Format("2006-01-02 15:04:05")
+							}
 						}
 						dataMapInLoop = map[string]interface{}{
 							"time":         sendTime,
@@ -685,8 +689,11 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 							if data.Time == 0 {
 								sendTime = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 							} else {
-								sendTime = time.Unix(data.Time, 0).Format("2006-01-02 15:04:05")
-							}
+								if data.Time > 1e12{
+									sendTime = time.Unix(data.Time/1e6, 0).Format("2006-01-02 15:04:05")
+								}else{
+									sendTime = time.Unix(data.Time, 0).Format("2006-01-02 15:04:05")
+								}							}
 							dataMap = map[string]interface{}{
 								"time":         sendTime,
 								"#$model":      bson.M{"id": modelID, "_tableName": "model"},
