@@ -394,8 +394,6 @@ eventloop:
 											data["nodeUid"] = tools.FormatKeyInfo(nodeInfo, "uid")
 											data["time"] = tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
-											data["content"] = content
-
 											switch modifyTypeAfterMapping {
 											case "编辑资产画面", "删除资产画面":
 												dashboardInfo, ok := data["dashboard"].(map[string]interface{})
@@ -405,6 +403,7 @@ eventloop:
 												}
 												data["dashboardName"] = tools.FormatKeyInfo(dashboardInfo, "name")
 											}
+											data["content"] = tools.TemplateVariableMapping(content, data)
 											sendMap := data
 
 											b, err := json.Marshal(sendMap)
@@ -539,8 +538,6 @@ eventloop:
 					data["nodeUid"] = tools.FormatKeyInfo(nodeInfo, "uid")
 					data["time"] = tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
-					data["content"] = content
-
 					switch modifyTypeAfterMapping {
 					case "编辑资产画面", "删除资产画面":
 						dashboardInfo, ok := data["dashboard"].(map[string]interface{})
@@ -550,6 +547,7 @@ eventloop:
 						}
 						data["dashboardName"] = tools.FormatKeyInfo(dashboardInfo, "name")
 					}
+					data["content"] = tools.TemplateVariableMapping(content, data)
 					sendMap := data
 
 					b, err := json.Marshal(sendMap)
@@ -937,7 +935,6 @@ func TriggerModelModify(data map[string]interface{}) error {
 					//data["nodeUid"] = tools.FormatKeyInfo(nodeInfo, "uid")
 					data["time"] = tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
-					data["content"] = content
 					switch modifyTypeAfterMapping {
 					case "编辑模型画面", "新增模型画面", "删除模型画面":
 						dashboardInfo, ok := data["dashboard"].(map[string]interface{})
@@ -946,6 +943,7 @@ func TriggerModelModify(data map[string]interface{}) error {
 						}
 						data["dashboardName"] = tools.FormatKeyInfo(dashboardInfo, "name")
 					}
+					data["content"] = tools.TemplateVariableMapping(content, data)
 					sendMap := data
 
 					b, err := json.Marshal(sendMap)
