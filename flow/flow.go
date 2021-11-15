@@ -41,8 +41,19 @@ func TrimSymbol(s string) string {
 }
 
 func FindExtra(ctx context.Context, apiClient api.Client, param string, variables []byte) (*gjson.Result, error) {
-	if param == "#$time" {
-		timeMap := map[string]interface{}{param: time.Now().Local().Format("2006-01-02 15:04:05")}
+	if strings.HasPrefix(param, "#$time") {
+		paramTimes := strings.Split(param, ",")
+		if len(paramTimes) == 0 || paramTimes[0] != "#$time" {
+			return nil, fmt.Errorf("系统时间变量格式不正确")
+		}
+		var timeMap map[string]interface{}
+		if len(paramTimes) == 1 || paramTimes[1] == "datetime" {
+			timeMap = map[string]interface{}{param: time.Now().Local().Format("2006-01-02 15:04:05")}
+		} else if paramTimes[1] == "date" {
+			timeMap = map[string]interface{}{param: time.Now().Local().Format("2006-01-02")}
+		} else {
+			timeMap = map[string]interface{}{param: time.Now().Local().Format("2006-01-02 15:04:05")}
+		}
 		timeBytes, _ := json.Marshal(timeMap)
 		result := gjson.GetBytes(timeBytes, param)
 		return &result, nil
