@@ -48,14 +48,14 @@ func FindExtra(ctx context.Context, apiClient api.Client, param string, variable
 		}
 		var timeMap map[string]interface{}
 		if len(paramTimes) == 1 {
-			timeMap = map[string]interface{}{"#$time": time.Now().Local().Format("2006-01-02 15:04:05")}
+			timeMap = map[string]interface{}{param: time.Now().Local().Format("2006-01-02 15:04:05")}
 		} else if paramTimes[1] == "date" {
-			timeMap = map[string]interface{}{"#$time": time.Now().Local().Format("2006-01-02")}
+			timeMap = map[string]interface{}{param: time.Now().Local().Format("2006-01-02")}
 		} else {
-			timeMap = map[string]interface{}{"#$time": time.Now().Local().Format("2006-01-02 15:04:05")}
+			timeMap = map[string]interface{}{param: time.Now().Local().Format("2006-01-02 15:04:05")}
 		}
 		timeBytes, _ := json.Marshal(timeMap)
-		result := gjson.GetBytes(timeBytes, "#$time")
+		result := gjson.GetBytes(timeBytes, param)
 		return &result, nil
 	}
 	paramArr := strings.Split(param, ".")
