@@ -624,12 +624,12 @@ flowloop:
 											if contentInSettings, ok := settings["content"].(string); ok {
 												b, err := json.Marshal(data)
 												if err != nil {
-													logger.Errorf("资产修改事件的内容序列化失败:%s", err.Error())
+													logger.Errorf("资产修改触发事件的内容序列化失败:%s", err.Error())
 													continue
 												}
 												templateContent, err := TemplateVariableMappingFlow(ctx, apiClient, contentInSettings, string(b))
 												if err != nil {
-													logger.Errorf(fmt.Sprintf("资产修改事件的内容模板替换失败:%s", err.Error()))
+													logger.Errorf(fmt.Sprintf("资产修改触发事件的内容模板替换失败:%s", err.Error()))
 													continue
 												}
 												data["content"] = templateContent
@@ -1108,20 +1108,6 @@ flowloop:
 					data["nodeUid"] = formatx.FormatKeyInfo(nodeInfo, "uid")
 					data["time"] = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
-					if contentInSettings, ok := settings["content"].(string); ok {
-						b, err := json.Marshal(data)
-						if err != nil {
-							logger.Errorf(fmt.Sprintf("资产修改事件的内容序列化失败:%s", err.Error()))
-							continue
-						}
-						templateContent, err := TemplateVariableMappingFlow(ctx, apiClient, contentInSettings, string(b))
-						if err != nil {
-							logger.Errorf(fmt.Sprintf("资产修改事件的内容模板替换失败:%s", err.Error()))
-							continue
-						}
-						data["content"] = templateContent
-					}
-
 					switch modifyTypeAfterMapping {
 					case "编辑资产画面", "删除资产画面":
 						dashboardInfo, ok := data["dashboard"].(map[string]interface{})
@@ -1139,6 +1125,19 @@ flowloop:
 								data["#$dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
 							}
 						}
+					}
+					if contentInSettings, ok := settings["content"].(string); ok {
+						b, err := json.Marshal(data)
+						if err != nil {
+							logger.Errorf(fmt.Sprintf("资产修改触发事件的内容序列化失败:%s", err.Error()))
+							continue
+						}
+						templateContent, err := TemplateVariableMappingFlow(ctx, apiClient, contentInSettings, string(b))
+						if err != nil {
+							logger.Errorf(fmt.Sprintf("资产修改触发事件的内容模板替换失败:%s", err.Error()))
+							continue
+						}
+						data["content"] = templateContent
 					}
 
 					deptMap := bson.M{}
@@ -1379,10 +1378,10 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 				//判断流程是否已经触发
 				hasExecute := false
 
-				content := ""
-				if contentInSettings, ok := settings["content"].(string); ok {
-					content = contentInSettings
-				}
+				//content := ""
+				//if contentInSettings, ok := settings["content"].(string); ok {
+				//	content = contentInSettings
+				//}
 				//departmentConditionList := make([]string, 0)
 				//modelConditionList := make([]string, 0)
 
@@ -1439,7 +1438,6 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 					//data["nodeUid"] = formatx.FormatKeyInfo(nodeInfo, "uid")
 					data["time"] = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
-					data["content"] = content
 
 					switch modifyTypeAfterMapping {
 					case "编辑模型画面", "新增模型画面", "删除模型画面":
@@ -1458,6 +1456,19 @@ func TriggerModelModifyFlow(ctx context.Context, redisClient redisdb.Client, mon
 								data["#$dashboard"] = bson.M{dashboardInfoID: bson.M{"id": dashboardInfoID, "_tableName": "dashboard"}}
 							}
 						}
+					}
+					if contentInSettings, ok := settings["content"].(string); ok {
+						b, err := json.Marshal(data)
+						if err != nil {
+							logger.Errorf(fmt.Sprintf("模型修改触发事件的内容序列化失败:%s", err.Error()))
+							continue
+						}
+						templateContent, err := TemplateVariableMappingFlow(ctx, apiClient, contentInSettings, string(b))
+						if err != nil {
+							logger.Errorf(fmt.Sprintf("模型修改触发事件的内容模板替换失败:%s", err.Error()))
+							continue
+						}
+						data["content"] = templateContent
 					}
 
 					deptMap := bson.M{}

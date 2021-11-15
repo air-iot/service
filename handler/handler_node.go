@@ -255,7 +255,6 @@ eventloop:
 											data["nodeUid"] = formatx.FormatKeyInfo(nodeInfo, "uid")
 											data["time"] = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
-											data["content"] = content
 
 											switch modifyTypeAfterMapping {
 											case "编辑资产画面", "删除资产画面":
@@ -266,6 +265,7 @@ eventloop:
 												}
 												data["dashboardName"] = formatx.FormatKeyInfo(dashboardInfo, "name")
 											}
+											data["content"] = formatx.TemplateVariableMapping(content, data)
 											sendMap := data
 
 											b, err := json.Marshal(sendMap)
@@ -386,7 +386,6 @@ eventloop:
 					data["nodeUid"] = formatx.FormatKeyInfo(nodeInfo, "uid")
 					data["time"] = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
-					data["content"] = content
 
 					switch modifyTypeAfterMapping {
 					case "编辑资产画面", "删除资产画面":
@@ -398,6 +397,7 @@ eventloop:
 						}
 						data["dashboardName"] = formatx.FormatKeyInfo(dashboardInfo, "name")
 					}
+					data["content"] = formatx.TemplateVariableMapping(content, data)
 					sendMap := data
 
 					b, err := json.Marshal(sendMap)
@@ -778,7 +778,6 @@ func TriggerModelModify(ctx context.Context, redisClient redisdb.Client, mongoCl
 					//data["nodeUid"] = formatx.FormatKeyInfo(nodeInfo, "uid")
 					data["time"] = timex.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
-					data["content"] = content
 					switch modifyTypeAfterMapping {
 					case "编辑模型画面", "新增模型画面", "删除模型画面":
 						dashboardInfo, ok := data["dashboard"].(map[string]interface{})
@@ -787,6 +786,7 @@ func TriggerModelModify(ctx context.Context, redisClient redisdb.Client, mongoCl
 						}
 						data["dashboardName"] = formatx.FormatKeyInfo(dashboardInfo, "name")
 					}
+					data["content"] = formatx.TemplateVariableMapping(content, data)
 					sendMap := data
 
 					b, err := json.Marshal(sendMap)
