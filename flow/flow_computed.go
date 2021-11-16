@@ -394,13 +394,14 @@ func TriggerComputedNodeFlow(ctx context.Context, redisClient redisdb.Client, mo
 						//	}
 						//}
 					}
-
-					err = flowx.StartFlow(mongoClient, zbClient, flowInfo.FlowXml, projectName, string(NodeDataTrigger), flowID, dataMap, settings)
-					if err != nil {
-						logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
-						continue
+					if len(dataMap) != 0 {
+						err = flowx.StartFlow(mongoClient, zbClient, flowInfo.FlowXml, projectName, string(NodeDataTrigger), flowID, dataMap, settings)
+						if err != nil {
+							logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
+							continue
+						}
+						hasExecute = true
 					}
-					hasExecute = true
 				}
 			}
 		}
@@ -560,7 +561,7 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 					//}
 				}
 			}
-			if _,ok := nodeUIDModelMap[modelID];ok{
+			if _, ok := nodeUIDModelMap[modelID]; ok {
 				if fields, ok := nodeUIDFieldsMap[data.Uid]; ok {
 					hasField := false
 				fieldLoopModel:
@@ -734,13 +735,14 @@ func TriggerComputedModelFlow(ctx context.Context, redisClient redisdb.Client, m
 								//dataMap["tagInfo"] = formatx.FormatDataInfoList(fields)
 							}
 						}
-
-						err = flowx.StartFlow(mongoClient, zbClient, flowInfo.FlowXml, projectName, string(ModelDataTrigger), flowID, dataMap, settings)
-						if err != nil {
-							logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
-							continue
+						if len(dataMap) != 0 {
+							err = flowx.StartFlow(mongoClient, zbClient, flowInfo.FlowXml, projectName, string(ModelDataTrigger), flowID, dataMap, settings)
+							if err != nil {
+								logger.Errorf("流程(%s)推进到下一阶段失败:%s", flowID, err.Error())
+								continue
+							}
+							hasExecute = true
 						}
-						hasExecute = true
 					}
 				}
 			}
