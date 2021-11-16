@@ -12284,7 +12284,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 								data[key] = relateVal
 							}
 						} else if extRaw.RelateTo != "" {
-							if relateVal, ok := eleRaw["name"]; ok {
+							if relateVal, ok := eleRaw[extRaw.RelateName]; ok {
 								data[key] = relateVal
 							}
 						}
@@ -12374,10 +12374,10 @@ func getTableSchemaColsNameMap(ctx context.Context, redisClient redisdb.Client, 
 		"Role":       "role",
 	}
 	schemaTableRelateNameMapping := map[string]string{
-		"Node":       "id",
+		"Node":       "name",
 		"Model":      "name",
 		"User":       "name",
-		"Department": "id",
+		"Department": "name",
 		"Role":       "name",
 	}
 
@@ -12389,7 +12389,7 @@ func getTableSchemaColsNameMap(ctx context.Context, redisClient redisdb.Client, 
 			for key, propertyVal := range properties {
 				if propertyMap, ok := propertyVal.(map[string]interface{}); ok {
 					if propertyType, ok := propertyMap["type"].(string); ok {
-						if _, ok := propertyMap["title"].(string); ok {
+						if customKey, ok := propertyMap["key"].(string); ok {
 							excelColNameTypeExt := ExcelColNameTypeExt{
 								Name:     key,
 								DataType: propertyType,
@@ -12435,9 +12435,19 @@ func getTableSchemaColsNameMap(ctx context.Context, redisClient redisdb.Client, 
 									excelColNameTypeExt.FieldType = strings.ToLower(relateTo)
 									excelColNameTypeExt.RelateName = schemaTableRelateNameMapping[relateTo]
 								} else if relateMap, ok := propertyMap["relate"].(map[string]interface{}); ok {
-									if relateTo, ok := relateMap["name"].(string); ok {
-										excelColNameTypeExt.RelateTo = "ext_" + relateTo
-										excelColNameTypeExt.FieldType = relateTo
+									if relateToID, ok := relateMap["id"].(string); ok {
+										tableInfo := entity.Table{}
+										err = table.Get(ctx, redisClient, mongoClient, projectName, relateToID, &tableInfo)
+										if err != nil {
+											logger.Errorf("获取工作表(%s)缓存失败:%s",relateToID,err.Error())
+											if relateTo, ok := relateMap["name"].(string); ok {
+												excelColNameTypeExt.RelateTo = "ext_" + relateTo
+												excelColNameTypeExt.FieldType = relateTo
+											}
+										}else{
+											excelColNameTypeExt.RelateTo = "ext_" + tableInfo.Name
+											excelColNameTypeExt.FieldType = tableInfo.Name
+										}
 										if fields, ok := relateMap["fields"].([]interface{}); ok {
 											for _, field := range fields {
 												if fieldMap, ok := field.(map[string]interface{}); ok {
@@ -12448,6 +12458,19 @@ func getTableSchemaColsNameMap(ctx context.Context, redisClient redisdb.Client, 
 											}
 										}
 									}
+									//if relateTo, ok := relateMap["name"].(string); ok {
+									//	excelColNameTypeExt.RelateTo = "ext_" + relateTo
+									//	excelColNameTypeExt.FieldType = relateTo
+									//	if fields, ok := relateMap["fields"].([]interface{}); ok {
+									//		for _, field := range fields {
+									//			if fieldMap, ok := field.(map[string]interface{}); ok {
+									//				if fieldKey, ok := fieldMap["key"].(string); ok {
+									//					excelColNameTypeExt.RelateField = fieldKey
+									//				}
+									//			}
+									//		}
+									//	}
+									//}
 									if relateName, ok := relateMap["relateName"].(string); ok {
 										excelColNameTypeExt.RelateName = relateName
 									} else if fields, ok := relateMap["fields"].([]interface{}); ok {
@@ -12472,7 +12495,7 @@ func getTableSchemaColsNameMap(ctx context.Context, redisClient redisdb.Client, 
 								}
 							}
 							excelColNameTypeExt.IsForeign = true
-							resultMap[key] = excelColNameTypeExt
+							resultMap[customKey] = excelColNameTypeExt
 						}
 					}
 				}
