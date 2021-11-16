@@ -210,7 +210,7 @@ func TriggerExecCmd(ctx context.Context, redisClient redisdb.Client, mongoClient
 								continue
 							}
 
-							err = mq.Publish(ctx, []string{"event", eventID}, b)
+							err = mq.Publish(ctx, []string{"event", projectName, eventID}, b)
 							if err != nil {
 								logger.Warnf("发送事件(%s)错误:%s", eventID, err.Error())
 							} else {
