@@ -233,6 +233,7 @@ type TSDB struct {
 	DBName  string
 	Timeout int
 	Influx  Influx
+	Influx2 Influx2
 	Taos    Taos
 }
 
@@ -242,6 +243,21 @@ type Influx struct {
 	Addr     string
 	Username string
 	Password string
+	Timeout  *int64
+}
+
+// Influx2 influxdb配置参数
+type Influx2 struct {
+	Addr       string
+	Token      string
+	Org        string
+	Bucket     string
+	Username   string
+	Password   string
+	Timeout    *uint
+	UseGZip    *bool
+	LogLevel   *uint
+	MaxRetries *uint
 }
 
 // Taos 涛思配置参数
