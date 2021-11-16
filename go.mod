@@ -11,6 +11,7 @@ require (
 	github.com/go-redis/redis/v8 v8.8.2
 	github.com/go-resty/resty/v2 v2.6.0
 	github.com/google/uuid v1.2.0
+	github.com/influxdata/influxdb-client-go/v2 v2.5.1 // indirect
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jinzhu/copier v0.3.0
 	github.com/jmoiron/sqlx v1.3.3

@@ -26,11 +26,20 @@ func NewInfluxDB(cfg config.Influx) (client.Client, func(), error) {
 			Addr: cfg.Addr,
 		})
 	default:
-		cli, err = client.NewHTTPClient(client.HTTPConfig{
-			Addr:     cfg.Addr,
-			Username: cfg.Username,
-			Password: cfg.Password,
-		})
+		if cfg.Timeout == nil {
+			cli, err = client.NewHTTPClient(client.HTTPConfig{
+				Addr:     cfg.Addr,
+				Username: cfg.Username,
+				Password: cfg.Password,
+			})
+		} else {
+			cli, err = client.NewHTTPClient(client.HTTPConfig{
+				Addr:     cfg.Addr,
+				Username: cfg.Username,
+				Password: cfg.Password,
+				Timeout:  time.Second * time.Duration(*(cfg.Timeout)),
+			})
+		}
 	}
 
 	if err != nil {
