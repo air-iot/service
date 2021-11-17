@@ -24,8 +24,6 @@ type Setting struct {
 }
 
 type LoginDuration struct {
-	Count int    `json:"count"`
-	Unit  string `json:"unit"`
 	Time  int    `json:"time"`
 }
 
