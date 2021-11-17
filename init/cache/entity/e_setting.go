@@ -18,6 +18,20 @@ type Setting struct {
 	Rectption_login_page RectptionLoginPage `json:"rectption_login_page"`
 	NotShowCode          bool               `json:"notShowCode"`
 	NotShowCodeAdmin     bool               `json:"notShowCodeAdmin"`
+	LoginDuration        LoginDuration      `json:"loginDuration"`
+	LoginLimit           LoginLimit         `json:"loginLimit"`
+	LoginLimitAdmin      LoginLimit         `json:"loginLimitAdmin"`
+}
+
+type LoginDuration struct {
+	Count int    `json:"count"`
+	Unit  string `json:"unit"`
+	Time  int    `json:"time"`
+}
+
+type LoginLimit struct {
+	Count int    `json:"count"`
+	Type  string `json:"type"`
 }
 
 type RectptionLoginPage struct {
@@ -77,10 +91,17 @@ type SettingMongo struct {
 	// Email 邮件发送配置
 	EmailMongo primitive.M `json:"email" bson:"email"`
 	// Wechat Wechat发送配置
-	WechatMongo   primitive.M `json:"wechat" bson:"wechat"`
-	PropTag       string      `json:"propTag" bson:"propTag"`
-	OnlineCheck   bool        `json:"onlineCheck" bson:"onlineCheck"`
-	DingtalkMongo primitive.M `json:"dingtalk" bson:"dingtalk"`
+	WechatMongo          primitive.M `json:"wechat" bson:"wechat"`
+	PropTag              string      `json:"propTag" bson:"propTag"`
+	OnlineCheck          bool        `json:"onlineCheck" bson:"onlineCheck"`
+	DingtalkMongo        primitive.M `json:"dingtalk" bson:"dingtalk"`
+	Sms                  primitive.M `json:"sms" bson:"sms"`
+	Rectption_login_page primitive.M `json:"rectption_login_page" bson:"rectption_login_page"`
+	NotShowCode          bool        `json:"notShowCode" bson:"notShowCode"`
+	NotShowCodeAdmin     bool        `json:"notShowCodeAdmin" bson:"notShowCodeAdmin"`
+	LoginDuration        primitive.M `json:"loginDuration" bson:"loginDuration"`
+	LoginLimit           primitive.M `json:"loginLimit" bson:"loginLimit"`
+	LoginLimitAdmin      primitive.M `json:"loginLimitAdmin" bson:"loginLimitAdmin"`
 }
 
 type WarningSettingMongo struct {
