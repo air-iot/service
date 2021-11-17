@@ -12213,6 +12213,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 				case "记录选择":
 					deleteID, ok := data["id"].(string)
 					if !ok {
+						logger.Errorf("不存在ID:%+v",data)
 						continue
 					}
 					canDelete := false
@@ -16273,6 +16274,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			}
 		}
 
+		fmt.Println("data:",data)
 		err = apiClient.SaveExt(headerMap, tempTableName, data, &result)
 		if err != nil {
 			logger.Errorf("存储临时工作表记录失败:%s", err.Error())
@@ -16313,7 +16315,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 		}
 
 		////fmt.Println("settings.Query:",settings.Query)
-
+		fmt.Println("settings.Query:",settings.Query)
 		queryResult := make([]interface{}, 0)
 		err = apiClient.FindExtQuery(headerMap, tempTableName, settings.Query, &queryResult)
 		if err != nil {
@@ -16321,7 +16323,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			continue
 		}
 		////fmt.Println("queryResult:",queryResult)
-
+		fmt.Println("len(queryResult):",len(queryResult))
 		if len(queryResult) != 0 {
 			isValid = true
 		}
