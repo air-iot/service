@@ -8222,12 +8222,673 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			if !hasValidField {
 				continue
 			}
-			if filter, ok := settings.Query["filter"]; ok {
-				if filterM, ok := filter.(map[string]interface{}); ok {
-					for key, val := range filterM {
-						if extRaw, ok := excelColNameTypeExtMap[key]; ok {
-							//fmt.Println("excelColNameTypeExtMap[key] in:", key)
-							if extRaw.Format != "" {
+			if operateType == "add" {
+				if filter, ok := settings.Query["filter"]; ok {
+					if filterM, ok := filter.(map[string]interface{}); ok {
+						for key, val := range filterM {
+							if extRaw, ok := excelColNameTypeExtMap[key]; ok {
+								//fmt.Println("excelColNameTypeExtMap[key] in:", key)
+								if extRaw.Format != "" {
+									if timeMapRaw, ok := val.(map[string]interface{}); ok {
+										for k, v := range timeMapRaw {
+											if originTime, ok := v.(string); ok {
+												var queryTime string
+												var startPoint string
+												var endPoint string
+												timeMap := map[string]interface{}{}
+												switch originTime {
+												case "今天":
+													startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "昨天":
+													startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "明天":
+													startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "本周":
+													week := int(time.Now().Weekday())
+													if week == 0 {
+														week = 7
+													}
+													startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "上周":
+													week := int(time.Now().Weekday())
+													if week == 0 {
+														week = 7
+													}
+													startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "今年":
+													startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "去年":
+													startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "明年":
+													startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												default:
+													if originTime != "" {
+														fromNow := false
+														if strings.HasPrefix(originTime, "前") {
+															//fmt.Println("originTime:", originTime)
+															if strings.HasSuffix(originTime, "当前") {
+																fromNow = true
+																originTime = strings.ReplaceAll(originTime, "当前", "")
+																//fmt.Println("originTime after 当前:", originTime)
+															}
+															intervalNumberString := numberx.GetNumberExp(originTime)
+															intervalNumber, err := strconv.Atoi(intervalNumberString)
+															if err != nil {
+																logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																continue
+															}
+															interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+															//fmt.Println("intervalNumber:", intervalNumber)
+															//fmt.Println("interval:", interval)
+															switch interval {
+															case "天":
+																if fromNow {
+																	//fmt.Println("fromNow")
+																	startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	endPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																}
+															case "周":
+																if fromNow {
+																	startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	endPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	weekDay := int(timeNow.Weekday())
+																	if weekDay == 0 {
+																		weekDay = 7
+																	}
+																	startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																}
+															case "月":
+																if fromNow {
+																	startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	endPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																}
+															case "年":
+																if fromNow {
+																	startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	endPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																}
+															case "季度":
+																if fromNow {
+																	startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	endPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	timeNowMonth := int(timeNow.Month())
+																	quarter1 := timeNowMonth - 1
+																	quarter2 := timeNowMonth - 4
+																	quarter3 := timeNowMonth - 7
+																	quarter4 := timeNowMonth - 10
+																	quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																	min := quarter1
+																	for _, v := range quarterList {
+																		if v < min {
+																			min = v
+																		}
+																	}
+																	startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																}
+															case "时":
+																if fromNow {
+																	startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	endPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																}
+															case "分":
+																if fromNow {
+																	startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																	endPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
+																}
+															case "秒":
+																startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																endPoint = timeNow.Format("2006-01-02 15:04:05")
+															}
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														} else if strings.HasPrefix(originTime, "后") {
+															if strings.HasSuffix(originTime, "当前") {
+																fromNow = true
+																originTime = strings.ReplaceAll(originTime, "当前", "")
+															}
+															intervalNumberString := numberx.GetNumberExp(originTime)
+															intervalNumber, err := strconv.Atoi(intervalNumberString)
+															if err != nil {
+																logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																continue
+															}
+															interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+															switch interval {
+															case "天":
+																if fromNow {
+																	endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	startPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																}
+															case "周":
+																if fromNow {
+																	endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	startPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	weekDay := int(timeNow.Weekday())
+																	if weekDay == 0 {
+																		weekDay = 7
+																	}
+																	endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																}
+															case "月":
+																if fromNow {
+																	endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	startPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																}
+															case "年":
+																if fromNow {
+																	endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	startPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																}
+															case "季度":
+																if fromNow {
+																	endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	startPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	timeNowMonth := int(timeNow.Month())
+																	quarter1 := timeNowMonth - 1
+																	quarter2 := timeNowMonth - 4
+																	quarter3 := timeNowMonth - 7
+																	quarter4 := timeNowMonth - 10
+																	quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																	min := quarter1
+																	for _, v := range quarterList {
+																		if v < min {
+																			min = v
+																		}
+																	}
+																	endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																}
+															case "时":
+																if fromNow {
+																	endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	startPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																}
+															case "分":
+																if fromNow {
+																	endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																	startPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																}
+															case "秒":
+																endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																startPoint = timeNow.Format("2006-01-02 15:04:05")
+															}
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														} else if strings.HasPrefix(originTime, "当前") {
+															interval := strings.ReplaceAll(originTime, "当前", "")
+															switch interval {
+															case "天":
+																startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+															case "周":
+																weekDay := int(timeNow.Weekday())
+																if weekDay == 0 {
+																	weekDay = 7
+																}
+																startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+															case "月":
+																startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+															case "年":
+																startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+															case "季度":
+																timeNowMonth := int(timeNow.Month())
+																quarter1 := timeNowMonth - 1
+																quarter2 := timeNowMonth - 4
+																quarter3 := timeNowMonth - 7
+																quarter4 := timeNowMonth - 10
+																quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																min := quarter1
+																for _, v := range quarterList {
+																	if v < min {
+																		min = v
+																	}
+																}
+																startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+															case "时":
+																startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+															case "分":
+																startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+															case "秒":
+																endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+																startPoint = timeNow.Format("2006-01-02 15:04:05")
+															}
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														} else {
+															eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+															if err != nil {
+																continue
+															}
+															queryTime = eleTime.Format("2006-01-02 15:04:05")
+														}
+													}
+												}
+												if len(timeMap) != 0 {
+													timeMapRaw[k] = timeMap
+												} else {
+													timeMapRaw[k] = queryTime
+												}
+											}
+										}
+									} else if originTime, ok := val.(string); ok {
+										var queryTime string
+										var startPoint string
+										var endPoint string
+										timeMap := map[string]interface{}{}
+										switch originTime {
+										case "今天":
+											startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "昨天":
+											startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "明天":
+											startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "本周":
+											week := int(time.Now().Weekday())
+											if week == 0 {
+												week = 7
+											}
+											startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "上周":
+											week := int(time.Now().Weekday())
+											if week == 0 {
+												week = 7
+											}
+											startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "今年":
+											startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "去年":
+											startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "明年":
+											startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										default:
+											if originTime != "" {
+												fromNow := false
+												if strings.HasPrefix(originTime, "前") {
+													//fmt.Println("originTime:", originTime)
+													if strings.HasSuffix(originTime, "当前") {
+														fromNow = true
+														originTime = strings.ReplaceAll(originTime, "当前", "")
+														//fmt.Println("originTime after 当前:", originTime)
+													}
+													intervalNumberString := numberx.GetNumberExp(originTime)
+													intervalNumber, err := strconv.Atoi(intervalNumberString)
+													if err != nil {
+														logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+														continue
+													}
+													interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+													//fmt.Println("intervalNumber:", intervalNumber)
+													//fmt.Println("interval:", interval)
+													switch interval {
+													case "天":
+														if fromNow {
+															//fmt.Println("fromNow")
+															startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															endPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+														}
+													case "周":
+														if fromNow {
+															startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															endPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															weekDay := int(timeNow.Weekday())
+															if weekDay == 0 {
+																weekDay = 7
+															}
+															startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+														}
+													case "月":
+														if fromNow {
+															startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															endPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+														}
+													case "年":
+														if fromNow {
+															startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															endPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+														}
+													case "季度":
+														if fromNow {
+															startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															endPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															timeNowMonth := int(timeNow.Month())
+															quarter1 := timeNowMonth - 1
+															quarter2 := timeNowMonth - 4
+															quarter3 := timeNowMonth - 7
+															quarter4 := timeNowMonth - 10
+															quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+															min := quarter1
+															for _, v := range quarterList {
+																if v < min {
+																	min = v
+																}
+															}
+															startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+														}
+													case "时":
+														if fromNow {
+															startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															endPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+														}
+													case "分":
+														if fromNow {
+															startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+															endPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
+														}
+													case "秒":
+														startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+														endPoint = timeNow.Format("2006-01-02 15:04:05")
+													}
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												} else if strings.HasPrefix(originTime, "后") {
+													if strings.HasSuffix(originTime, "当前") {
+														fromNow = true
+														originTime = strings.ReplaceAll(originTime, "当前", "")
+													}
+													intervalNumberString := numberx.GetNumberExp(originTime)
+													intervalNumber, err := strconv.Atoi(intervalNumberString)
+													if err != nil {
+														logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+														continue
+													}
+													interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+													switch interval {
+													case "天":
+														if fromNow {
+															endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															startPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+														}
+													case "周":
+														if fromNow {
+															endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															startPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															weekDay := int(timeNow.Weekday())
+															if weekDay == 0 {
+																weekDay = 7
+															}
+															endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+														}
+													case "月":
+														if fromNow {
+															endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															startPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+														}
+													case "年":
+														if fromNow {
+															endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															startPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+														}
+													case "季度":
+														if fromNow {
+															endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															startPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															timeNowMonth := int(timeNow.Month())
+															quarter1 := timeNowMonth - 1
+															quarter2 := timeNowMonth - 4
+															quarter3 := timeNowMonth - 7
+															quarter4 := timeNowMonth - 10
+															quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+															min := quarter1
+															for _, v := range quarterList {
+																if v < min {
+																	min = v
+																}
+															}
+															endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+														}
+													case "时":
+														if fromNow {
+															endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															startPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+														}
+													case "分":
+														if fromNow {
+															endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+															startPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+														}
+													case "秒":
+														endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+														startPoint = timeNow.Format("2006-01-02 15:04:05")
+													}
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												} else if strings.HasPrefix(originTime, "当前") {
+													interval := strings.ReplaceAll(originTime, "当前", "")
+													switch interval {
+													case "天":
+														startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+													case "周":
+														weekDay := int(timeNow.Weekday())
+														if weekDay == 0 {
+															weekDay = 7
+														}
+														startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+													case "月":
+														startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+													case "年":
+														startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+													case "季度":
+														timeNowMonth := int(timeNow.Month())
+														quarter1 := timeNowMonth - 1
+														quarter2 := timeNowMonth - 4
+														quarter3 := timeNowMonth - 7
+														quarter4 := timeNowMonth - 10
+														quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+														min := quarter1
+														for _, v := range quarterList {
+															if v < min {
+																min = v
+															}
+														}
+														startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+													case "时":
+														startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+													case "分":
+														startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+													case "秒":
+														endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+														startPoint = timeNow.Format("2006-01-02 15:04:05")
+													}
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												} else {
+													eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+													if err != nil {
+														continue
+													}
+													queryTime = eleTime.Format("2006-01-02 15:04:05")
+												}
+											}
+										}
+										if len(timeMap) != 0 {
+											filterM[key] = timeMap
+										} else {
+											filterM[key] = queryTime
+										}
+									}
+								}
+							} else if key == "createTime" || key == "modifyTime" {
+								//fmt.Println("createTime[key] in:", key, "val:", val)
 								if timeMapRaw, ok := val.(map[string]interface{}); ok {
 									for k, v := range timeMapRaw {
 										if originTime, ok := v.(string); ok {
@@ -8559,6 +9220,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 										}
 									}
 								} else if originTime, ok := val.(string); ok {
+									//fmt.Println("val.(string):", val.(string))
 									var queryTime string
 									var startPoint string
 									var endPoint string
@@ -8886,679 +9548,677 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 									}
 								}
 							}
-						} else if key == "createTime" || key == "modifyTime" {
-							//fmt.Println("createTime[key] in:", key, "val:", val)
-							if timeMapRaw, ok := val.(map[string]interface{}); ok {
-								for k, v := range timeMapRaw {
-									if originTime, ok := v.(string); ok {
-										var queryTime string
-										var startPoint string
-										var endPoint string
-										timeMap := map[string]interface{}{}
-										switch originTime {
-										case "今天":
-											startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-											endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
-											timeMap = map[string]interface{}{
-												"$gte": startPoint,
-												"$lt":  endPoint,
-											}
-										case "昨天":
-											startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
-											endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-											timeMap = map[string]interface{}{
-												"$gte": startPoint,
-												"$lt":  endPoint,
-											}
-										case "明天":
-											startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
-											endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
-											timeMap = map[string]interface{}{
-												"$gte": startPoint,
-												"$lt":  endPoint,
-											}
-										case "本周":
-											week := int(time.Now().Weekday())
-											if week == 0 {
-												week = 7
-											}
-											startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
-											endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
-											timeMap = map[string]interface{}{
-												"$gte": startPoint,
-												"$lt":  endPoint,
-											}
-										case "上周":
-											week := int(time.Now().Weekday())
-											if week == 0 {
-												week = 7
-											}
-											startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
-											endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
-											timeMap = map[string]interface{}{
-												"$gte": startPoint,
-												"$lt":  endPoint,
-											}
-										case "今年":
-											startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-											endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
-											timeMap = map[string]interface{}{
-												"$gte": startPoint,
-												"$lt":  endPoint,
-											}
-										case "去年":
-											startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
-											endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-											timeMap = map[string]interface{}{
-												"$gte": startPoint,
-												"$lt":  endPoint,
-											}
-										case "明年":
-											startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
-											endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
-											timeMap = map[string]interface{}{
-												"$gte": startPoint,
-												"$lt":  endPoint,
-											}
-										default:
-											if originTime != "" {
-												fromNow := false
-												if strings.HasPrefix(originTime, "前") {
-													//fmt.Println("originTime:", originTime)
-													if strings.HasSuffix(originTime, "当前") {
-														fromNow = true
-														originTime = strings.ReplaceAll(originTime, "当前", "")
-														//fmt.Println("originTime after 当前:", originTime)
-													}
-													intervalNumberString := numberx.GetNumberExp(originTime)
-													intervalNumber, err := strconv.Atoi(intervalNumberString)
-													if err != nil {
-														logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
-														continue
-													}
-													interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-													//fmt.Println("intervalNumber:", intervalNumber)
-													//fmt.Println("interval:", interval)
-													switch interval {
-													case "天":
-														if fromNow {
-															//fmt.Println("fromNow")
-															startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-															endPoint = timeNow.Format("2006-01-02 15:04:05")
-														} else {
-															startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-														}
-													case "周":
-														if fromNow {
-															startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-															endPoint = timeNow.Format("2006-01-02 15:04:05")
-														} else {
-															weekDay := int(timeNow.Weekday())
-															if weekDay == 0 {
-																weekDay = 7
-															}
-															startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
-														}
-													case "月":
-														if fromNow {
-															startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-															endPoint = timeNow.Format("2006-01-02 15:04:05")
-														} else {
-															startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-														}
-													case "年":
-														if fromNow {
-															startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-															endPoint = timeNow.Format("2006-01-02 15:04:05")
-														} else {
-															startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-														}
-													case "季度":
-														if fromNow {
-															startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-															endPoint = timeNow.Format("2006-01-02 15:04:05")
-														} else {
-															timeNowMonth := int(timeNow.Month())
-															quarter1 := timeNowMonth - 1
-															quarter2 := timeNowMonth - 4
-															quarter3 := timeNowMonth - 7
-															quarter4 := timeNowMonth - 10
-															quarterList := []int{quarter1, quarter2, quarter3, quarter4}
-															min := quarter1
-															for _, v := range quarterList {
-																if v < min {
-																	min = v
-																}
-															}
-															startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
-														}
-													case "时":
-														if fromNow {
-															startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-															endPoint = timeNow.Format("2006-01-02 15:04:05")
-														} else {
-															startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
-														}
-													case "分":
-														if fromNow {
-															startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
-															endPoint = timeNow.Format("2006-01-02 15:04:05")
-														} else {
-															startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
-															endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
-														}
-													case "秒":
-														startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
-														endPoint = timeNow.Format("2006-01-02 15:04:05")
-													}
-													timeMap = map[string]interface{}{
-														"$gte": startPoint,
-														"$lt":  endPoint,
-													}
-												} else if strings.HasPrefix(originTime, "后") {
-													if strings.HasSuffix(originTime, "当前") {
-														fromNow = true
-														originTime = strings.ReplaceAll(originTime, "当前", "")
-													}
-													intervalNumberString := numberx.GetNumberExp(originTime)
-													intervalNumber, err := strconv.Atoi(intervalNumberString)
-													if err != nil {
-														logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
-														continue
-													}
-													interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
-													switch interval {
-													case "天":
-														if fromNow {
-															endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-															startPoint = timeNow.Format("2006-01-02 15:04:05")
-														} else {
-															endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
-															startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-														}
-													case "周":
-														if fromNow {
-															endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-															startPoint = timeNow.Format("2006-01-02 15:04:05")
-														} else {
-															weekDay := int(timeNow.Weekday())
-															if weekDay == 0 {
-																weekDay = 7
-															}
-															endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
-															startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
-														}
-													case "月":
-														if fromNow {
-															endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-															startPoint = timeNow.Format("2006-01-02 15:04:05")
-														} else {
-															endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
-															startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-														}
-													case "年":
-														if fromNow {
-															endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-															startPoint = timeNow.Format("2006-01-02 15:04:05")
-														} else {
-															endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-															startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-														}
-													case "季度":
-														if fromNow {
-															endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-															startPoint = timeNow.Format("2006-01-02 15:04:05")
-														} else {
-															timeNowMonth := int(timeNow.Month())
-															quarter1 := timeNowMonth - 1
-															quarter2 := timeNowMonth - 4
-															quarter3 := timeNowMonth - 7
-															quarter4 := timeNowMonth - 10
-															quarterList := []int{quarter1, quarter2, quarter3, quarter4}
-															min := quarter1
-															for _, v := range quarterList {
-																if v < min {
-																	min = v
-																}
-															}
-															endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
-															startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
-														}
-													case "时":
-														if fromNow {
-															endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-															startPoint = timeNow.Format("2006-01-02 15:04:05")
-														} else {
-															endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
-															startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
-														}
-													case "分":
-														if fromNow {
-															endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
-															startPoint = timeNow.Format("2006-01-02 15:04:05")
-														} else {
-															endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
-															startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
-														}
-													case "秒":
-														endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
-														startPoint = timeNow.Format("2006-01-02 15:04:05")
-													}
-													timeMap = map[string]interface{}{
-														"$gte": startPoint,
-														"$lt":  endPoint,
-													}
-												} else if strings.HasPrefix(originTime, "当前") {
-													interval := strings.ReplaceAll(originTime, "当前", "")
-													switch interval {
-													case "天":
-														startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
-													case "周":
-														weekDay := int(timeNow.Weekday())
-														if weekDay == 0 {
-															weekDay = 7
-														}
-														startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
-													case "月":
-														startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
-													case "年":
-														startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
-													case "季度":
-														timeNowMonth := int(timeNow.Month())
-														quarter1 := timeNowMonth - 1
-														quarter2 := timeNowMonth - 4
-														quarter3 := timeNowMonth - 7
-														quarter4 := timeNowMonth - 10
-														quarterList := []int{quarter1, quarter2, quarter3, quarter4}
-														min := quarter1
-														for _, v := range quarterList {
-															if v < min {
-																min = v
-															}
-														}
-														startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
-													case "时":
-														startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
-													case "分":
-														startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
-														endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
-													case "秒":
-														endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
-														startPoint = timeNow.Format("2006-01-02 15:04:05")
-													}
-													timeMap = map[string]interface{}{
-														"$gte": startPoint,
-														"$lt":  endPoint,
-													}
-												} else {
-													eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
-													if err != nil {
-														continue
-													}
-													queryTime = eleTime.Format("2006-01-02 15:04:05")
-												}
-											}
-										}
-										if len(timeMap) != 0 {
-											timeMapRaw[k] = timeMap
-										} else {
-											timeMapRaw[k] = queryTime
-										}
-									}
-								}
-							} else if originTime, ok := val.(string); ok {
-								//fmt.Println("val.(string):", val.(string))
-								var queryTime string
-								var startPoint string
-								var endPoint string
-								timeMap := map[string]interface{}{}
-								switch originTime {
-								case "今天":
-									startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-									endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
-									timeMap = map[string]interface{}{
-										"$gte": startPoint,
-										"$lt":  endPoint,
-									}
-								case "昨天":
-									startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
-									endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-									timeMap = map[string]interface{}{
-										"$gte": startPoint,
-										"$lt":  endPoint,
-									}
-								case "明天":
-									startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
-									endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
-									timeMap = map[string]interface{}{
-										"$gte": startPoint,
-										"$lt":  endPoint,
-									}
-								case "本周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
-									endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
-									timeMap = map[string]interface{}{
-										"$gte": startPoint,
-										"$lt":  endPoint,
-									}
-								case "上周":
-									week := int(time.Now().Weekday())
-									if week == 0 {
-										week = 7
-									}
-									startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
-									endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
-									timeMap = map[string]interface{}{
-										"$gte": startPoint,
-										"$lt":  endPoint,
-									}
-								case "今年":
-									startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-									endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
-									timeMap = map[string]interface{}{
-										"$gte": startPoint,
-										"$lt":  endPoint,
-									}
-								case "去年":
-									startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
-									endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-									timeMap = map[string]interface{}{
-										"$gte": startPoint,
-										"$lt":  endPoint,
-									}
-								case "明年":
-									startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
-									endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
-									timeMap = map[string]interface{}{
-										"$gte": startPoint,
-										"$lt":  endPoint,
-									}
-								default:
-									if originTime != "" {
-										fromNow := false
-										if strings.HasPrefix(originTime, "前") {
-											//fmt.Println("originTime:", originTime)
-											if strings.HasSuffix(originTime, "当前") {
-												fromNow = true
-												originTime = strings.ReplaceAll(originTime, "当前", "")
-												//fmt.Println("originTime after 当前:", originTime)
-											}
-											intervalNumberString := numberx.GetNumberExp(originTime)
-											intervalNumber, err := strconv.Atoi(intervalNumberString)
-											if err != nil {
-												logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
-												continue
-											}
-											interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-											//fmt.Println("intervalNumber:", intervalNumber)
-											//fmt.Println("interval:", interval)
-											switch interval {
-											case "天":
-												if fromNow {
-													//fmt.Println("fromNow")
-													startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-													endPoint = timeNow.Format("2006-01-02 15:04:05")
-												} else {
-													startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-												}
-											case "周":
-												if fromNow {
-													startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-													endPoint = timeNow.Format("2006-01-02 15:04:05")
-												} else {
-													weekDay := int(timeNow.Weekday())
-													if weekDay == 0 {
-														weekDay = 7
-													}
-													startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
-												}
-											case "月":
-												if fromNow {
-													startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-													endPoint = timeNow.Format("2006-01-02 15:04:05")
-												} else {
-													startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-												}
-											case "年":
-												if fromNow {
-													startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-													endPoint = timeNow.Format("2006-01-02 15:04:05")
-												} else {
-													startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-												}
-											case "季度":
-												if fromNow {
-													startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-													endPoint = timeNow.Format("2006-01-02 15:04:05")
-												} else {
-													timeNowMonth := int(timeNow.Month())
-													quarter1 := timeNowMonth - 1
-													quarter2 := timeNowMonth - 4
-													quarter3 := timeNowMonth - 7
-													quarter4 := timeNowMonth - 10
-													quarterList := []int{quarter1, quarter2, quarter3, quarter4}
-													min := quarter1
-													for _, v := range quarterList {
-														if v < min {
-															min = v
-														}
-													}
-													startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
-												}
-											case "时":
-												if fromNow {
-													startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-													endPoint = timeNow.Format("2006-01-02 15:04:05")
-												} else {
-													startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
-												}
-											case "分":
-												if fromNow {
-													startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
-													endPoint = timeNow.Format("2006-01-02 15:04:05")
-												} else {
-													startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
-													endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
-												}
-											case "秒":
-												startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
-												endPoint = timeNow.Format("2006-01-02 15:04:05")
-											}
-											timeMap = map[string]interface{}{
-												"$gte": startPoint,
-												"$lt":  endPoint,
-											}
-										} else if strings.HasPrefix(originTime, "后") {
-											if strings.HasSuffix(originTime, "当前") {
-												fromNow = true
-												originTime = strings.ReplaceAll(originTime, "当前", "")
-											}
-											intervalNumberString := numberx.GetNumberExp(originTime)
-											intervalNumber, err := strconv.Atoi(intervalNumberString)
-											if err != nil {
-												logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
-												continue
-											}
-											interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
-											switch interval {
-											case "天":
-												if fromNow {
-													endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-													startPoint = timeNow.Format("2006-01-02 15:04:05")
-												} else {
-													endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
-													startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-												}
-											case "周":
-												if fromNow {
-													endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-													startPoint = timeNow.Format("2006-01-02 15:04:05")
-												} else {
-													weekDay := int(timeNow.Weekday())
-													if weekDay == 0 {
-														weekDay = 7
-													}
-													endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
-													startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
-												}
-											case "月":
-												if fromNow {
-													endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-													startPoint = timeNow.Format("2006-01-02 15:04:05")
-												} else {
-													endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
-													startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-												}
-											case "年":
-												if fromNow {
-													endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-													startPoint = timeNow.Format("2006-01-02 15:04:05")
-												} else {
-													endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-													startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-												}
-											case "季度":
-												if fromNow {
-													endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-													startPoint = timeNow.Format("2006-01-02 15:04:05")
-												} else {
-													timeNowMonth := int(timeNow.Month())
-													quarter1 := timeNowMonth - 1
-													quarter2 := timeNowMonth - 4
-													quarter3 := timeNowMonth - 7
-													quarter4 := timeNowMonth - 10
-													quarterList := []int{quarter1, quarter2, quarter3, quarter4}
-													min := quarter1
-													for _, v := range quarterList {
-														if v < min {
-															min = v
-														}
-													}
-													endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
-													startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
-												}
-											case "时":
-												if fromNow {
-													endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-													startPoint = timeNow.Format("2006-01-02 15:04:05")
-												} else {
-													endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
-													startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
-												}
-											case "分":
-												if fromNow {
-													endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
-													startPoint = timeNow.Format("2006-01-02 15:04:05")
-												} else {
-													endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
-													startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
-												}
-											case "秒":
-												endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
-												startPoint = timeNow.Format("2006-01-02 15:04:05")
-											}
-											timeMap = map[string]interface{}{
-												"$gte": startPoint,
-												"$lt":  endPoint,
-											}
-										} else if strings.HasPrefix(originTime, "当前") {
-											interval := strings.ReplaceAll(originTime, "当前", "")
-											switch interval {
-											case "天":
-												startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
-											case "周":
-												weekDay := int(timeNow.Weekday())
-												if weekDay == 0 {
-													weekDay = 7
-												}
-												startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
-											case "月":
-												startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
-											case "年":
-												startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
-											case "季度":
-												timeNowMonth := int(timeNow.Month())
-												quarter1 := timeNowMonth - 1
-												quarter2 := timeNowMonth - 4
-												quarter3 := timeNowMonth - 7
-												quarter4 := timeNowMonth - 10
-												quarterList := []int{quarter1, quarter2, quarter3, quarter4}
-												min := quarter1
-												for _, v := range quarterList {
-													if v < min {
-														min = v
-													}
-												}
-												startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
-											case "时":
-												startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
-											case "分":
-												startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
-												endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
-											case "秒":
-												endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
-												startPoint = timeNow.Format("2006-01-02 15:04:05")
-											}
-											timeMap = map[string]interface{}{
-												"$gte": startPoint,
-												"$lt":  endPoint,
-											}
-										} else {
-											eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
-											if err != nil {
-												continue
-											}
-											queryTime = eleTime.Format("2006-01-02 15:04:05")
-										}
-									}
-								}
-								if len(timeMap) != 0 {
-									filterM[key] = timeMap
-								} else {
-									filterM[key] = queryTime
-								}
-							}
-						}
-						if key == "$or" {
-							if orList, ok := val.([]interface{}); ok {
-								for _, orEle := range orList {
-									if orEleMap, ok := orEle.(map[string]interface{}); ok {
-										for orKey, orVal := range orEleMap {
-											if orKey == "$and" {
-												if orList, ok := orVal.([]interface{}); ok {
-													for _, orEle := range orList {
-														if orEleMap, ok := orEle.(map[string]interface{}); ok {
-															for orKey, orVal := range orEleMap {
-																if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
-																	if extRaw.Format != "" {
+							if key == "$or" {
+								if orList, ok := val.([]interface{}); ok {
+									for _, orEle := range orList {
+										if orEleMap, ok := orEle.(map[string]interface{}); ok {
+											for orKey, orVal := range orEleMap {
+												if orKey == "$and" {
+													if orList, ok := orVal.([]interface{}); ok {
+														for _, orEle := range orList {
+															if orEleMap, ok := orEle.(map[string]interface{}); ok {
+																for orKey, orVal := range orEleMap {
+																	if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
+																		if extRaw.Format != "" {
+																			if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+																				for k, v := range timeMapRaw {
+																					if originTime, ok := v.(string); ok {
+																						var queryTime string
+																						var startPoint string
+																						var endPoint string
+																						timeMap := map[string]interface{}{}
+																						switch originTime {
+																						case "今天":
+																							startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "昨天":
+																							startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "明天":
+																							startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "本周":
+																							week := int(time.Now().Weekday())
+																							if week == 0 {
+																								week = 7
+																							}
+																							startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "上周":
+																							week := int(time.Now().Weekday())
+																							if week == 0 {
+																								week = 7
+																							}
+																							startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "今年":
+																							startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "去年":
+																							startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "明年":
+																							startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						default:
+																							if originTime != "" {
+																								fromNow := false
+																								if strings.HasPrefix(originTime, "前") {
+																									//fmt.Println("originTime:", originTime)
+																									if strings.HasSuffix(originTime, "当前") {
+																										fromNow = true
+																										originTime = strings.ReplaceAll(originTime, "当前", "")
+																										//fmt.Println("originTime after 当前:", originTime)
+																									}
+																									intervalNumberString := numberx.GetNumberExp(originTime)
+																									intervalNumber, err := strconv.Atoi(intervalNumberString)
+																									if err != nil {
+																										logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																										continue
+																									}
+																									interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+																									//fmt.Println("intervalNumber:", intervalNumber)
+																									//fmt.Println("interval:", interval)
+																									switch interval {
+																									case "天":
+																										if fromNow {
+																											//fmt.Println("fromNow")
+																											startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											endPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																										}
+																									case "周":
+																										if fromNow {
+																											startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											endPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											weekDay := int(timeNow.Weekday())
+																											if weekDay == 0 {
+																												weekDay = 7
+																											}
+																											startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																										}
+																									case "月":
+																										if fromNow {
+																											startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											endPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																										}
+																									case "年":
+																										if fromNow {
+																											startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											endPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																										}
+																									case "季度":
+																										if fromNow {
+																											startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											endPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											timeNowMonth := int(timeNow.Month())
+																											quarter1 := timeNowMonth - 1
+																											quarter2 := timeNowMonth - 4
+																											quarter3 := timeNowMonth - 7
+																											quarter4 := timeNowMonth - 10
+																											quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																											min := quarter1
+																											for _, v := range quarterList {
+																												if v < min {
+																													min = v
+																												}
+																											}
+																											startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																										}
+																									case "时":
+																										if fromNow {
+																											startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											endPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																										}
+																									case "分":
+																										if fromNow {
+																											startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																											endPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
+																										}
+																									case "秒":
+																										startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																										endPoint = timeNow.Format("2006-01-02 15:04:05")
+																									}
+																									timeMap = map[string]interface{}{
+																										"$gte": startPoint,
+																										"$lt":  endPoint,
+																									}
+																								} else if strings.HasPrefix(originTime, "后") {
+																									if strings.HasSuffix(originTime, "当前") {
+																										fromNow = true
+																										originTime = strings.ReplaceAll(originTime, "当前", "")
+																									}
+																									intervalNumberString := numberx.GetNumberExp(originTime)
+																									intervalNumber, err := strconv.Atoi(intervalNumberString)
+																									if err != nil {
+																										logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																										continue
+																									}
+																									interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+																									switch interval {
+																									case "天":
+																										if fromNow {
+																											endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											startPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+																											startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																										}
+																									case "周":
+																										if fromNow {
+																											endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											startPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											weekDay := int(timeNow.Weekday())
+																											if weekDay == 0 {
+																												weekDay = 7
+																											}
+																											endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																											startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																										}
+																									case "月":
+																										if fromNow {
+																											endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											startPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+																											startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																										}
+																									case "年":
+																										if fromNow {
+																											endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											startPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																											startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																										}
+																									case "季度":
+																										if fromNow {
+																											endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											startPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											timeNowMonth := int(timeNow.Month())
+																											quarter1 := timeNowMonth - 1
+																											quarter2 := timeNowMonth - 4
+																											quarter3 := timeNowMonth - 7
+																											quarter4 := timeNowMonth - 10
+																											quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																											min := quarter1
+																											for _, v := range quarterList {
+																												if v < min {
+																													min = v
+																												}
+																											}
+																											endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																											startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																										}
+																									case "时":
+																										if fromNow {
+																											endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											startPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																											startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																										}
+																									case "分":
+																										if fromNow {
+																											endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																											startPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																											startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																										}
+																									case "秒":
+																										endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																										startPoint = timeNow.Format("2006-01-02 15:04:05")
+																									}
+																									timeMap = map[string]interface{}{
+																										"$gte": startPoint,
+																										"$lt":  endPoint,
+																									}
+																								} else if strings.HasPrefix(originTime, "当前") {
+																									interval := strings.ReplaceAll(originTime, "当前", "")
+																									switch interval {
+																									case "天":
+																										startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																									case "周":
+																										weekDay := int(timeNow.Weekday())
+																										if weekDay == 0 {
+																											weekDay = 7
+																										}
+																										startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+																									case "月":
+																										startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																									case "年":
+																										startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																									case "季度":
+																										timeNowMonth := int(timeNow.Month())
+																										quarter1 := timeNowMonth - 1
+																										quarter2 := timeNowMonth - 4
+																										quarter3 := timeNowMonth - 7
+																										quarter4 := timeNowMonth - 10
+																										quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																										min := quarter1
+																										for _, v := range quarterList {
+																											if v < min {
+																												min = v
+																											}
+																										}
+																										startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+																									case "时":
+																										startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																									case "分":
+																										startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																									case "秒":
+																										endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+																										startPoint = timeNow.Format("2006-01-02 15:04:05")
+																									}
+																									timeMap = map[string]interface{}{
+																										"$gte": startPoint,
+																										"$lt":  endPoint,
+																									}
+																								} else {
+																									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																									if err != nil {
+																										continue
+																									}
+																									queryTime = eleTime.Format("2006-01-02 15:04:05")
+																								}
+																							}
+																						}
+																						if len(timeMap) != 0 {
+																							timeMapRaw[k] = timeMap
+																						} else {
+																							timeMapRaw[k] = queryTime
+																						}
+																					}
+																				}
+																			} else if originTime, ok := orVal.(string); ok {
+																				var queryTime string
+																				var startPoint string
+																				var endPoint string
+																				timeMap := map[string]interface{}{}
+																				switch originTime {
+																				case "今天":
+																					startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "昨天":
+																					startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "明天":
+																					startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "本周":
+																					week := int(time.Now().Weekday())
+																					if week == 0 {
+																						week = 7
+																					}
+																					startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "上周":
+																					week := int(time.Now().Weekday())
+																					if week == 0 {
+																						week = 7
+																					}
+																					startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "今年":
+																					startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "去年":
+																					startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "明年":
+																					startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				default:
+																					if originTime != "" {
+																						fromNow := false
+																						if strings.HasPrefix(originTime, "前") {
+																							//fmt.Println("originTime:", originTime)
+																							if strings.HasSuffix(originTime, "当前") {
+																								fromNow = true
+																								originTime = strings.ReplaceAll(originTime, "当前", "")
+																								//fmt.Println("originTime after 当前:", originTime)
+																							}
+																							intervalNumberString := numberx.GetNumberExp(originTime)
+																							intervalNumber, err := strconv.Atoi(intervalNumberString)
+																							if err != nil {
+																								logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																								continue
+																							}
+																							interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+																							//fmt.Println("intervalNumber:", intervalNumber)
+																							//fmt.Println("interval:", interval)
+																							switch interval {
+																							case "天":
+																								if fromNow {
+																									//fmt.Println("fromNow")
+																									startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									endPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																								}
+																							case "周":
+																								if fromNow {
+																									startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									endPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									weekDay := int(timeNow.Weekday())
+																									if weekDay == 0 {
+																										weekDay = 7
+																									}
+																									startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																								}
+																							case "月":
+																								if fromNow {
+																									startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									endPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																								}
+																							case "年":
+																								if fromNow {
+																									startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									endPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																								}
+																							case "季度":
+																								if fromNow {
+																									startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									endPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									timeNowMonth := int(timeNow.Month())
+																									quarter1 := timeNowMonth - 1
+																									quarter2 := timeNowMonth - 4
+																									quarter3 := timeNowMonth - 7
+																									quarter4 := timeNowMonth - 10
+																									quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																									min := quarter1
+																									for _, v := range quarterList {
+																										if v < min {
+																											min = v
+																										}
+																									}
+																									startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																								}
+																							case "时":
+																								if fromNow {
+																									startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									endPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																								}
+																							case "分":
+																								if fromNow {
+																									startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																									endPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
+																								}
+																							case "秒":
+																								startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																								endPoint = timeNow.Format("2006-01-02 15:04:05")
+																							}
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						} else if strings.HasPrefix(originTime, "后") {
+																							if strings.HasSuffix(originTime, "当前") {
+																								fromNow = true
+																								originTime = strings.ReplaceAll(originTime, "当前", "")
+																							}
+																							intervalNumberString := numberx.GetNumberExp(originTime)
+																							intervalNumber, err := strconv.Atoi(intervalNumberString)
+																							if err != nil {
+																								logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																								continue
+																							}
+																							interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+																							switch interval {
+																							case "天":
+																								if fromNow {
+																									endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									startPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																								}
+																							case "周":
+																								if fromNow {
+																									endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									startPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									weekDay := int(timeNow.Weekday())
+																									if weekDay == 0 {
+																										weekDay = 7
+																									}
+																									endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																								}
+																							case "月":
+																								if fromNow {
+																									endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									startPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																								}
+																							case "年":
+																								if fromNow {
+																									endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									startPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																								}
+																							case "季度":
+																								if fromNow {
+																									endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									startPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									timeNowMonth := int(timeNow.Month())
+																									quarter1 := timeNowMonth - 1
+																									quarter2 := timeNowMonth - 4
+																									quarter3 := timeNowMonth - 7
+																									quarter4 := timeNowMonth - 10
+																									quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																									min := quarter1
+																									for _, v := range quarterList {
+																										if v < min {
+																											min = v
+																										}
+																									}
+																									endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																								}
+																							case "时":
+																								if fromNow {
+																									endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									startPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																								}
+																							case "分":
+																								if fromNow {
+																									endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																									startPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																								}
+																							case "秒":
+																								endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																								startPoint = timeNow.Format("2006-01-02 15:04:05")
+																							}
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						} else if strings.HasPrefix(originTime, "当前") {
+																							interval := strings.ReplaceAll(originTime, "当前", "")
+																							switch interval {
+																							case "天":
+																								startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																							case "周":
+																								weekDay := int(timeNow.Weekday())
+																								if weekDay == 0 {
+																									weekDay = 7
+																								}
+																								startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+																							case "月":
+																								startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																							case "年":
+																								startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																							case "季度":
+																								timeNowMonth := int(timeNow.Month())
+																								quarter1 := timeNowMonth - 1
+																								quarter2 := timeNowMonth - 4
+																								quarter3 := timeNowMonth - 7
+																								quarter4 := timeNowMonth - 10
+																								quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																								min := quarter1
+																								for _, v := range quarterList {
+																									if v < min {
+																										min = v
+																									}
+																								}
+																								startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+																							case "时":
+																								startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																							case "分":
+																								startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																							case "秒":
+																								endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+																								startPoint = timeNow.Format("2006-01-02 15:04:05")
+																							}
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						} else {
+																							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																							if err != nil {
+																								continue
+																							}
+																							queryTime = eleTime.Format("2006-01-02 15:04:05")
+																						}
+																					}
+																				}
+																				if len(timeMap) != 0 {
+																					orEleMap[orKey] = timeMap
+																				} else {
+																					orEleMap[orKey] = queryTime
+																				}
+																			}
+																		}
+																	} else if orKey == "createTime" || orKey == "modifyTime" {
 																		if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
 																			for k, v := range timeMapRaw {
 																				if originTime, ok := v.(string); ok {
@@ -10217,621 +10877,146 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																			}
 																		}
 																	}
-																} else if orKey == "createTime" || orKey == "modifyTime" {
-																	if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
-																		for k, v := range timeMapRaw {
-																			if originTime, ok := v.(string); ok {
-																				var queryTime string
-																				var startPoint string
-																				var endPoint string
-																				timeMap := map[string]interface{}{}
-																				switch originTime {
-																				case "今天":
-																					startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-																					endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
-																					timeMap = map[string]interface{}{
-																						"$gte": startPoint,
-																						"$lt":  endPoint,
-																					}
-																				case "昨天":
-																					startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
-																					endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-																					timeMap = map[string]interface{}{
-																						"$gte": startPoint,
-																						"$lt":  endPoint,
-																					}
-																				case "明天":
-																					startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
-																					endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
-																					timeMap = map[string]interface{}{
-																						"$gte": startPoint,
-																						"$lt":  endPoint,
-																					}
-																				case "本周":
-																					week := int(time.Now().Weekday())
-																					if week == 0 {
-																						week = 7
-																					}
-																					startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
-																					endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
-																					timeMap = map[string]interface{}{
-																						"$gte": startPoint,
-																						"$lt":  endPoint,
-																					}
-																				case "上周":
-																					week := int(time.Now().Weekday())
-																					if week == 0 {
-																						week = 7
-																					}
-																					startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
-																					endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
-																					timeMap = map[string]interface{}{
-																						"$gte": startPoint,
-																						"$lt":  endPoint,
-																					}
-																				case "今年":
-																					startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-																					endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
-																					timeMap = map[string]interface{}{
-																						"$gte": startPoint,
-																						"$lt":  endPoint,
-																					}
-																				case "去年":
-																					startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
-																					endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-																					timeMap = map[string]interface{}{
-																						"$gte": startPoint,
-																						"$lt":  endPoint,
-																					}
-																				case "明年":
-																					startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
-																					endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
-																					timeMap = map[string]interface{}{
-																						"$gte": startPoint,
-																						"$lt":  endPoint,
-																					}
-																				default:
-																					if originTime != "" {
-																						fromNow := false
-																						if strings.HasPrefix(originTime, "前") {
-																							//fmt.Println("originTime:", originTime)
-																							if strings.HasSuffix(originTime, "当前") {
-																								fromNow = true
-																								originTime = strings.ReplaceAll(originTime, "当前", "")
-																								//fmt.Println("originTime after 当前:", originTime)
-																							}
-																							intervalNumberString := numberx.GetNumberExp(originTime)
-																							intervalNumber, err := strconv.Atoi(intervalNumberString)
-																							if err != nil {
-																								logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
-																								continue
-																							}
-																							interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																							//fmt.Println("intervalNumber:", intervalNumber)
-																							//fmt.Println("interval:", interval)
-																							switch interval {
-																							case "天":
-																								if fromNow {
-																									//fmt.Println("fromNow")
-																									startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																									endPoint = timeNow.Format("2006-01-02 15:04:05")
-																								} else {
-																									startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-																								}
-																							case "周":
-																								if fromNow {
-																									startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																									endPoint = timeNow.Format("2006-01-02 15:04:05")
-																								} else {
-																									weekDay := int(timeNow.Weekday())
-																									if weekDay == 0 {
-																										weekDay = 7
-																									}
-																									startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
-																								}
-																							case "月":
-																								if fromNow {
-																									startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																									endPoint = timeNow.Format("2006-01-02 15:04:05")
-																								} else {
-																									startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-																								}
-																							case "年":
-																								if fromNow {
-																									startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																									endPoint = timeNow.Format("2006-01-02 15:04:05")
-																								} else {
-																									startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-																								}
-																							case "季度":
-																								if fromNow {
-																									startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																									endPoint = timeNow.Format("2006-01-02 15:04:05")
-																								} else {
-																									timeNowMonth := int(timeNow.Month())
-																									quarter1 := timeNowMonth - 1
-																									quarter2 := timeNowMonth - 4
-																									quarter3 := timeNowMonth - 7
-																									quarter4 := timeNowMonth - 10
-																									quarterList := []int{quarter1, quarter2, quarter3, quarter4}
-																									min := quarter1
-																									for _, v := range quarterList {
-																										if v < min {
-																											min = v
-																										}
-																									}
-																									startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
-																								}
-																							case "时":
-																								if fromNow {
-																									startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																									endPoint = timeNow.Format("2006-01-02 15:04:05")
-																								} else {
-																									startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
-																								}
-																							case "分":
-																								if fromNow {
-																									startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
-																									endPoint = timeNow.Format("2006-01-02 15:04:05")
-																								} else {
-																									startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
-																									endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
-																								}
-																							case "秒":
-																								startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
-																								endPoint = timeNow.Format("2006-01-02 15:04:05")
-																							}
-																							timeMap = map[string]interface{}{
-																								"$gte": startPoint,
-																								"$lt":  endPoint,
-																							}
-																						} else if strings.HasPrefix(originTime, "后") {
-																							if strings.HasSuffix(originTime, "当前") {
-																								fromNow = true
-																								originTime = strings.ReplaceAll(originTime, "当前", "")
-																							}
-																							intervalNumberString := numberx.GetNumberExp(originTime)
-																							intervalNumber, err := strconv.Atoi(intervalNumberString)
-																							if err != nil {
-																								logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
-																								continue
-																							}
-																							interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
-																							switch interval {
-																							case "天":
-																								if fromNow {
-																									endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																									startPoint = timeNow.Format("2006-01-02 15:04:05")
-																								} else {
-																									endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
-																									startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-																								}
-																							case "周":
-																								if fromNow {
-																									endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																									startPoint = timeNow.Format("2006-01-02 15:04:05")
-																								} else {
-																									weekDay := int(timeNow.Weekday())
-																									if weekDay == 0 {
-																										weekDay = 7
-																									}
-																									endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
-																									startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
-																								}
-																							case "月":
-																								if fromNow {
-																									endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																									startPoint = timeNow.Format("2006-01-02 15:04:05")
-																								} else {
-																									endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
-																									startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-																								}
-																							case "年":
-																								if fromNow {
-																									endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																									startPoint = timeNow.Format("2006-01-02 15:04:05")
-																								} else {
-																									endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-																									startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-																								}
-																							case "季度":
-																								if fromNow {
-																									endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																									startPoint = timeNow.Format("2006-01-02 15:04:05")
-																								} else {
-																									timeNowMonth := int(timeNow.Month())
-																									quarter1 := timeNowMonth - 1
-																									quarter2 := timeNowMonth - 4
-																									quarter3 := timeNowMonth - 7
-																									quarter4 := timeNowMonth - 10
-																									quarterList := []int{quarter1, quarter2, quarter3, quarter4}
-																									min := quarter1
-																									for _, v := range quarterList {
-																										if v < min {
-																											min = v
-																										}
-																									}
-																									endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
-																									startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
-																								}
-																							case "时":
-																								if fromNow {
-																									endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																									startPoint = timeNow.Format("2006-01-02 15:04:05")
-																								} else {
-																									endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
-																									startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
-																								}
-																							case "分":
-																								if fromNow {
-																									endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
-																									startPoint = timeNow.Format("2006-01-02 15:04:05")
-																								} else {
-																									endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
-																									startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
-																								}
-																							case "秒":
-																								endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
-																								startPoint = timeNow.Format("2006-01-02 15:04:05")
-																							}
-																							timeMap = map[string]interface{}{
-																								"$gte": startPoint,
-																								"$lt":  endPoint,
-																							}
-																						} else if strings.HasPrefix(originTime, "当前") {
-																							interval := strings.ReplaceAll(originTime, "当前", "")
-																							switch interval {
-																							case "天":
-																								startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
-																							case "周":
-																								weekDay := int(timeNow.Weekday())
-																								if weekDay == 0 {
-																									weekDay = 7
-																								}
-																								startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
-																							case "月":
-																								startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
-																							case "年":
-																								startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
-																							case "季度":
-																								timeNowMonth := int(timeNow.Month())
-																								quarter1 := timeNowMonth - 1
-																								quarter2 := timeNowMonth - 4
-																								quarter3 := timeNowMonth - 7
-																								quarter4 := timeNowMonth - 10
-																								quarterList := []int{quarter1, quarter2, quarter3, quarter4}
-																								min := quarter1
-																								for _, v := range quarterList {
-																									if v < min {
-																										min = v
-																									}
-																								}
-																								startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
-																							case "时":
-																								startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
-																							case "分":
-																								startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
-																								endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
-																							case "秒":
-																								endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
-																								startPoint = timeNow.Format("2006-01-02 15:04:05")
-																							}
-																							timeMap = map[string]interface{}{
-																								"$gte": startPoint,
-																								"$lt":  endPoint,
-																							}
-																						} else {
-																							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
-																							if err != nil {
-																								continue
-																							}
-																							queryTime = eleTime.Format("2006-01-02 15:04:05")
-																						}
-																					}
-																				}
-																				if len(timeMap) != 0 {
-																					timeMapRaw[k] = timeMap
-																				} else {
-																					timeMapRaw[k] = queryTime
-																				}
-																			}
+																}
+															}
+														}
+													}
+												} else if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
+													if extRaw.Format != "" {
+														if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+															for k, v := range timeMapRaw {
+																if originTime, ok := v.(string); ok {
+																	var queryTime string
+																	var startPoint string
+																	var endPoint string
+																	timeMap := map[string]interface{}{}
+																	switch originTime {
+																	case "今天":
+																		startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
 																		}
-																	} else if originTime, ok := orVal.(string); ok {
-																		var queryTime string
-																		var startPoint string
-																		var endPoint string
-																		timeMap := map[string]interface{}{}
-																		switch originTime {
-																		case "今天":
-																			startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
-																			timeMap = map[string]interface{}{
-																				"$gte": startPoint,
-																				"$lt":  endPoint,
-																			}
-																		case "昨天":
-																			startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-																			timeMap = map[string]interface{}{
-																				"$gte": startPoint,
-																				"$lt":  endPoint,
-																			}
-																		case "明天":
-																			startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
-																			timeMap = map[string]interface{}{
-																				"$gte": startPoint,
-																				"$lt":  endPoint,
-																			}
-																		case "本周":
-																			week := int(time.Now().Weekday())
-																			if week == 0 {
-																				week = 7
-																			}
-																			startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
-																			timeMap = map[string]interface{}{
-																				"$gte": startPoint,
-																				"$lt":  endPoint,
-																			}
-																		case "上周":
-																			week := int(time.Now().Weekday())
-																			if week == 0 {
-																				week = 7
-																			}
-																			startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
-																			timeMap = map[string]interface{}{
-																				"$gte": startPoint,
-																				"$lt":  endPoint,
-																			}
-																		case "今年":
-																			startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
-																			timeMap = map[string]interface{}{
-																				"$gte": startPoint,
-																				"$lt":  endPoint,
-																			}
-																		case "去年":
-																			startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-																			timeMap = map[string]interface{}{
-																				"$gte": startPoint,
-																				"$lt":  endPoint,
-																			}
-																		case "明年":
-																			startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
-																			timeMap = map[string]interface{}{
-																				"$gte": startPoint,
-																				"$lt":  endPoint,
-																			}
-																		default:
-																			if originTime != "" {
-																				fromNow := false
-																				if strings.HasPrefix(originTime, "前") {
-																					//fmt.Println("originTime:", originTime)
-																					if strings.HasSuffix(originTime, "当前") {
-																						fromNow = true
-																						originTime = strings.ReplaceAll(originTime, "当前", "")
-																						//fmt.Println("originTime after 当前:", originTime)
-																					}
-																					intervalNumberString := numberx.GetNumberExp(originTime)
-																					intervalNumber, err := strconv.Atoi(intervalNumberString)
-																					if err != nil {
-																						logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
-																						continue
-																					}
-																					interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																					//fmt.Println("intervalNumber:", intervalNumber)
-																					//fmt.Println("interval:", interval)
-																					switch interval {
-																					case "天":
-																						if fromNow {
-																							//fmt.Println("fromNow")
-																							startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																							endPoint = timeNow.Format("2006-01-02 15:04:05")
-																						} else {
-																							startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-																						}
-																					case "周":
-																						if fromNow {
-																							startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																							endPoint = timeNow.Format("2006-01-02 15:04:05")
-																						} else {
-																							weekDay := int(timeNow.Weekday())
-																							if weekDay == 0 {
-																								weekDay = 7
-																							}
-																							startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
-																						}
-																					case "月":
-																						if fromNow {
-																							startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																							endPoint = timeNow.Format("2006-01-02 15:04:05")
-																						} else {
-																							startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-																						}
-																					case "年":
-																						if fromNow {
-																							startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																							endPoint = timeNow.Format("2006-01-02 15:04:05")
-																						} else {
-																							startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-																						}
-																					case "季度":
-																						if fromNow {
-																							startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																							endPoint = timeNow.Format("2006-01-02 15:04:05")
-																						} else {
-																							timeNowMonth := int(timeNow.Month())
-																							quarter1 := timeNowMonth - 1
-																							quarter2 := timeNowMonth - 4
-																							quarter3 := timeNowMonth - 7
-																							quarter4 := timeNowMonth - 10
-																							quarterList := []int{quarter1, quarter2, quarter3, quarter4}
-																							min := quarter1
-																							for _, v := range quarterList {
-																								if v < min {
-																									min = v
-																								}
-																							}
-																							startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
-																						}
-																					case "时":
-																						if fromNow {
-																							startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																							endPoint = timeNow.Format("2006-01-02 15:04:05")
-																						} else {
-																							startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
-																						}
-																					case "分":
-																						if fromNow {
-																							startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
-																							endPoint = timeNow.Format("2006-01-02 15:04:05")
-																						} else {
-																							startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
-																							endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
-																						}
-																					case "秒":
-																						startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																	case "昨天":
+																		startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "明天":
+																		startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "本周":
+																		week := int(time.Now().Weekday())
+																		if week == 0 {
+																			week = 7
+																		}
+																		startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "上周":
+																		week := int(time.Now().Weekday())
+																		if week == 0 {
+																			week = 7
+																		}
+																		startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "今年":
+																		startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "去年":
+																		startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "明年":
+																		startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	default:
+																		if originTime != "" {
+																			fromNow := false
+																			if strings.HasPrefix(originTime, "前") {
+																				//fmt.Println("originTime:", originTime)
+																				if strings.HasSuffix(originTime, "当前") {
+																					fromNow = true
+																					originTime = strings.ReplaceAll(originTime, "当前", "")
+																					//fmt.Println("originTime after 当前:", originTime)
+																				}
+																				intervalNumberString := numberx.GetNumberExp(originTime)
+																				intervalNumber, err := strconv.Atoi(intervalNumberString)
+																				if err != nil {
+																					logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																					continue
+																				}
+																				interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+																				//fmt.Println("intervalNumber:", intervalNumber)
+																				//fmt.Println("interval:", interval)
+																				switch interval {
+																				case "天":
+																					if fromNow {
+																						//fmt.Println("fromNow")
+																						startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
 																						endPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
 																					}
-																					timeMap = map[string]interface{}{
-																						"$gte": startPoint,
-																						"$lt":  endPoint,
-																					}
-																				} else if strings.HasPrefix(originTime, "后") {
-																					if strings.HasSuffix(originTime, "当前") {
-																						fromNow = true
-																						originTime = strings.ReplaceAll(originTime, "当前", "")
-																					}
-																					intervalNumberString := numberx.GetNumberExp(originTime)
-																					intervalNumber, err := strconv.Atoi(intervalNumberString)
-																					if err != nil {
-																						logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
-																						continue
-																					}
-																					interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
-																					switch interval {
-																					case "天":
-																						if fromNow {
-																							endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																							startPoint = timeNow.Format("2006-01-02 15:04:05")
-																						} else {
-																							endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
-																							startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-																						}
-																					case "周":
-																						if fromNow {
-																							endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																							startPoint = timeNow.Format("2006-01-02 15:04:05")
-																						} else {
-																							weekDay := int(timeNow.Weekday())
-																							if weekDay == 0 {
-																								weekDay = 7
-																							}
-																							endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
-																							startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
-																						}
-																					case "月":
-																						if fromNow {
-																							endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																							startPoint = timeNow.Format("2006-01-02 15:04:05")
-																						} else {
-																							endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
-																							startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-																						}
-																					case "年":
-																						if fromNow {
-																							endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																							startPoint = timeNow.Format("2006-01-02 15:04:05")
-																						} else {
-																							endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-																							startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-																						}
-																					case "季度":
-																						if fromNow {
-																							endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																							startPoint = timeNow.Format("2006-01-02 15:04:05")
-																						} else {
-																							timeNowMonth := int(timeNow.Month())
-																							quarter1 := timeNowMonth - 1
-																							quarter2 := timeNowMonth - 4
-																							quarter3 := timeNowMonth - 7
-																							quarter4 := timeNowMonth - 10
-																							quarterList := []int{quarter1, quarter2, quarter3, quarter4}
-																							min := quarter1
-																							for _, v := range quarterList {
-																								if v < min {
-																									min = v
-																								}
-																							}
-																							endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
-																							startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
-																						}
-																					case "时":
-																						if fromNow {
-																							endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																							startPoint = timeNow.Format("2006-01-02 15:04:05")
-																						} else {
-																							endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
-																							startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
-																						}
-																					case "分":
-																						if fromNow {
-																							endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
-																							startPoint = timeNow.Format("2006-01-02 15:04:05")
-																						} else {
-																							endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
-																							startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
-																						}
-																					case "秒":
-																						endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
-																						startPoint = timeNow.Format("2006-01-02 15:04:05")
-																					}
-																					timeMap = map[string]interface{}{
-																						"$gte": startPoint,
-																						"$lt":  endPoint,
-																					}
-																				} else if strings.HasPrefix(originTime, "当前") {
-																					interval := strings.ReplaceAll(originTime, "当前", "")
-																					switch interval {
-																					case "天":
-																						startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
-																					case "周":
+																				case "周":
+																					if fromNow {
+																						startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						endPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
 																						weekDay := int(timeNow.Weekday())
 																						if weekDay == 0 {
 																							weekDay = 7
 																						}
-																						startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
-																					case "月":
-																						startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
-																					case "年":
-																						startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
-																					case "季度":
+																						startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																					}
+																				case "月":
+																					if fromNow {
+																						startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						endPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																					}
+																				case "年":
+																					if fromNow {
+																						startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						endPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																					}
+																				case "季度":
+																					if fromNow {
+																						startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						endPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
 																						timeNowMonth := int(timeNow.Month())
 																						quarter1 := timeNowMonth - 1
 																						quarter2 := timeNowMonth - 4
@@ -10844,44 +11029,519 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 																								min = v
 																							}
 																						}
-																						startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
-																					case "时":
-																						startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
-																					case "分":
-																						startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
-																						endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
-																					case "秒":
-																						endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
-																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
 																					}
-																					timeMap = map[string]interface{}{
-																						"$gte": startPoint,
-																						"$lt":  endPoint,
+																				case "时":
+																					if fromNow {
+																						startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						endPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
 																					}
-																				} else {
-																					eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
-																					if err != nil {
-																						continue
+																				case "分":
+																					if fromNow {
+																						startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																						endPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
 																					}
-																					queryTime = eleTime.Format("2006-01-02 15:04:05")
+																				case "秒":
+																					startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																					endPoint = timeNow.Format("2006-01-02 15:04:05")
 																				}
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			} else if strings.HasPrefix(originTime, "后") {
+																				if strings.HasSuffix(originTime, "当前") {
+																					fromNow = true
+																					originTime = strings.ReplaceAll(originTime, "当前", "")
+																				}
+																				intervalNumberString := numberx.GetNumberExp(originTime)
+																				intervalNumber, err := strconv.Atoi(intervalNumberString)
+																				if err != nil {
+																					logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																					continue
+																				}
+																				interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+																				switch interval {
+																				case "天":
+																					if fromNow {
+																						endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																					}
+																				case "周":
+																					if fromNow {
+																						endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						weekDay := int(timeNow.Weekday())
+																						if weekDay == 0 {
+																							weekDay = 7
+																						}
+																						endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																					}
+																				case "月":
+																					if fromNow {
+																						endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																					}
+																				case "年":
+																					if fromNow {
+																						endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																					}
+																				case "季度":
+																					if fromNow {
+																						endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						timeNowMonth := int(timeNow.Month())
+																						quarter1 := timeNowMonth - 1
+																						quarter2 := timeNowMonth - 4
+																						quarter3 := timeNowMonth - 7
+																						quarter4 := timeNowMonth - 10
+																						quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																						min := quarter1
+																						for _, v := range quarterList {
+																							if v < min {
+																								min = v
+																							}
+																						}
+																						endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																					}
+																				case "时":
+																					if fromNow {
+																						endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																					}
+																				case "分":
+																					if fromNow {
+																						endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																					}
+																				case "秒":
+																					endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																					startPoint = timeNow.Format("2006-01-02 15:04:05")
+																				}
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			} else if strings.HasPrefix(originTime, "当前") {
+																				interval := strings.ReplaceAll(originTime, "当前", "")
+																				switch interval {
+																				case "天":
+																					startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																				case "周":
+																					weekDay := int(timeNow.Weekday())
+																					if weekDay == 0 {
+																						weekDay = 7
+																					}
+																					startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+																				case "月":
+																					startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																				case "年":
+																					startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																				case "季度":
+																					timeNowMonth := int(timeNow.Month())
+																					quarter1 := timeNowMonth - 1
+																					quarter2 := timeNowMonth - 4
+																					quarter3 := timeNowMonth - 7
+																					quarter4 := timeNowMonth - 10
+																					quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																					min := quarter1
+																					for _, v := range quarterList {
+																						if v < min {
+																							min = v
+																						}
+																					}
+																					startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+																				case "时":
+																					startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																				case "分":
+																					startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																				case "秒":
+																					endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+																					startPoint = timeNow.Format("2006-01-02 15:04:05")
+																				}
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			} else {
+																				eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																				if err != nil {
+																					continue
+																				}
+																				queryTime = eleTime.Format("2006-01-02 15:04:05")
 																			}
 																		}
-																		if len(timeMap) != 0 {
-																			orEleMap[orKey] = timeMap
-																		} else {
-																			orEleMap[orKey] = queryTime
-																		}
+																	}
+																	if len(timeMap) != 0 {
+																		timeMapRaw[k] = timeMap
+																	} else {
+																		timeMapRaw[k] = queryTime
 																	}
 																}
 															}
+														} else if originTime, ok := orVal.(string); ok {
+															var queryTime string
+															var startPoint string
+															var endPoint string
+															timeMap := map[string]interface{}{}
+															switch originTime {
+															case "今天":
+																startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "昨天":
+																startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "明天":
+																startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "本周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "上周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "今年":
+																startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "去年":
+																startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "明年":
+																startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															default:
+																if originTime != "" {
+																	fromNow := false
+																	if strings.HasPrefix(originTime, "前") {
+																		//fmt.Println("originTime:", originTime)
+																		if strings.HasSuffix(originTime, "当前") {
+																			fromNow = true
+																			originTime = strings.ReplaceAll(originTime, "当前", "")
+																			//fmt.Println("originTime after 当前:", originTime)
+																		}
+																		intervalNumberString := numberx.GetNumberExp(originTime)
+																		intervalNumber, err := strconv.Atoi(intervalNumberString)
+																		if err != nil {
+																			logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																			continue
+																		}
+																		interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+																		//fmt.Println("intervalNumber:", intervalNumber)
+																		//fmt.Println("interval:", interval)
+																		switch interval {
+																		case "天":
+																			if fromNow {
+																				//fmt.Println("fromNow")
+																				startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				endPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																			}
+																		case "周":
+																			if fromNow {
+																				startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				endPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				weekDay := int(timeNow.Weekday())
+																				if weekDay == 0 {
+																					weekDay = 7
+																				}
+																				startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																			}
+																		case "月":
+																			if fromNow {
+																				startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				endPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																			}
+																		case "年":
+																			if fromNow {
+																				startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				endPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																			}
+																		case "季度":
+																			if fromNow {
+																				startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				endPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				timeNowMonth := int(timeNow.Month())
+																				quarter1 := timeNowMonth - 1
+																				quarter2 := timeNowMonth - 4
+																				quarter3 := timeNowMonth - 7
+																				quarter4 := timeNowMonth - 10
+																				quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																				min := quarter1
+																				for _, v := range quarterList {
+																					if v < min {
+																						min = v
+																					}
+																				}
+																				startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																			}
+																		case "时":
+																			if fromNow {
+																				startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				endPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																			}
+																		case "分":
+																			if fromNow {
+																				startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																				endPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
+																			}
+																		case "秒":
+																			startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																			endPoint = timeNow.Format("2006-01-02 15:04:05")
+																		}
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	} else if strings.HasPrefix(originTime, "后") {
+																		if strings.HasSuffix(originTime, "当前") {
+																			fromNow = true
+																			originTime = strings.ReplaceAll(originTime, "当前", "")
+																		}
+																		intervalNumberString := numberx.GetNumberExp(originTime)
+																		intervalNumber, err := strconv.Atoi(intervalNumberString)
+																		if err != nil {
+																			logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																			continue
+																		}
+																		interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+																		switch interval {
+																		case "天":
+																			if fromNow {
+																				endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				startPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																			}
+																		case "周":
+																			if fromNow {
+																				endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				startPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				weekDay := int(timeNow.Weekday())
+																				if weekDay == 0 {
+																					weekDay = 7
+																				}
+																				endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																			}
+																		case "月":
+																			if fromNow {
+																				endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				startPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																			}
+																		case "年":
+																			if fromNow {
+																				endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				startPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																			}
+																		case "季度":
+																			if fromNow {
+																				endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				startPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				timeNowMonth := int(timeNow.Month())
+																				quarter1 := timeNowMonth - 1
+																				quarter2 := timeNowMonth - 4
+																				quarter3 := timeNowMonth - 7
+																				quarter4 := timeNowMonth - 10
+																				quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																				min := quarter1
+																				for _, v := range quarterList {
+																					if v < min {
+																						min = v
+																					}
+																				}
+																				endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																			}
+																		case "时":
+																			if fromNow {
+																				endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				startPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																			}
+																		case "分":
+																			if fromNow {
+																				endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																				startPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																			}
+																		case "秒":
+																			endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																			startPoint = timeNow.Format("2006-01-02 15:04:05")
+																		}
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	} else if strings.HasPrefix(originTime, "当前") {
+																		interval := strings.ReplaceAll(originTime, "当前", "")
+																		switch interval {
+																		case "天":
+																			startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																		case "周":
+																			weekDay := int(timeNow.Weekday())
+																			if weekDay == 0 {
+																				weekDay = 7
+																			}
+																			startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+																		case "月":
+																			startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																		case "年":
+																			startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																		case "季度":
+																			timeNowMonth := int(timeNow.Month())
+																			quarter1 := timeNowMonth - 1
+																			quarter2 := timeNowMonth - 4
+																			quarter3 := timeNowMonth - 7
+																			quarter4 := timeNowMonth - 10
+																			quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																			min := quarter1
+																			for _, v := range quarterList {
+																				if v < min {
+																					min = v
+																				}
+																			}
+																			startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+																		case "时":
+																			startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																		case "分":
+																			startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																		case "秒":
+																			endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+																			startPoint = timeNow.Format("2006-01-02 15:04:05")
+																		}
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	} else {
+																		eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																		if err != nil {
+																			continue
+																		}
+																		queryTime = eleTime.Format("2006-01-02 15:04:05")
+																	}
+																}
+															}
+															if len(timeMap) != 0 {
+																orEleMap[orKey] = timeMap
+															} else {
+																orEleMap[orKey] = queryTime
+															}
 														}
 													}
-												}
-											} else if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
-												if extRaw.Format != "" {
+												} else if orKey == "createTime" || orKey == "modifyTime" {
 													if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
 														for k, v := range timeMapRaw {
 															if originTime, ok := v.(string); ok {
@@ -11540,338 +12200,41 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 														}
 													}
 												}
-											} else if orKey == "createTime" || orKey == "modifyTime" {
-												if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
-													for k, v := range timeMapRaw {
-														if originTime, ok := v.(string); ok {
-															var queryTime string
-															var startPoint string
-															var endPoint string
-															timeMap := map[string]interface{}{}
-															switch originTime {
-															case "今天":
-																startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-																endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
-																timeMap = map[string]interface{}{
-																	"$gte": startPoint,
-																	"$lt":  endPoint,
-																}
-															case "昨天":
-																startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
-																endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-																timeMap = map[string]interface{}{
-																	"$gte": startPoint,
-																	"$lt":  endPoint,
-																}
-															case "明天":
-																startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
-																endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
-																timeMap = map[string]interface{}{
-																	"$gte": startPoint,
-																	"$lt":  endPoint,
-																}
-															case "本周":
-																week := int(time.Now().Weekday())
-																if week == 0 {
-																	week = 7
-																}
-																startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
-																endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
-																timeMap = map[string]interface{}{
-																	"$gte": startPoint,
-																	"$lt":  endPoint,
-																}
-															case "上周":
-																week := int(time.Now().Weekday())
-																if week == 0 {
-																	week = 7
-																}
-																startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
-																endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
-																timeMap = map[string]interface{}{
-																	"$gte": startPoint,
-																	"$lt":  endPoint,
-																}
-															case "今年":
-																startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-																endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
-																timeMap = map[string]interface{}{
-																	"$gte": startPoint,
-																	"$lt":  endPoint,
-																}
-															case "去年":
-																startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
-																endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-																timeMap = map[string]interface{}{
-																	"$gte": startPoint,
-																	"$lt":  endPoint,
-																}
-															case "明年":
-																startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
-																endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
-																timeMap = map[string]interface{}{
-																	"$gte": startPoint,
-																	"$lt":  endPoint,
-																}
-															default:
-																if originTime != "" {
-																	fromNow := false
-																	if strings.HasPrefix(originTime, "前") {
-																		//fmt.Println("originTime:", originTime)
-																		if strings.HasSuffix(originTime, "当前") {
-																			fromNow = true
-																			originTime = strings.ReplaceAll(originTime, "当前", "")
-																			//fmt.Println("originTime after 当前:", originTime)
-																		}
-																		intervalNumberString := numberx.GetNumberExp(originTime)
-																		intervalNumber, err := strconv.Atoi(intervalNumberString)
-																		if err != nil {
-																			logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
-																			continue
-																		}
-																		interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
-																		//fmt.Println("intervalNumber:", intervalNumber)
-																		//fmt.Println("interval:", interval)
-																		switch interval {
-																		case "天":
-																			if fromNow {
-																				//fmt.Println("fromNow")
-																				startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																				endPoint = timeNow.Format("2006-01-02 15:04:05")
-																			} else {
-																				startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-																			}
-																		case "周":
-																			if fromNow {
-																				startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																				endPoint = timeNow.Format("2006-01-02 15:04:05")
-																			} else {
-																				weekDay := int(timeNow.Weekday())
-																				if weekDay == 0 {
-																					weekDay = 7
-																				}
-																				startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
-																			}
-																		case "月":
-																			if fromNow {
-																				startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																				endPoint = timeNow.Format("2006-01-02 15:04:05")
-																			} else {
-																				startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-																			}
-																		case "年":
-																			if fromNow {
-																				startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																				endPoint = timeNow.Format("2006-01-02 15:04:05")
-																			} else {
-																				startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-																			}
-																		case "季度":
-																			if fromNow {
-																				startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																				endPoint = timeNow.Format("2006-01-02 15:04:05")
-																			} else {
-																				timeNowMonth := int(timeNow.Month())
-																				quarter1 := timeNowMonth - 1
-																				quarter2 := timeNowMonth - 4
-																				quarter3 := timeNowMonth - 7
-																				quarter4 := timeNowMonth - 10
-																				quarterList := []int{quarter1, quarter2, quarter3, quarter4}
-																				min := quarter1
-																				for _, v := range quarterList {
-																					if v < min {
-																						min = v
-																					}
-																				}
-																				startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
-																			}
-																		case "时":
-																			if fromNow {
-																				startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																				endPoint = timeNow.Format("2006-01-02 15:04:05")
-																			} else {
-																				startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
-																			}
-																		case "分":
-																			if fromNow {
-																				startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
-																				endPoint = timeNow.Format("2006-01-02 15:04:05")
-																			} else {
-																				startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
-																				endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
-																			}
-																		case "秒":
-																			startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
-																			endPoint = timeNow.Format("2006-01-02 15:04:05")
-																		}
-																		timeMap = map[string]interface{}{
-																			"$gte": startPoint,
-																			"$lt":  endPoint,
-																		}
-																	} else if strings.HasPrefix(originTime, "后") {
-																		if strings.HasSuffix(originTime, "当前") {
-																			fromNow = true
-																			originTime = strings.ReplaceAll(originTime, "当前", "")
-																		}
-																		intervalNumberString := numberx.GetNumberExp(originTime)
-																		intervalNumber, err := strconv.Atoi(intervalNumberString)
-																		if err != nil {
-																			logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
-																			continue
-																		}
-																		interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
-																		switch interval {
-																		case "天":
-																			if fromNow {
-																				endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																				startPoint = timeNow.Format("2006-01-02 15:04:05")
-																			} else {
-																				endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
-																				startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
-																			}
-																		case "周":
-																			if fromNow {
-																				endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																				startPoint = timeNow.Format("2006-01-02 15:04:05")
-																			} else {
-																				weekDay := int(timeNow.Weekday())
-																				if weekDay == 0 {
-																					weekDay = 7
-																				}
-																				endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
-																				startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
-																			}
-																		case "月":
-																			if fromNow {
-																				endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																				startPoint = timeNow.Format("2006-01-02 15:04:05")
-																			} else {
-																				endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
-																				startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
-																			}
-																		case "年":
-																			if fromNow {
-																				endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																				startPoint = timeNow.Format("2006-01-02 15:04:05")
-																			} else {
-																				endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-																				startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
-																			}
-																		case "季度":
-																			if fromNow {
-																				endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																				startPoint = timeNow.Format("2006-01-02 15:04:05")
-																			} else {
-																				timeNowMonth := int(timeNow.Month())
-																				quarter1 := timeNowMonth - 1
-																				quarter2 := timeNowMonth - 4
-																				quarter3 := timeNowMonth - 7
-																				quarter4 := timeNowMonth - 10
-																				quarterList := []int{quarter1, quarter2, quarter3, quarter4}
-																				min := quarter1
-																				for _, v := range quarterList {
-																					if v < min {
-																						min = v
-																					}
-																				}
-																				endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
-																				startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
-																			}
-																		case "时":
-																			if fromNow {
-																				endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
-																				startPoint = timeNow.Format("2006-01-02 15:04:05")
-																			} else {
-																				endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
-																				startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
-																			}
-																		case "分":
-																			if fromNow {
-																				endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
-																				startPoint = timeNow.Format("2006-01-02 15:04:05")
-																			} else {
-																				endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
-																				startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
-																			}
-																		case "秒":
-																			endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
-																			startPoint = timeNow.Format("2006-01-02 15:04:05")
-																		}
-																		timeMap = map[string]interface{}{
-																			"$gte": startPoint,
-																			"$lt":  endPoint,
-																		}
-																	} else if strings.HasPrefix(originTime, "当前") {
-																		interval := strings.ReplaceAll(originTime, "当前", "")
-																		switch interval {
-																		case "天":
-																			startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
-																		case "周":
-																			weekDay := int(timeNow.Weekday())
-																			if weekDay == 0 {
-																				weekDay = 7
-																			}
-																			startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
-																		case "月":
-																			startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
-																		case "年":
-																			startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
-																		case "季度":
-																			timeNowMonth := int(timeNow.Month())
-																			quarter1 := timeNowMonth - 1
-																			quarter2 := timeNowMonth - 4
-																			quarter3 := timeNowMonth - 7
-																			quarter4 := timeNowMonth - 10
-																			quarterList := []int{quarter1, quarter2, quarter3, quarter4}
-																			min := quarter1
-																			for _, v := range quarterList {
-																				if v < min {
-																					min = v
-																				}
-																			}
-																			startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
-																		case "时":
-																			startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
-																		case "分":
-																			startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
-																			endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
-																		case "秒":
-																			endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
-																			startPoint = timeNow.Format("2006-01-02 15:04:05")
-																		}
-																		timeMap = map[string]interface{}{
-																			"$gte": startPoint,
-																			"$lt":  endPoint,
-																		}
-																	} else {
-																		eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
-																		if err != nil {
-																			continue
-																		}
-																		queryTime = eleTime.Format("2006-01-02 15:04:05")
-																	}
-																}
-															}
-															if len(timeMap) != 0 {
-																timeMapRaw[k] = timeMap
-															} else {
-																timeMapRaw[k] = queryTime
-															}
-														}
-													}
-												} else if originTime, ok := orVal.(string); ok {
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}else{
+				switch settings.SelectTyp {
+				case "记录选择":
+					deleteID, ok := data["id"].(string)
+					if !ok {
+						continue
+					}
+					canDelete := false
+					for _, record := range settings.SelectRecord {
+						if deleteID == record.ID {
+							canDelete = true
+							break
+						}
+					}
+					if !canDelete {
+						continue
+					}
+				case "范围定义":
+					if filter, ok := settings.Query["filter"]; ok {
+						if filterM, ok := filter.(map[string]interface{}); ok {
+							for key, val := range filterM {
+								if extRaw, ok := excelColNameTypeExtMap[key]; ok {
+									//fmt.Println("excelColNameTypeExtMap[key] in:", key)
+									if extRaw.Format != "" {
+										if timeMapRaw, ok := val.(map[string]interface{}); ok {
+											for k, v := range timeMapRaw {
+												if originTime, ok := v.(string); ok {
 													var queryTime string
 													var startPoint string
 													var endPoint string
@@ -12193,9 +12556,3652 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 														}
 													}
 													if len(timeMap) != 0 {
-														orEleMap[orKey] = timeMap
+														timeMapRaw[k] = timeMap
 													} else {
-														orEleMap[orKey] = queryTime
+														timeMapRaw[k] = queryTime
+													}
+												}
+											}
+										} else if originTime, ok := val.(string); ok {
+											var queryTime string
+											var startPoint string
+											var endPoint string
+											timeMap := map[string]interface{}{}
+											switch originTime {
+											case "今天":
+												startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "昨天":
+												startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "明天":
+												startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "本周":
+												week := int(time.Now().Weekday())
+												if week == 0 {
+													week = 7
+												}
+												startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "上周":
+												week := int(time.Now().Weekday())
+												if week == 0 {
+													week = 7
+												}
+												startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "今年":
+												startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "去年":
+												startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											case "明年":
+												startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+												endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+												timeMap = map[string]interface{}{
+													"$gte": startPoint,
+													"$lt":  endPoint,
+												}
+											default:
+												if originTime != "" {
+													fromNow := false
+													if strings.HasPrefix(originTime, "前") {
+														//fmt.Println("originTime:", originTime)
+														if strings.HasSuffix(originTime, "当前") {
+															fromNow = true
+															originTime = strings.ReplaceAll(originTime, "当前", "")
+															//fmt.Println("originTime after 当前:", originTime)
+														}
+														intervalNumberString := numberx.GetNumberExp(originTime)
+														intervalNumber, err := strconv.Atoi(intervalNumberString)
+														if err != nil {
+															logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+															continue
+														}
+														interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+														//fmt.Println("intervalNumber:", intervalNumber)
+														//fmt.Println("interval:", interval)
+														switch interval {
+														case "天":
+															if fromNow {
+																//fmt.Println("fromNow")
+																startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																endPoint = timeNow.Format("2006-01-02 15:04:05")
+															} else {
+																startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+															}
+														case "周":
+															if fromNow {
+																startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																endPoint = timeNow.Format("2006-01-02 15:04:05")
+															} else {
+																weekDay := int(timeNow.Weekday())
+																if weekDay == 0 {
+																	weekDay = 7
+																}
+																startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+															}
+														case "月":
+															if fromNow {
+																startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																endPoint = timeNow.Format("2006-01-02 15:04:05")
+															} else {
+																startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+															}
+														case "年":
+															if fromNow {
+																startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																endPoint = timeNow.Format("2006-01-02 15:04:05")
+															} else {
+																startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+															}
+														case "季度":
+															if fromNow {
+																startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																endPoint = timeNow.Format("2006-01-02 15:04:05")
+															} else {
+																timeNowMonth := int(timeNow.Month())
+																quarter1 := timeNowMonth - 1
+																quarter2 := timeNowMonth - 4
+																quarter3 := timeNowMonth - 7
+																quarter4 := timeNowMonth - 10
+																quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																min := quarter1
+																for _, v := range quarterList {
+																	if v < min {
+																		min = v
+																	}
+																}
+																startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+															}
+														case "时":
+															if fromNow {
+																startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																endPoint = timeNow.Format("2006-01-02 15:04:05")
+															} else {
+																startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+															}
+														case "分":
+															if fromNow {
+																startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																endPoint = timeNow.Format("2006-01-02 15:04:05")
+															} else {
+																startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
+															}
+														case "秒":
+															startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+															endPoint = timeNow.Format("2006-01-02 15:04:05")
+														}
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													} else if strings.HasPrefix(originTime, "后") {
+														if strings.HasSuffix(originTime, "当前") {
+															fromNow = true
+															originTime = strings.ReplaceAll(originTime, "当前", "")
+														}
+														intervalNumberString := numberx.GetNumberExp(originTime)
+														intervalNumber, err := strconv.Atoi(intervalNumberString)
+														if err != nil {
+															logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+															continue
+														}
+														interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+														switch interval {
+														case "天":
+															if fromNow {
+																endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																startPoint = timeNow.Format("2006-01-02 15:04:05")
+															} else {
+																endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+																startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+															}
+														case "周":
+															if fromNow {
+																endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																startPoint = timeNow.Format("2006-01-02 15:04:05")
+															} else {
+																weekDay := int(timeNow.Weekday())
+																if weekDay == 0 {
+																	weekDay = 7
+																}
+																endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+															}
+														case "月":
+															if fromNow {
+																endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																startPoint = timeNow.Format("2006-01-02 15:04:05")
+															} else {
+																endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+																startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+															}
+														case "年":
+															if fromNow {
+																endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																startPoint = timeNow.Format("2006-01-02 15:04:05")
+															} else {
+																endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+															}
+														case "季度":
+															if fromNow {
+																endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																startPoint = timeNow.Format("2006-01-02 15:04:05")
+															} else {
+																timeNowMonth := int(timeNow.Month())
+																quarter1 := timeNowMonth - 1
+																quarter2 := timeNowMonth - 4
+																quarter3 := timeNowMonth - 7
+																quarter4 := timeNowMonth - 10
+																quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																min := quarter1
+																for _, v := range quarterList {
+																	if v < min {
+																		min = v
+																	}
+																}
+																endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+															}
+														case "时":
+															if fromNow {
+																endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																startPoint = timeNow.Format("2006-01-02 15:04:05")
+															} else {
+																endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+															}
+														case "分":
+															if fromNow {
+																endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																startPoint = timeNow.Format("2006-01-02 15:04:05")
+															} else {
+																endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+															}
+														case "秒":
+															endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+															startPoint = timeNow.Format("2006-01-02 15:04:05")
+														}
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													} else if strings.HasPrefix(originTime, "当前") {
+														interval := strings.ReplaceAll(originTime, "当前", "")
+														switch interval {
+														case "天":
+															startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+														case "周":
+															weekDay := int(timeNow.Weekday())
+															if weekDay == 0 {
+																weekDay = 7
+															}
+															startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+														case "月":
+															startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+														case "年":
+															startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+														case "季度":
+															timeNowMonth := int(timeNow.Month())
+															quarter1 := timeNowMonth - 1
+															quarter2 := timeNowMonth - 4
+															quarter3 := timeNowMonth - 7
+															quarter4 := timeNowMonth - 10
+															quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+															min := quarter1
+															for _, v := range quarterList {
+																if v < min {
+																	min = v
+																}
+															}
+															startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+														case "时":
+															startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+														case "分":
+															startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+														case "秒":
+															endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+															startPoint = timeNow.Format("2006-01-02 15:04:05")
+														}
+														timeMap = map[string]interface{}{
+															"$gte": startPoint,
+															"$lt":  endPoint,
+														}
+													} else {
+														eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+														if err != nil {
+															continue
+														}
+														queryTime = eleTime.Format("2006-01-02 15:04:05")
+													}
+												}
+											}
+											if len(timeMap) != 0 {
+												filterM[key] = timeMap
+											} else {
+												filterM[key] = queryTime
+											}
+										}
+									}
+								} else if key == "createTime" || key == "modifyTime" {
+									//fmt.Println("createTime[key] in:", key, "val:", val)
+									if timeMapRaw, ok := val.(map[string]interface{}); ok {
+										for k, v := range timeMapRaw {
+											if originTime, ok := v.(string); ok {
+												var queryTime string
+												var startPoint string
+												var endPoint string
+												timeMap := map[string]interface{}{}
+												switch originTime {
+												case "今天":
+													startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "昨天":
+													startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "明天":
+													startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "本周":
+													week := int(time.Now().Weekday())
+													if week == 0 {
+														week = 7
+													}
+													startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "上周":
+													week := int(time.Now().Weekday())
+													if week == 0 {
+														week = 7
+													}
+													startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "今年":
+													startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "去年":
+													startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												case "明年":
+													startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+													endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												default:
+													if originTime != "" {
+														fromNow := false
+														if strings.HasPrefix(originTime, "前") {
+															//fmt.Println("originTime:", originTime)
+															if strings.HasSuffix(originTime, "当前") {
+																fromNow = true
+																originTime = strings.ReplaceAll(originTime, "当前", "")
+																//fmt.Println("originTime after 当前:", originTime)
+															}
+															intervalNumberString := numberx.GetNumberExp(originTime)
+															intervalNumber, err := strconv.Atoi(intervalNumberString)
+															if err != nil {
+																logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																continue
+															}
+															interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+															//fmt.Println("intervalNumber:", intervalNumber)
+															//fmt.Println("interval:", interval)
+															switch interval {
+															case "天":
+																if fromNow {
+																	//fmt.Println("fromNow")
+																	startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	endPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																}
+															case "周":
+																if fromNow {
+																	startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	endPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	weekDay := int(timeNow.Weekday())
+																	if weekDay == 0 {
+																		weekDay = 7
+																	}
+																	startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																}
+															case "月":
+																if fromNow {
+																	startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	endPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																}
+															case "年":
+																if fromNow {
+																	startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	endPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																}
+															case "季度":
+																if fromNow {
+																	startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	endPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	timeNowMonth := int(timeNow.Month())
+																	quarter1 := timeNowMonth - 1
+																	quarter2 := timeNowMonth - 4
+																	quarter3 := timeNowMonth - 7
+																	quarter4 := timeNowMonth - 10
+																	quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																	min := quarter1
+																	for _, v := range quarterList {
+																		if v < min {
+																			min = v
+																		}
+																	}
+																	startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																}
+															case "时":
+																if fromNow {
+																	startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	endPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																}
+															case "分":
+																if fromNow {
+																	startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																	endPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
+																}
+															case "秒":
+																startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																endPoint = timeNow.Format("2006-01-02 15:04:05")
+															}
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														} else if strings.HasPrefix(originTime, "后") {
+															if strings.HasSuffix(originTime, "当前") {
+																fromNow = true
+																originTime = strings.ReplaceAll(originTime, "当前", "")
+															}
+															intervalNumberString := numberx.GetNumberExp(originTime)
+															intervalNumber, err := strconv.Atoi(intervalNumberString)
+															if err != nil {
+																logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																continue
+															}
+															interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+															switch interval {
+															case "天":
+																if fromNow {
+																	endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	startPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																}
+															case "周":
+																if fromNow {
+																	endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	startPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	weekDay := int(timeNow.Weekday())
+																	if weekDay == 0 {
+																		weekDay = 7
+																	}
+																	endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																}
+															case "月":
+																if fromNow {
+																	endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	startPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																}
+															case "年":
+																if fromNow {
+																	endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	startPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																}
+															case "季度":
+																if fromNow {
+																	endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	startPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	timeNowMonth := int(timeNow.Month())
+																	quarter1 := timeNowMonth - 1
+																	quarter2 := timeNowMonth - 4
+																	quarter3 := timeNowMonth - 7
+																	quarter4 := timeNowMonth - 10
+																	quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																	min := quarter1
+																	for _, v := range quarterList {
+																		if v < min {
+																			min = v
+																		}
+																	}
+																	endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																}
+															case "时":
+																if fromNow {
+																	endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																	startPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																}
+															case "分":
+																if fromNow {
+																	endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																	startPoint = timeNow.Format("2006-01-02 15:04:05")
+																} else {
+																	endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																	startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																}
+															case "秒":
+																endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																startPoint = timeNow.Format("2006-01-02 15:04:05")
+															}
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														} else if strings.HasPrefix(originTime, "当前") {
+															interval := strings.ReplaceAll(originTime, "当前", "")
+															switch interval {
+															case "天":
+																startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+															case "周":
+																weekDay := int(timeNow.Weekday())
+																if weekDay == 0 {
+																	weekDay = 7
+																}
+																startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+															case "月":
+																startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+															case "年":
+																startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+															case "季度":
+																timeNowMonth := int(timeNow.Month())
+																quarter1 := timeNowMonth - 1
+																quarter2 := timeNowMonth - 4
+																quarter3 := timeNowMonth - 7
+																quarter4 := timeNowMonth - 10
+																quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																min := quarter1
+																for _, v := range quarterList {
+																	if v < min {
+																		min = v
+																	}
+																}
+																startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+															case "时":
+																startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+															case "分":
+																startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+															case "秒":
+																endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+																startPoint = timeNow.Format("2006-01-02 15:04:05")
+															}
+															timeMap = map[string]interface{}{
+																"$gte": startPoint,
+																"$lt":  endPoint,
+															}
+														} else {
+															eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+															if err != nil {
+																continue
+															}
+															queryTime = eleTime.Format("2006-01-02 15:04:05")
+														}
+													}
+												}
+												if len(timeMap) != 0 {
+													timeMapRaw[k] = timeMap
+												} else {
+													timeMapRaw[k] = queryTime
+												}
+											}
+										}
+									} else if originTime, ok := val.(string); ok {
+										//fmt.Println("val.(string):", val.(string))
+										var queryTime string
+										var startPoint string
+										var endPoint string
+										timeMap := map[string]interface{}{}
+										switch originTime {
+										case "今天":
+											startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "昨天":
+											startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "明天":
+											startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "本周":
+											week := int(time.Now().Weekday())
+											if week == 0 {
+												week = 7
+											}
+											startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "上周":
+											week := int(time.Now().Weekday())
+											if week == 0 {
+												week = 7
+											}
+											startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "今年":
+											startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "去年":
+											startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										case "明年":
+											startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+											endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+											timeMap = map[string]interface{}{
+												"$gte": startPoint,
+												"$lt":  endPoint,
+											}
+										default:
+											if originTime != "" {
+												fromNow := false
+												if strings.HasPrefix(originTime, "前") {
+													//fmt.Println("originTime:", originTime)
+													if strings.HasSuffix(originTime, "当前") {
+														fromNow = true
+														originTime = strings.ReplaceAll(originTime, "当前", "")
+														//fmt.Println("originTime after 当前:", originTime)
+													}
+													intervalNumberString := numberx.GetNumberExp(originTime)
+													intervalNumber, err := strconv.Atoi(intervalNumberString)
+													if err != nil {
+														logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+														continue
+													}
+													interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+													//fmt.Println("intervalNumber:", intervalNumber)
+													//fmt.Println("interval:", interval)
+													switch interval {
+													case "天":
+														if fromNow {
+															//fmt.Println("fromNow")
+															startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															endPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+														}
+													case "周":
+														if fromNow {
+															startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															endPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															weekDay := int(timeNow.Weekday())
+															if weekDay == 0 {
+																weekDay = 7
+															}
+															startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+														}
+													case "月":
+														if fromNow {
+															startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															endPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+														}
+													case "年":
+														if fromNow {
+															startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															endPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+														}
+													case "季度":
+														if fromNow {
+															startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															endPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															timeNowMonth := int(timeNow.Month())
+															quarter1 := timeNowMonth - 1
+															quarter2 := timeNowMonth - 4
+															quarter3 := timeNowMonth - 7
+															quarter4 := timeNowMonth - 10
+															quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+															min := quarter1
+															for _, v := range quarterList {
+																if v < min {
+																	min = v
+																}
+															}
+															startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+														}
+													case "时":
+														if fromNow {
+															startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															endPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+														}
+													case "分":
+														if fromNow {
+															startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+															endPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+															endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
+														}
+													case "秒":
+														startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+														endPoint = timeNow.Format("2006-01-02 15:04:05")
+													}
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												} else if strings.HasPrefix(originTime, "后") {
+													if strings.HasSuffix(originTime, "当前") {
+														fromNow = true
+														originTime = strings.ReplaceAll(originTime, "当前", "")
+													}
+													intervalNumberString := numberx.GetNumberExp(originTime)
+													intervalNumber, err := strconv.Atoi(intervalNumberString)
+													if err != nil {
+														logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+														continue
+													}
+													interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+													switch interval {
+													case "天":
+														if fromNow {
+															endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															startPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+														}
+													case "周":
+														if fromNow {
+															endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															startPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															weekDay := int(timeNow.Weekday())
+															if weekDay == 0 {
+																weekDay = 7
+															}
+															endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+														}
+													case "月":
+														if fromNow {
+															endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															startPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+														}
+													case "年":
+														if fromNow {
+															endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															startPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+														}
+													case "季度":
+														if fromNow {
+															endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															startPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															timeNowMonth := int(timeNow.Month())
+															quarter1 := timeNowMonth - 1
+															quarter2 := timeNowMonth - 4
+															quarter3 := timeNowMonth - 7
+															quarter4 := timeNowMonth - 10
+															quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+															min := quarter1
+															for _, v := range quarterList {
+																if v < min {
+																	min = v
+																}
+															}
+															endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+														}
+													case "时":
+														if fromNow {
+															endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+															startPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+														}
+													case "分":
+														if fromNow {
+															endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+															startPoint = timeNow.Format("2006-01-02 15:04:05")
+														} else {
+															endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+															startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+														}
+													case "秒":
+														endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+														startPoint = timeNow.Format("2006-01-02 15:04:05")
+													}
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												} else if strings.HasPrefix(originTime, "当前") {
+													interval := strings.ReplaceAll(originTime, "当前", "")
+													switch interval {
+													case "天":
+														startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+													case "周":
+														weekDay := int(timeNow.Weekday())
+														if weekDay == 0 {
+															weekDay = 7
+														}
+														startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+													case "月":
+														startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+													case "年":
+														startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+													case "季度":
+														timeNowMonth := int(timeNow.Month())
+														quarter1 := timeNowMonth - 1
+														quarter2 := timeNowMonth - 4
+														quarter3 := timeNowMonth - 7
+														quarter4 := timeNowMonth - 10
+														quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+														min := quarter1
+														for _, v := range quarterList {
+															if v < min {
+																min = v
+															}
+														}
+														startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+													case "时":
+														startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+													case "分":
+														startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+														endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+													case "秒":
+														endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+														startPoint = timeNow.Format("2006-01-02 15:04:05")
+													}
+													timeMap = map[string]interface{}{
+														"$gte": startPoint,
+														"$lt":  endPoint,
+													}
+												} else {
+													eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+													if err != nil {
+														continue
+													}
+													queryTime = eleTime.Format("2006-01-02 15:04:05")
+												}
+											}
+										}
+										if len(timeMap) != 0 {
+											filterM[key] = timeMap
+										} else {
+											filterM[key] = queryTime
+										}
+									}
+								}
+								if key == "$or" {
+									if orList, ok := val.([]interface{}); ok {
+										for _, orEle := range orList {
+											if orEleMap, ok := orEle.(map[string]interface{}); ok {
+												for orKey, orVal := range orEleMap {
+													if orKey == "$and" {
+														if orList, ok := orVal.([]interface{}); ok {
+															for _, orEle := range orList {
+																if orEleMap, ok := orEle.(map[string]interface{}); ok {
+																	for orKey, orVal := range orEleMap {
+																		if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
+																			if extRaw.Format != "" {
+																				if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+																					for k, v := range timeMapRaw {
+																						if originTime, ok := v.(string); ok {
+																							var queryTime string
+																							var startPoint string
+																							var endPoint string
+																							timeMap := map[string]interface{}{}
+																							switch originTime {
+																							case "今天":
+																								startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																								timeMap = map[string]interface{}{
+																									"$gte": startPoint,
+																									"$lt":  endPoint,
+																								}
+																							case "昨天":
+																								startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																								timeMap = map[string]interface{}{
+																									"$gte": startPoint,
+																									"$lt":  endPoint,
+																								}
+																							case "明天":
+																								startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																								timeMap = map[string]interface{}{
+																									"$gte": startPoint,
+																									"$lt":  endPoint,
+																								}
+																							case "本周":
+																								week := int(time.Now().Weekday())
+																								if week == 0 {
+																									week = 7
+																								}
+																								startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																								timeMap = map[string]interface{}{
+																									"$gte": startPoint,
+																									"$lt":  endPoint,
+																								}
+																							case "上周":
+																								week := int(time.Now().Weekday())
+																								if week == 0 {
+																									week = 7
+																								}
+																								startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																								timeMap = map[string]interface{}{
+																									"$gte": startPoint,
+																									"$lt":  endPoint,
+																								}
+																							case "今年":
+																								startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																								timeMap = map[string]interface{}{
+																									"$gte": startPoint,
+																									"$lt":  endPoint,
+																								}
+																							case "去年":
+																								startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																								timeMap = map[string]interface{}{
+																									"$gte": startPoint,
+																									"$lt":  endPoint,
+																								}
+																							case "明年":
+																								startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																								timeMap = map[string]interface{}{
+																									"$gte": startPoint,
+																									"$lt":  endPoint,
+																								}
+																							default:
+																								if originTime != "" {
+																									fromNow := false
+																									if strings.HasPrefix(originTime, "前") {
+																										//fmt.Println("originTime:", originTime)
+																										if strings.HasSuffix(originTime, "当前") {
+																											fromNow = true
+																											originTime = strings.ReplaceAll(originTime, "当前", "")
+																											//fmt.Println("originTime after 当前:", originTime)
+																										}
+																										intervalNumberString := numberx.GetNumberExp(originTime)
+																										intervalNumber, err := strconv.Atoi(intervalNumberString)
+																										if err != nil {
+																											logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																											continue
+																										}
+																										interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+																										//fmt.Println("intervalNumber:", intervalNumber)
+																										//fmt.Println("interval:", interval)
+																										switch interval {
+																										case "天":
+																											if fromNow {
+																												//fmt.Println("fromNow")
+																												startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																												endPoint = timeNow.Format("2006-01-02 15:04:05")
+																											} else {
+																												startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+																												endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																											}
+																										case "周":
+																											if fromNow {
+																												startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																												endPoint = timeNow.Format("2006-01-02 15:04:05")
+																											} else {
+																												weekDay := int(timeNow.Weekday())
+																												if weekDay == 0 {
+																													weekDay = 7
+																												}
+																												startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																												endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																											}
+																										case "月":
+																											if fromNow {
+																												startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																												endPoint = timeNow.Format("2006-01-02 15:04:05")
+																											} else {
+																												startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+																												endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																											}
+																										case "年":
+																											if fromNow {
+																												startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																												endPoint = timeNow.Format("2006-01-02 15:04:05")
+																											} else {
+																												startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																												endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																											}
+																										case "季度":
+																											if fromNow {
+																												startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																												endPoint = timeNow.Format("2006-01-02 15:04:05")
+																											} else {
+																												timeNowMonth := int(timeNow.Month())
+																												quarter1 := timeNowMonth - 1
+																												quarter2 := timeNowMonth - 4
+																												quarter3 := timeNowMonth - 7
+																												quarter4 := timeNowMonth - 10
+																												quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																												min := quarter1
+																												for _, v := range quarterList {
+																													if v < min {
+																														min = v
+																													}
+																												}
+																												startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																												endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																											}
+																										case "时":
+																											if fromNow {
+																												startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																												endPoint = timeNow.Format("2006-01-02 15:04:05")
+																											} else {
+																												startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																												endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																											}
+																										case "分":
+																											if fromNow {
+																												startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																												endPoint = timeNow.Format("2006-01-02 15:04:05")
+																											} else {
+																												startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																												endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
+																											}
+																										case "秒":
+																											startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																											endPoint = timeNow.Format("2006-01-02 15:04:05")
+																										}
+																										timeMap = map[string]interface{}{
+																											"$gte": startPoint,
+																											"$lt":  endPoint,
+																										}
+																									} else if strings.HasPrefix(originTime, "后") {
+																										if strings.HasSuffix(originTime, "当前") {
+																											fromNow = true
+																											originTime = strings.ReplaceAll(originTime, "当前", "")
+																										}
+																										intervalNumberString := numberx.GetNumberExp(originTime)
+																										intervalNumber, err := strconv.Atoi(intervalNumberString)
+																										if err != nil {
+																											logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																											continue
+																										}
+																										interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+																										switch interval {
+																										case "天":
+																											if fromNow {
+																												endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																												startPoint = timeNow.Format("2006-01-02 15:04:05")
+																											} else {
+																												endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+																												startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																											}
+																										case "周":
+																											if fromNow {
+																												endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																												startPoint = timeNow.Format("2006-01-02 15:04:05")
+																											} else {
+																												weekDay := int(timeNow.Weekday())
+																												if weekDay == 0 {
+																													weekDay = 7
+																												}
+																												endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																												startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																											}
+																										case "月":
+																											if fromNow {
+																												endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																												startPoint = timeNow.Format("2006-01-02 15:04:05")
+																											} else {
+																												endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+																												startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																											}
+																										case "年":
+																											if fromNow {
+																												endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																												startPoint = timeNow.Format("2006-01-02 15:04:05")
+																											} else {
+																												endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																												startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																											}
+																										case "季度":
+																											if fromNow {
+																												endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																												startPoint = timeNow.Format("2006-01-02 15:04:05")
+																											} else {
+																												timeNowMonth := int(timeNow.Month())
+																												quarter1 := timeNowMonth - 1
+																												quarter2 := timeNowMonth - 4
+																												quarter3 := timeNowMonth - 7
+																												quarter4 := timeNowMonth - 10
+																												quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																												min := quarter1
+																												for _, v := range quarterList {
+																													if v < min {
+																														min = v
+																													}
+																												}
+																												endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																												startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																											}
+																										case "时":
+																											if fromNow {
+																												endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																												startPoint = timeNow.Format("2006-01-02 15:04:05")
+																											} else {
+																												endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																												startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																											}
+																										case "分":
+																											if fromNow {
+																												endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																												startPoint = timeNow.Format("2006-01-02 15:04:05")
+																											} else {
+																												endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																												startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																											}
+																										case "秒":
+																											endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																											startPoint = timeNow.Format("2006-01-02 15:04:05")
+																										}
+																										timeMap = map[string]interface{}{
+																											"$gte": startPoint,
+																											"$lt":  endPoint,
+																										}
+																									} else if strings.HasPrefix(originTime, "当前") {
+																										interval := strings.ReplaceAll(originTime, "当前", "")
+																										switch interval {
+																										case "天":
+																											startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																										case "周":
+																											weekDay := int(timeNow.Weekday())
+																											if weekDay == 0 {
+																												weekDay = 7
+																											}
+																											startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+																										case "月":
+																											startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																										case "年":
+																											startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																										case "季度":
+																											timeNowMonth := int(timeNow.Month())
+																											quarter1 := timeNowMonth - 1
+																											quarter2 := timeNowMonth - 4
+																											quarter3 := timeNowMonth - 7
+																											quarter4 := timeNowMonth - 10
+																											quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																											min := quarter1
+																											for _, v := range quarterList {
+																												if v < min {
+																													min = v
+																												}
+																											}
+																											startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+																										case "时":
+																											startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																										case "分":
+																											startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																										case "秒":
+																											endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+																											startPoint = timeNow.Format("2006-01-02 15:04:05")
+																										}
+																										timeMap = map[string]interface{}{
+																											"$gte": startPoint,
+																											"$lt":  endPoint,
+																										}
+																									} else {
+																										eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																										if err != nil {
+																											continue
+																										}
+																										queryTime = eleTime.Format("2006-01-02 15:04:05")
+																									}
+																								}
+																							}
+																							if len(timeMap) != 0 {
+																								timeMapRaw[k] = timeMap
+																							} else {
+																								timeMapRaw[k] = queryTime
+																							}
+																						}
+																					}
+																				} else if originTime, ok := orVal.(string); ok {
+																					var queryTime string
+																					var startPoint string
+																					var endPoint string
+																					timeMap := map[string]interface{}{}
+																					switch originTime {
+																					case "今天":
+																						startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "昨天":
+																						startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "明天":
+																						startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "本周":
+																						week := int(time.Now().Weekday())
+																						if week == 0 {
+																							week = 7
+																						}
+																						startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "上周":
+																						week := int(time.Now().Weekday())
+																						if week == 0 {
+																							week = 7
+																						}
+																						startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "今年":
+																						startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "去年":
+																						startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					case "明年":
+																						startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																						timeMap = map[string]interface{}{
+																							"$gte": startPoint,
+																							"$lt":  endPoint,
+																						}
+																					default:
+																						if originTime != "" {
+																							fromNow := false
+																							if strings.HasPrefix(originTime, "前") {
+																								//fmt.Println("originTime:", originTime)
+																								if strings.HasSuffix(originTime, "当前") {
+																									fromNow = true
+																									originTime = strings.ReplaceAll(originTime, "当前", "")
+																									//fmt.Println("originTime after 当前:", originTime)
+																								}
+																								intervalNumberString := numberx.GetNumberExp(originTime)
+																								intervalNumber, err := strconv.Atoi(intervalNumberString)
+																								if err != nil {
+																									logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																									continue
+																								}
+																								interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+																								//fmt.Println("intervalNumber:", intervalNumber)
+																								//fmt.Println("interval:", interval)
+																								switch interval {
+																								case "天":
+																									if fromNow {
+																										//fmt.Println("fromNow")
+																										startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																										endPoint = timeNow.Format("2006-01-02 15:04:05")
+																									} else {
+																										startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																									}
+																								case "周":
+																									if fromNow {
+																										startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																										endPoint = timeNow.Format("2006-01-02 15:04:05")
+																									} else {
+																										weekDay := int(timeNow.Weekday())
+																										if weekDay == 0 {
+																											weekDay = 7
+																										}
+																										startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																									}
+																								case "月":
+																									if fromNow {
+																										startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																										endPoint = timeNow.Format("2006-01-02 15:04:05")
+																									} else {
+																										startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																									}
+																								case "年":
+																									if fromNow {
+																										startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																										endPoint = timeNow.Format("2006-01-02 15:04:05")
+																									} else {
+																										startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																									}
+																								case "季度":
+																									if fromNow {
+																										startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																										endPoint = timeNow.Format("2006-01-02 15:04:05")
+																									} else {
+																										timeNowMonth := int(timeNow.Month())
+																										quarter1 := timeNowMonth - 1
+																										quarter2 := timeNowMonth - 4
+																										quarter3 := timeNowMonth - 7
+																										quarter4 := timeNowMonth - 10
+																										quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																										min := quarter1
+																										for _, v := range quarterList {
+																											if v < min {
+																												min = v
+																											}
+																										}
+																										startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																									}
+																								case "时":
+																									if fromNow {
+																										startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																										endPoint = timeNow.Format("2006-01-02 15:04:05")
+																									} else {
+																										startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																									}
+																								case "分":
+																									if fromNow {
+																										startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																										endPoint = timeNow.Format("2006-01-02 15:04:05")
+																									} else {
+																										startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
+																									}
+																								case "秒":
+																									startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																									endPoint = timeNow.Format("2006-01-02 15:04:05")
+																								}
+																								timeMap = map[string]interface{}{
+																									"$gte": startPoint,
+																									"$lt":  endPoint,
+																								}
+																							} else if strings.HasPrefix(originTime, "后") {
+																								if strings.HasSuffix(originTime, "当前") {
+																									fromNow = true
+																									originTime = strings.ReplaceAll(originTime, "当前", "")
+																								}
+																								intervalNumberString := numberx.GetNumberExp(originTime)
+																								intervalNumber, err := strconv.Atoi(intervalNumberString)
+																								if err != nil {
+																									logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																									continue
+																								}
+																								interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+																								switch interval {
+																								case "天":
+																									if fromNow {
+																										endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																										startPoint = timeNow.Format("2006-01-02 15:04:05")
+																									} else {
+																										endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+																										startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																									}
+																								case "周":
+																									if fromNow {
+																										endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																										startPoint = timeNow.Format("2006-01-02 15:04:05")
+																									} else {
+																										weekDay := int(timeNow.Weekday())
+																										if weekDay == 0 {
+																											weekDay = 7
+																										}
+																										endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																										startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																									}
+																								case "月":
+																									if fromNow {
+																										endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																										startPoint = timeNow.Format("2006-01-02 15:04:05")
+																									} else {
+																										endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+																										startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																									}
+																								case "年":
+																									if fromNow {
+																										endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																										startPoint = timeNow.Format("2006-01-02 15:04:05")
+																									} else {
+																										endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																										startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																									}
+																								case "季度":
+																									if fromNow {
+																										endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																										startPoint = timeNow.Format("2006-01-02 15:04:05")
+																									} else {
+																										timeNowMonth := int(timeNow.Month())
+																										quarter1 := timeNowMonth - 1
+																										quarter2 := timeNowMonth - 4
+																										quarter3 := timeNowMonth - 7
+																										quarter4 := timeNowMonth - 10
+																										quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																										min := quarter1
+																										for _, v := range quarterList {
+																											if v < min {
+																												min = v
+																											}
+																										}
+																										endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																										startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																									}
+																								case "时":
+																									if fromNow {
+																										endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																										startPoint = timeNow.Format("2006-01-02 15:04:05")
+																									} else {
+																										endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																										startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																									}
+																								case "分":
+																									if fromNow {
+																										endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																										startPoint = timeNow.Format("2006-01-02 15:04:05")
+																									} else {
+																										endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																										startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																									}
+																								case "秒":
+																									endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																									startPoint = timeNow.Format("2006-01-02 15:04:05")
+																								}
+																								timeMap = map[string]interface{}{
+																									"$gte": startPoint,
+																									"$lt":  endPoint,
+																								}
+																							} else if strings.HasPrefix(originTime, "当前") {
+																								interval := strings.ReplaceAll(originTime, "当前", "")
+																								switch interval {
+																								case "天":
+																									startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																								case "周":
+																									weekDay := int(timeNow.Weekday())
+																									if weekDay == 0 {
+																										weekDay = 7
+																									}
+																									startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+																								case "月":
+																									startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																								case "年":
+																									startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																								case "季度":
+																									timeNowMonth := int(timeNow.Month())
+																									quarter1 := timeNowMonth - 1
+																									quarter2 := timeNowMonth - 4
+																									quarter3 := timeNowMonth - 7
+																									quarter4 := timeNowMonth - 10
+																									quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																									min := quarter1
+																									for _, v := range quarterList {
+																										if v < min {
+																											min = v
+																										}
+																									}
+																									startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+																								case "时":
+																									startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																								case "分":
+																									startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																								case "秒":
+																									endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+																									startPoint = timeNow.Format("2006-01-02 15:04:05")
+																								}
+																								timeMap = map[string]interface{}{
+																									"$gte": startPoint,
+																									"$lt":  endPoint,
+																								}
+																							} else {
+																								eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																								if err != nil {
+																									continue
+																								}
+																								queryTime = eleTime.Format("2006-01-02 15:04:05")
+																							}
+																						}
+																					}
+																					if len(timeMap) != 0 {
+																						orEleMap[orKey] = timeMap
+																					} else {
+																						orEleMap[orKey] = queryTime
+																					}
+																				}
+																			}
+																		} else if orKey == "createTime" || orKey == "modifyTime" {
+																			if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+																				for k, v := range timeMapRaw {
+																					if originTime, ok := v.(string); ok {
+																						var queryTime string
+																						var startPoint string
+																						var endPoint string
+																						timeMap := map[string]interface{}{}
+																						switch originTime {
+																						case "今天":
+																							startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "昨天":
+																							startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "明天":
+																							startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "本周":
+																							week := int(time.Now().Weekday())
+																							if week == 0 {
+																								week = 7
+																							}
+																							startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "上周":
+																							week := int(time.Now().Weekday())
+																							if week == 0 {
+																								week = 7
+																							}
+																							startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "今年":
+																							startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "去年":
+																							startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						case "明年":
+																							startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						default:
+																							if originTime != "" {
+																								fromNow := false
+																								if strings.HasPrefix(originTime, "前") {
+																									//fmt.Println("originTime:", originTime)
+																									if strings.HasSuffix(originTime, "当前") {
+																										fromNow = true
+																										originTime = strings.ReplaceAll(originTime, "当前", "")
+																										//fmt.Println("originTime after 当前:", originTime)
+																									}
+																									intervalNumberString := numberx.GetNumberExp(originTime)
+																									intervalNumber, err := strconv.Atoi(intervalNumberString)
+																									if err != nil {
+																										logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																										continue
+																									}
+																									interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+																									//fmt.Println("intervalNumber:", intervalNumber)
+																									//fmt.Println("interval:", interval)
+																									switch interval {
+																									case "天":
+																										if fromNow {
+																											//fmt.Println("fromNow")
+																											startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											endPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																										}
+																									case "周":
+																										if fromNow {
+																											startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											endPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											weekDay := int(timeNow.Weekday())
+																											if weekDay == 0 {
+																												weekDay = 7
+																											}
+																											startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																										}
+																									case "月":
+																										if fromNow {
+																											startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											endPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																										}
+																									case "年":
+																										if fromNow {
+																											startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											endPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																										}
+																									case "季度":
+																										if fromNow {
+																											startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											endPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											timeNowMonth := int(timeNow.Month())
+																											quarter1 := timeNowMonth - 1
+																											quarter2 := timeNowMonth - 4
+																											quarter3 := timeNowMonth - 7
+																											quarter4 := timeNowMonth - 10
+																											quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																											min := quarter1
+																											for _, v := range quarterList {
+																												if v < min {
+																													min = v
+																												}
+																											}
+																											startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																										}
+																									case "时":
+																										if fromNow {
+																											startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											endPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																										}
+																									case "分":
+																										if fromNow {
+																											startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																											endPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																											endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
+																										}
+																									case "秒":
+																										startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																										endPoint = timeNow.Format("2006-01-02 15:04:05")
+																									}
+																									timeMap = map[string]interface{}{
+																										"$gte": startPoint,
+																										"$lt":  endPoint,
+																									}
+																								} else if strings.HasPrefix(originTime, "后") {
+																									if strings.HasSuffix(originTime, "当前") {
+																										fromNow = true
+																										originTime = strings.ReplaceAll(originTime, "当前", "")
+																									}
+																									intervalNumberString := numberx.GetNumberExp(originTime)
+																									intervalNumber, err := strconv.Atoi(intervalNumberString)
+																									if err != nil {
+																										logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																										continue
+																									}
+																									interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+																									switch interval {
+																									case "天":
+																										if fromNow {
+																											endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											startPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+																											startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																										}
+																									case "周":
+																										if fromNow {
+																											endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											startPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											weekDay := int(timeNow.Weekday())
+																											if weekDay == 0 {
+																												weekDay = 7
+																											}
+																											endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																											startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																										}
+																									case "月":
+																										if fromNow {
+																											endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											startPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+																											startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																										}
+																									case "年":
+																										if fromNow {
+																											endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											startPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																											startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																										}
+																									case "季度":
+																										if fromNow {
+																											endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											startPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											timeNowMonth := int(timeNow.Month())
+																											quarter1 := timeNowMonth - 1
+																											quarter2 := timeNowMonth - 4
+																											quarter3 := timeNowMonth - 7
+																											quarter4 := timeNowMonth - 10
+																											quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																											min := quarter1
+																											for _, v := range quarterList {
+																												if v < min {
+																													min = v
+																												}
+																											}
+																											endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																											startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																										}
+																									case "时":
+																										if fromNow {
+																											endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																											startPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																											startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																										}
+																									case "分":
+																										if fromNow {
+																											endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																											startPoint = timeNow.Format("2006-01-02 15:04:05")
+																										} else {
+																											endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																											startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																										}
+																									case "秒":
+																										endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																										startPoint = timeNow.Format("2006-01-02 15:04:05")
+																									}
+																									timeMap = map[string]interface{}{
+																										"$gte": startPoint,
+																										"$lt":  endPoint,
+																									}
+																								} else if strings.HasPrefix(originTime, "当前") {
+																									interval := strings.ReplaceAll(originTime, "当前", "")
+																									switch interval {
+																									case "天":
+																										startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																									case "周":
+																										weekDay := int(timeNow.Weekday())
+																										if weekDay == 0 {
+																											weekDay = 7
+																										}
+																										startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+																									case "月":
+																										startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																									case "年":
+																										startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																									case "季度":
+																										timeNowMonth := int(timeNow.Month())
+																										quarter1 := timeNowMonth - 1
+																										quarter2 := timeNowMonth - 4
+																										quarter3 := timeNowMonth - 7
+																										quarter4 := timeNowMonth - 10
+																										quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																										min := quarter1
+																										for _, v := range quarterList {
+																											if v < min {
+																												min = v
+																											}
+																										}
+																										startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+																									case "时":
+																										startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																									case "分":
+																										startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																										endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																									case "秒":
+																										endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+																										startPoint = timeNow.Format("2006-01-02 15:04:05")
+																									}
+																									timeMap = map[string]interface{}{
+																										"$gte": startPoint,
+																										"$lt":  endPoint,
+																									}
+																								} else {
+																									eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																									if err != nil {
+																										continue
+																									}
+																									queryTime = eleTime.Format("2006-01-02 15:04:05")
+																								}
+																							}
+																						}
+																						if len(timeMap) != 0 {
+																							timeMapRaw[k] = timeMap
+																						} else {
+																							timeMapRaw[k] = queryTime
+																						}
+																					}
+																				}
+																			} else if originTime, ok := orVal.(string); ok {
+																				var queryTime string
+																				var startPoint string
+																				var endPoint string
+																				timeMap := map[string]interface{}{}
+																				switch originTime {
+																				case "今天":
+																					startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "昨天":
+																					startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "明天":
+																					startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "本周":
+																					week := int(time.Now().Weekday())
+																					if week == 0 {
+																						week = 7
+																					}
+																					startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "上周":
+																					week := int(time.Now().Weekday())
+																					if week == 0 {
+																						week = 7
+																					}
+																					startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "今年":
+																					startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "去年":
+																					startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				case "明年":
+																					startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				default:
+																					if originTime != "" {
+																						fromNow := false
+																						if strings.HasPrefix(originTime, "前") {
+																							//fmt.Println("originTime:", originTime)
+																							if strings.HasSuffix(originTime, "当前") {
+																								fromNow = true
+																								originTime = strings.ReplaceAll(originTime, "当前", "")
+																								//fmt.Println("originTime after 当前:", originTime)
+																							}
+																							intervalNumberString := numberx.GetNumberExp(originTime)
+																							intervalNumber, err := strconv.Atoi(intervalNumberString)
+																							if err != nil {
+																								logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																								continue
+																							}
+																							interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+																							//fmt.Println("intervalNumber:", intervalNumber)
+																							//fmt.Println("interval:", interval)
+																							switch interval {
+																							case "天":
+																								if fromNow {
+																									//fmt.Println("fromNow")
+																									startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									endPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																								}
+																							case "周":
+																								if fromNow {
+																									startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									endPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									weekDay := int(timeNow.Weekday())
+																									if weekDay == 0 {
+																										weekDay = 7
+																									}
+																									startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																								}
+																							case "月":
+																								if fromNow {
+																									startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									endPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																								}
+																							case "年":
+																								if fromNow {
+																									startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									endPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																								}
+																							case "季度":
+																								if fromNow {
+																									startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									endPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									timeNowMonth := int(timeNow.Month())
+																									quarter1 := timeNowMonth - 1
+																									quarter2 := timeNowMonth - 4
+																									quarter3 := timeNowMonth - 7
+																									quarter4 := timeNowMonth - 10
+																									quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																									min := quarter1
+																									for _, v := range quarterList {
+																										if v < min {
+																											min = v
+																										}
+																									}
+																									startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																								}
+																							case "时":
+																								if fromNow {
+																									startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									endPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																								}
+																							case "分":
+																								if fromNow {
+																									startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																									endPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																									endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
+																								}
+																							case "秒":
+																								startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																								endPoint = timeNow.Format("2006-01-02 15:04:05")
+																							}
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						} else if strings.HasPrefix(originTime, "后") {
+																							if strings.HasSuffix(originTime, "当前") {
+																								fromNow = true
+																								originTime = strings.ReplaceAll(originTime, "当前", "")
+																							}
+																							intervalNumberString := numberx.GetNumberExp(originTime)
+																							intervalNumber, err := strconv.Atoi(intervalNumberString)
+																							if err != nil {
+																								logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																								continue
+																							}
+																							interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+																							switch interval {
+																							case "天":
+																								if fromNow {
+																									endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									startPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																								}
+																							case "周":
+																								if fromNow {
+																									endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									startPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									weekDay := int(timeNow.Weekday())
+																									if weekDay == 0 {
+																										weekDay = 7
+																									}
+																									endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																								}
+																							case "月":
+																								if fromNow {
+																									endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									startPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																								}
+																							case "年":
+																								if fromNow {
+																									endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									startPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																								}
+																							case "季度":
+																								if fromNow {
+																									endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									startPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									timeNowMonth := int(timeNow.Month())
+																									quarter1 := timeNowMonth - 1
+																									quarter2 := timeNowMonth - 4
+																									quarter3 := timeNowMonth - 7
+																									quarter4 := timeNowMonth - 10
+																									quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																									min := quarter1
+																									for _, v := range quarterList {
+																										if v < min {
+																											min = v
+																										}
+																									}
+																									endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																								}
+																							case "时":
+																								if fromNow {
+																									endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																									startPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																								}
+																							case "分":
+																								if fromNow {
+																									endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																									startPoint = timeNow.Format("2006-01-02 15:04:05")
+																								} else {
+																									endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																									startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																								}
+																							case "秒":
+																								endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																								startPoint = timeNow.Format("2006-01-02 15:04:05")
+																							}
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						} else if strings.HasPrefix(originTime, "当前") {
+																							interval := strings.ReplaceAll(originTime, "当前", "")
+																							switch interval {
+																							case "天":
+																								startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																							case "周":
+																								weekDay := int(timeNow.Weekday())
+																								if weekDay == 0 {
+																									weekDay = 7
+																								}
+																								startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+																							case "月":
+																								startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																							case "年":
+																								startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																							case "季度":
+																								timeNowMonth := int(timeNow.Month())
+																								quarter1 := timeNowMonth - 1
+																								quarter2 := timeNowMonth - 4
+																								quarter3 := timeNowMonth - 7
+																								quarter4 := timeNowMonth - 10
+																								quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																								min := quarter1
+																								for _, v := range quarterList {
+																									if v < min {
+																										min = v
+																									}
+																								}
+																								startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+																							case "时":
+																								startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																							case "分":
+																								startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																								endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																							case "秒":
+																								endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+																								startPoint = timeNow.Format("2006-01-02 15:04:05")
+																							}
+																							timeMap = map[string]interface{}{
+																								"$gte": startPoint,
+																								"$lt":  endPoint,
+																							}
+																						} else {
+																							eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																							if err != nil {
+																								continue
+																							}
+																							queryTime = eleTime.Format("2006-01-02 15:04:05")
+																						}
+																					}
+																				}
+																				if len(timeMap) != 0 {
+																					orEleMap[orKey] = timeMap
+																				} else {
+																					orEleMap[orKey] = queryTime
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													} else if extRaw, ok := excelColNameTypeExtMap[orKey]; ok {
+														if extRaw.Format != "" {
+															if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+																for k, v := range timeMapRaw {
+																	if originTime, ok := v.(string); ok {
+																		var queryTime string
+																		var startPoint string
+																		var endPoint string
+																		timeMap := map[string]interface{}{}
+																		switch originTime {
+																		case "今天":
+																			startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "昨天":
+																			startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "明天":
+																			startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "本周":
+																			week := int(time.Now().Weekday())
+																			if week == 0 {
+																				week = 7
+																			}
+																			startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "上周":
+																			week := int(time.Now().Weekday())
+																			if week == 0 {
+																				week = 7
+																			}
+																			startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "今年":
+																			startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "去年":
+																			startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		case "明年":
+																			startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		default:
+																			if originTime != "" {
+																				fromNow := false
+																				if strings.HasPrefix(originTime, "前") {
+																					//fmt.Println("originTime:", originTime)
+																					if strings.HasSuffix(originTime, "当前") {
+																						fromNow = true
+																						originTime = strings.ReplaceAll(originTime, "当前", "")
+																						//fmt.Println("originTime after 当前:", originTime)
+																					}
+																					intervalNumberString := numberx.GetNumberExp(originTime)
+																					intervalNumber, err := strconv.Atoi(intervalNumberString)
+																					if err != nil {
+																						logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																						continue
+																					}
+																					interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+																					//fmt.Println("intervalNumber:", intervalNumber)
+																					//fmt.Println("interval:", interval)
+																					switch interval {
+																					case "天":
+																						if fromNow {
+																							//fmt.Println("fromNow")
+																							startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																							endPoint = timeNow.Format("2006-01-02 15:04:05")
+																						} else {
+																							startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																						}
+																					case "周":
+																						if fromNow {
+																							startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																							endPoint = timeNow.Format("2006-01-02 15:04:05")
+																						} else {
+																							weekDay := int(timeNow.Weekday())
+																							if weekDay == 0 {
+																								weekDay = 7
+																							}
+																							startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																						}
+																					case "月":
+																						if fromNow {
+																							startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																							endPoint = timeNow.Format("2006-01-02 15:04:05")
+																						} else {
+																							startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																						}
+																					case "年":
+																						if fromNow {
+																							startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																							endPoint = timeNow.Format("2006-01-02 15:04:05")
+																						} else {
+																							startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																						}
+																					case "季度":
+																						if fromNow {
+																							startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																							endPoint = timeNow.Format("2006-01-02 15:04:05")
+																						} else {
+																							timeNowMonth := int(timeNow.Month())
+																							quarter1 := timeNowMonth - 1
+																							quarter2 := timeNowMonth - 4
+																							quarter3 := timeNowMonth - 7
+																							quarter4 := timeNowMonth - 10
+																							quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																							min := quarter1
+																							for _, v := range quarterList {
+																								if v < min {
+																									min = v
+																								}
+																							}
+																							startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																						}
+																					case "时":
+																						if fromNow {
+																							startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																							endPoint = timeNow.Format("2006-01-02 15:04:05")
+																						} else {
+																							startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																						}
+																					case "分":
+																						if fromNow {
+																							startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																							endPoint = timeNow.Format("2006-01-02 15:04:05")
+																						} else {
+																							startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																							endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
+																						}
+																					case "秒":
+																						startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																						endPoint = timeNow.Format("2006-01-02 15:04:05")
+																					}
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				} else if strings.HasPrefix(originTime, "后") {
+																					if strings.HasSuffix(originTime, "当前") {
+																						fromNow = true
+																						originTime = strings.ReplaceAll(originTime, "当前", "")
+																					}
+																					intervalNumberString := numberx.GetNumberExp(originTime)
+																					intervalNumber, err := strconv.Atoi(intervalNumberString)
+																					if err != nil {
+																						logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																						continue
+																					}
+																					interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+																					switch interval {
+																					case "天":
+																						if fromNow {
+																							endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																							startPoint = timeNow.Format("2006-01-02 15:04:05")
+																						} else {
+																							endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																						}
+																					case "周":
+																						if fromNow {
+																							endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																							startPoint = timeNow.Format("2006-01-02 15:04:05")
+																						} else {
+																							weekDay := int(timeNow.Weekday())
+																							if weekDay == 0 {
+																								weekDay = 7
+																							}
+																							endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																						}
+																					case "月":
+																						if fromNow {
+																							endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																							startPoint = timeNow.Format("2006-01-02 15:04:05")
+																						} else {
+																							endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																						}
+																					case "年":
+																						if fromNow {
+																							endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																							startPoint = timeNow.Format("2006-01-02 15:04:05")
+																						} else {
+																							endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																						}
+																					case "季度":
+																						if fromNow {
+																							endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																							startPoint = timeNow.Format("2006-01-02 15:04:05")
+																						} else {
+																							timeNowMonth := int(timeNow.Month())
+																							quarter1 := timeNowMonth - 1
+																							quarter2 := timeNowMonth - 4
+																							quarter3 := timeNowMonth - 7
+																							quarter4 := timeNowMonth - 10
+																							quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																							min := quarter1
+																							for _, v := range quarterList {
+																								if v < min {
+																									min = v
+																								}
+																							}
+																							endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																						}
+																					case "时":
+																						if fromNow {
+																							endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																							startPoint = timeNow.Format("2006-01-02 15:04:05")
+																						} else {
+																							endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																						}
+																					case "分":
+																						if fromNow {
+																							endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																							startPoint = timeNow.Format("2006-01-02 15:04:05")
+																						} else {
+																							endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																							startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																						}
+																					case "秒":
+																						endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																					}
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				} else if strings.HasPrefix(originTime, "当前") {
+																					interval := strings.ReplaceAll(originTime, "当前", "")
+																					switch interval {
+																					case "天":
+																						startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																					case "周":
+																						weekDay := int(timeNow.Weekday())
+																						if weekDay == 0 {
+																							weekDay = 7
+																						}
+																						startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+																					case "月":
+																						startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																					case "年":
+																						startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																					case "季度":
+																						timeNowMonth := int(timeNow.Month())
+																						quarter1 := timeNowMonth - 1
+																						quarter2 := timeNowMonth - 4
+																						quarter3 := timeNowMonth - 7
+																						quarter4 := timeNowMonth - 10
+																						quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																						min := quarter1
+																						for _, v := range quarterList {
+																							if v < min {
+																								min = v
+																							}
+																						}
+																						startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+																					case "时":
+																						startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																					case "分":
+																						startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																					case "秒":
+																						endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																					}
+																					timeMap = map[string]interface{}{
+																						"$gte": startPoint,
+																						"$lt":  endPoint,
+																					}
+																				} else {
+																					eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																					if err != nil {
+																						continue
+																					}
+																					queryTime = eleTime.Format("2006-01-02 15:04:05")
+																				}
+																			}
+																		}
+																		if len(timeMap) != 0 {
+																			timeMapRaw[k] = timeMap
+																		} else {
+																			timeMapRaw[k] = queryTime
+																		}
+																	}
+																}
+															} else if originTime, ok := orVal.(string); ok {
+																var queryTime string
+																var startPoint string
+																var endPoint string
+																timeMap := map[string]interface{}{}
+																switch originTime {
+																case "今天":
+																	startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "昨天":
+																	startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "明天":
+																	startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "本周":
+																	week := int(time.Now().Weekday())
+																	if week == 0 {
+																		week = 7
+																	}
+																	startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "上周":
+																	week := int(time.Now().Weekday())
+																	if week == 0 {
+																		week = 7
+																	}
+																	startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "今年":
+																	startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "去年":
+																	startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																case "明年":
+																	startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																	endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																	timeMap = map[string]interface{}{
+																		"$gte": startPoint,
+																		"$lt":  endPoint,
+																	}
+																default:
+																	if originTime != "" {
+																		fromNow := false
+																		if strings.HasPrefix(originTime, "前") {
+																			//fmt.Println("originTime:", originTime)
+																			if strings.HasSuffix(originTime, "当前") {
+																				fromNow = true
+																				originTime = strings.ReplaceAll(originTime, "当前", "")
+																				//fmt.Println("originTime after 当前:", originTime)
+																			}
+																			intervalNumberString := numberx.GetNumberExp(originTime)
+																			intervalNumber, err := strconv.Atoi(intervalNumberString)
+																			if err != nil {
+																				logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																				continue
+																			}
+																			interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+																			//fmt.Println("intervalNumber:", intervalNumber)
+																			//fmt.Println("interval:", interval)
+																			switch interval {
+																			case "天":
+																				if fromNow {
+																					//fmt.Println("fromNow")
+																					startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																					endPoint = timeNow.Format("2006-01-02 15:04:05")
+																				} else {
+																					startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																				}
+																			case "周":
+																				if fromNow {
+																					startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																					endPoint = timeNow.Format("2006-01-02 15:04:05")
+																				} else {
+																					weekDay := int(timeNow.Weekday())
+																					if weekDay == 0 {
+																						weekDay = 7
+																					}
+																					startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																				}
+																			case "月":
+																				if fromNow {
+																					startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																					endPoint = timeNow.Format("2006-01-02 15:04:05")
+																				} else {
+																					startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																				}
+																			case "年":
+																				if fromNow {
+																					startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																					endPoint = timeNow.Format("2006-01-02 15:04:05")
+																				} else {
+																					startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																				}
+																			case "季度":
+																				if fromNow {
+																					startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																					endPoint = timeNow.Format("2006-01-02 15:04:05")
+																				} else {
+																					timeNowMonth := int(timeNow.Month())
+																					quarter1 := timeNowMonth - 1
+																					quarter2 := timeNowMonth - 4
+																					quarter3 := timeNowMonth - 7
+																					quarter4 := timeNowMonth - 10
+																					quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																					min := quarter1
+																					for _, v := range quarterList {
+																						if v < min {
+																							min = v
+																						}
+																					}
+																					startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																				}
+																			case "时":
+																				if fromNow {
+																					startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																					endPoint = timeNow.Format("2006-01-02 15:04:05")
+																				} else {
+																					startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																				}
+																			case "分":
+																				if fromNow {
+																					startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																					endPoint = timeNow.Format("2006-01-02 15:04:05")
+																				} else {
+																					startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
+																				}
+																			case "秒":
+																				startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																				endPoint = timeNow.Format("2006-01-02 15:04:05")
+																			}
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		} else if strings.HasPrefix(originTime, "后") {
+																			if strings.HasSuffix(originTime, "当前") {
+																				fromNow = true
+																				originTime = strings.ReplaceAll(originTime, "当前", "")
+																			}
+																			intervalNumberString := numberx.GetNumberExp(originTime)
+																			intervalNumber, err := strconv.Atoi(intervalNumberString)
+																			if err != nil {
+																				logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																				continue
+																			}
+																			interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+																			switch interval {
+																			case "天":
+																				if fromNow {
+																					endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																					startPoint = timeNow.Format("2006-01-02 15:04:05")
+																				} else {
+																					endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+																					startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																				}
+																			case "周":
+																				if fromNow {
+																					endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																					startPoint = timeNow.Format("2006-01-02 15:04:05")
+																				} else {
+																					weekDay := int(timeNow.Weekday())
+																					if weekDay == 0 {
+																						weekDay = 7
+																					}
+																					endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																					startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																				}
+																			case "月":
+																				if fromNow {
+																					endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																					startPoint = timeNow.Format("2006-01-02 15:04:05")
+																				} else {
+																					endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+																					startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																				}
+																			case "年":
+																				if fromNow {
+																					endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																					startPoint = timeNow.Format("2006-01-02 15:04:05")
+																				} else {
+																					endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																					startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																				}
+																			case "季度":
+																				if fromNow {
+																					endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																					startPoint = timeNow.Format("2006-01-02 15:04:05")
+																				} else {
+																					timeNowMonth := int(timeNow.Month())
+																					quarter1 := timeNowMonth - 1
+																					quarter2 := timeNowMonth - 4
+																					quarter3 := timeNowMonth - 7
+																					quarter4 := timeNowMonth - 10
+																					quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																					min := quarter1
+																					for _, v := range quarterList {
+																						if v < min {
+																							min = v
+																						}
+																					}
+																					endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																					startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																				}
+																			case "时":
+																				if fromNow {
+																					endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																					startPoint = timeNow.Format("2006-01-02 15:04:05")
+																				} else {
+																					endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																					startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																				}
+																			case "分":
+																				if fromNow {
+																					endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																					startPoint = timeNow.Format("2006-01-02 15:04:05")
+																				} else {
+																					endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																					startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																				}
+																			case "秒":
+																				endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																				startPoint = timeNow.Format("2006-01-02 15:04:05")
+																			}
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		} else if strings.HasPrefix(originTime, "当前") {
+																			interval := strings.ReplaceAll(originTime, "当前", "")
+																			switch interval {
+																			case "天":
+																				startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																			case "周":
+																				weekDay := int(timeNow.Weekday())
+																				if weekDay == 0 {
+																					weekDay = 7
+																				}
+																				startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+																			case "月":
+																				startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																			case "年":
+																				startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																			case "季度":
+																				timeNowMonth := int(timeNow.Month())
+																				quarter1 := timeNowMonth - 1
+																				quarter2 := timeNowMonth - 4
+																				quarter3 := timeNowMonth - 7
+																				quarter4 := timeNowMonth - 10
+																				quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																				min := quarter1
+																				for _, v := range quarterList {
+																					if v < min {
+																						min = v
+																					}
+																				}
+																				startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+																			case "时":
+																				startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																			case "分":
+																				startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																			case "秒":
+																				endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+																				startPoint = timeNow.Format("2006-01-02 15:04:05")
+																			}
+																			timeMap = map[string]interface{}{
+																				"$gte": startPoint,
+																				"$lt":  endPoint,
+																			}
+																		} else {
+																			eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																			if err != nil {
+																				continue
+																			}
+																			queryTime = eleTime.Format("2006-01-02 15:04:05")
+																		}
+																	}
+																}
+																if len(timeMap) != 0 {
+																	orEleMap[orKey] = timeMap
+																} else {
+																	orEleMap[orKey] = queryTime
+																}
+															}
+														}
+													} else if orKey == "createTime" || orKey == "modifyTime" {
+														if timeMapRaw, ok := orVal.(map[string]interface{}); ok {
+															for k, v := range timeMapRaw {
+																if originTime, ok := v.(string); ok {
+																	var queryTime string
+																	var startPoint string
+																	var endPoint string
+																	timeMap := map[string]interface{}{}
+																	switch originTime {
+																	case "今天":
+																		startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "昨天":
+																		startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "明天":
+																		startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "本周":
+																		week := int(time.Now().Weekday())
+																		if week == 0 {
+																			week = 7
+																		}
+																		startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "上周":
+																		week := int(time.Now().Weekday())
+																		if week == 0 {
+																			week = 7
+																		}
+																		startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "今年":
+																		startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "去年":
+																		startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	case "明年":
+																		startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																		endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	default:
+																		if originTime != "" {
+																			fromNow := false
+																			if strings.HasPrefix(originTime, "前") {
+																				//fmt.Println("originTime:", originTime)
+																				if strings.HasSuffix(originTime, "当前") {
+																					fromNow = true
+																					originTime = strings.ReplaceAll(originTime, "当前", "")
+																					//fmt.Println("originTime after 当前:", originTime)
+																				}
+																				intervalNumberString := numberx.GetNumberExp(originTime)
+																				intervalNumber, err := strconv.Atoi(intervalNumberString)
+																				if err != nil {
+																					logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																					continue
+																				}
+																				interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+																				//fmt.Println("intervalNumber:", intervalNumber)
+																				//fmt.Println("interval:", interval)
+																				switch interval {
+																				case "天":
+																					if fromNow {
+																						//fmt.Println("fromNow")
+																						startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						endPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																					}
+																				case "周":
+																					if fromNow {
+																						startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						endPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						weekDay := int(timeNow.Weekday())
+																						if weekDay == 0 {
+																							weekDay = 7
+																						}
+																						startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																					}
+																				case "月":
+																					if fromNow {
+																						startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						endPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																					}
+																				case "年":
+																					if fromNow {
+																						startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						endPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																					}
+																				case "季度":
+																					if fromNow {
+																						startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						endPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						timeNowMonth := int(timeNow.Month())
+																						quarter1 := timeNowMonth - 1
+																						quarter2 := timeNowMonth - 4
+																						quarter3 := timeNowMonth - 7
+																						quarter4 := timeNowMonth - 10
+																						quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																						min := quarter1
+																						for _, v := range quarterList {
+																							if v < min {
+																								min = v
+																							}
+																						}
+																						startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																					}
+																				case "时":
+																					if fromNow {
+																						startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						endPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																					}
+																				case "分":
+																					if fromNow {
+																						startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																						endPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																						endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
+																					}
+																				case "秒":
+																					startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																					endPoint = timeNow.Format("2006-01-02 15:04:05")
+																				}
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			} else if strings.HasPrefix(originTime, "后") {
+																				if strings.HasSuffix(originTime, "当前") {
+																					fromNow = true
+																					originTime = strings.ReplaceAll(originTime, "当前", "")
+																				}
+																				intervalNumberString := numberx.GetNumberExp(originTime)
+																				intervalNumber, err := strconv.Atoi(intervalNumberString)
+																				if err != nil {
+																					logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																					continue
+																				}
+																				interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+																				switch interval {
+																				case "天":
+																					if fromNow {
+																						endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																					}
+																				case "周":
+																					if fromNow {
+																						endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						weekDay := int(timeNow.Weekday())
+																						if weekDay == 0 {
+																							weekDay = 7
+																						}
+																						endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																					}
+																				case "月":
+																					if fromNow {
+																						endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																					}
+																				case "年":
+																					if fromNow {
+																						endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																					}
+																				case "季度":
+																					if fromNow {
+																						endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						timeNowMonth := int(timeNow.Month())
+																						quarter1 := timeNowMonth - 1
+																						quarter2 := timeNowMonth - 4
+																						quarter3 := timeNowMonth - 7
+																						quarter4 := timeNowMonth - 10
+																						quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																						min := quarter1
+																						for _, v := range quarterList {
+																							if v < min {
+																								min = v
+																							}
+																						}
+																						endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																					}
+																				case "时":
+																					if fromNow {
+																						endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																					}
+																				case "分":
+																					if fromNow {
+																						endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																						startPoint = timeNow.Format("2006-01-02 15:04:05")
+																					} else {
+																						endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																						startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																					}
+																				case "秒":
+																					endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																					startPoint = timeNow.Format("2006-01-02 15:04:05")
+																				}
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			} else if strings.HasPrefix(originTime, "当前") {
+																				interval := strings.ReplaceAll(originTime, "当前", "")
+																				switch interval {
+																				case "天":
+																					startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																				case "周":
+																					weekDay := int(timeNow.Weekday())
+																					if weekDay == 0 {
+																						weekDay = 7
+																					}
+																					startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+																				case "月":
+																					startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																				case "年":
+																					startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																				case "季度":
+																					timeNowMonth := int(timeNow.Month())
+																					quarter1 := timeNowMonth - 1
+																					quarter2 := timeNowMonth - 4
+																					quarter3 := timeNowMonth - 7
+																					quarter4 := timeNowMonth - 10
+																					quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																					min := quarter1
+																					for _, v := range quarterList {
+																						if v < min {
+																							min = v
+																						}
+																					}
+																					startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+																				case "时":
+																					startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																				case "分":
+																					startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																					endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																				case "秒":
+																					endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+																					startPoint = timeNow.Format("2006-01-02 15:04:05")
+																				}
+																				timeMap = map[string]interface{}{
+																					"$gte": startPoint,
+																					"$lt":  endPoint,
+																				}
+																			} else {
+																				eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																				if err != nil {
+																					continue
+																				}
+																				queryTime = eleTime.Format("2006-01-02 15:04:05")
+																			}
+																		}
+																	}
+																	if len(timeMap) != 0 {
+																		timeMapRaw[k] = timeMap
+																	} else {
+																		timeMapRaw[k] = queryTime
+																	}
+																}
+															}
+														} else if originTime, ok := orVal.(string); ok {
+															var queryTime string
+															var startPoint string
+															var endPoint string
+															timeMap := map[string]interface{}{}
+															switch originTime {
+															case "今天":
+																startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "昨天":
+																startPoint = timex.GetUnixToNewTimeDay(-1).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "明天":
+																startPoint = timex.GetUnixToNewTimeDay(1).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(2).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "本周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																startPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(8 - week).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "上周":
+																week := int(time.Now().Weekday())
+																if week == 0 {
+																	week = 7
+																}
+																startPoint = timex.GetUnixToNewTimeDay(-(week - 1 + 7)).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToNewTimeDay(-(week - 1)).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "今年":
+																startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "去年":
+																startPoint = timex.GetUnixToOldYearTime(1, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															case "明年":
+																startPoint = timex.GetUnixToOldYearTime(-1, 0).Format("2006-01-02 15:04:05")
+																endPoint = timex.GetUnixToOldYearTime(-2, 0).Format("2006-01-02 15:04:05")
+																timeMap = map[string]interface{}{
+																	"$gte": startPoint,
+																	"$lt":  endPoint,
+																}
+															default:
+																if originTime != "" {
+																	fromNow := false
+																	if strings.HasPrefix(originTime, "前") {
+																		//fmt.Println("originTime:", originTime)
+																		if strings.HasSuffix(originTime, "当前") {
+																			fromNow = true
+																			originTime = strings.ReplaceAll(originTime, "当前", "")
+																			//fmt.Println("originTime after 当前:", originTime)
+																		}
+																		intervalNumberString := numberx.GetNumberExp(originTime)
+																		intervalNumber, err := strconv.Atoi(intervalNumberString)
+																		if err != nil {
+																			logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																			continue
+																		}
+																		interval := strings.ReplaceAll(originTime, "前"+intervalNumberString, "")
+																		//fmt.Println("intervalNumber:", intervalNumber)
+																		//fmt.Println("interval:", interval)
+																		switch interval {
+																		case "天":
+																			if fromNow {
+																				//fmt.Println("fromNow")
+																				startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				endPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				startPoint = timex.GetUnixToNewTimeDay(-intervalNumber).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																			}
+																		case "周":
+																			if fromNow {
+																				startPoint = timex.GetFutureDayTimeSpecific(timeNow, -intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				endPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				weekDay := int(timeNow.Weekday())
+																				if weekDay == 0 {
+																					weekDay = 7
+																				}
+																				startPoint = timex.GetUnixToNewTimeDay(-intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																			}
+																		case "月":
+																			if fromNow {
+																				startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				endPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				startPoint = timex.GetUnixToOldYearTime(0, intervalNumber).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																			}
+																		case "年":
+																			if fromNow {
+																				startPoint = timex.GetFutureYearTimeSpecific(timeNow, -intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				endPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				startPoint = timex.GetUnixToOldYearTime(intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																			}
+																		case "季度":
+																			if fromNow {
+																				startPoint = timex.GetFutureMonthTimeSpecific(timeNow, -intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				endPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				timeNowMonth := int(timeNow.Month())
+																				quarter1 := timeNowMonth - 1
+																				quarter2 := timeNowMonth - 4
+																				quarter3 := timeNowMonth - 7
+																				quarter4 := timeNowMonth - 10
+																				quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																				min := quarter1
+																				for _, v := range quarterList {
+																					if v < min {
+																						min = v
+																					}
+																				}
+																				startPoint = timex.GetUnixToOldYearTime(0, -(-intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																			}
+																		case "时":
+																			if fromNow {
+																				startPoint = timex.GetFutureHourTimeSpecific(timeNow, -intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				endPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				startPoint = timex.GetLastServeralHoursFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																			}
+																		case "分":
+																			if fromNow {
+																				startPoint = timex.GetFutureMinuteTimeSpecific(timeNow, -intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																				endPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				startPoint = timex.GetLastServeralMinuteFromZero(intervalNumber).Format("2006-01-02 15:04:05")
+																				endPoint = timex.GetLastServeralMinuteFromZero(0).Format("2006-01-02 15:04:05")
+																			}
+																		case "秒":
+																			startPoint = time.Unix(timeNow.Unix()-int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																			endPoint = timeNow.Format("2006-01-02 15:04:05")
+																		}
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	} else if strings.HasPrefix(originTime, "后") {
+																		if strings.HasSuffix(originTime, "当前") {
+																			fromNow = true
+																			originTime = strings.ReplaceAll(originTime, "当前", "")
+																		}
+																		intervalNumberString := numberx.GetNumberExp(originTime)
+																		intervalNumber, err := strconv.Atoi(intervalNumberString)
+																		if err != nil {
+																			logger.Errorf("流程(%s)时间周期转数字失败:%s", flowID, err.Error())
+																			continue
+																		}
+																		interval := strings.ReplaceAll(originTime, "后"+intervalNumberString, "")
+																		switch interval {
+																		case "天":
+																			if fromNow {
+																				endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				startPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				endPoint = timex.GetUnixToNewTimeDay(intervalNumber).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetUnixToNewTimeDay(0).Format("2006-01-02 15:04:05")
+																			}
+																		case "周":
+																			if fromNow {
+																				endPoint = timex.GetFutureDayTimeSpecific(timeNow, intervalNumber*7, timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				startPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				weekDay := int(timeNow.Weekday())
+																				if weekDay == 0 {
+																					weekDay = 7
+																				}
+																				endPoint = timex.GetUnixToNewTimeDay(intervalNumber*7 - weekDay + 1).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetUnixToNewTimeDay(-weekDay + 1).Format("2006-01-02 15:04:05")
+																			}
+																		case "月":
+																			if fromNow {
+																				endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				startPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				endPoint = timex.GetUnixToOldYearTime(0, -intervalNumber).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetUnixToOldYearTime(0, 0).Format("2006-01-02 15:04:05")
+																			}
+																		case "年":
+																			if fromNow {
+																				endPoint = timex.GetFutureYearTimeSpecific(timeNow, intervalNumber, int(timeNow.Month()), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				startPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				endPoint = timex.GetUnixToOldYearTime(-intervalNumber, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetUnixToOldYearTime(0, -(1 - int(timeNow.Month()))).Format("2006-01-02 15:04:05")
+																			}
+																		case "季度":
+																			if fromNow {
+																				endPoint = timex.GetFutureMonthTimeSpecific(timeNow, intervalNumber*3, timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				startPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				timeNowMonth := int(timeNow.Month())
+																				quarter1 := timeNowMonth - 1
+																				quarter2 := timeNowMonth - 4
+																				quarter3 := timeNowMonth - 7
+																				quarter4 := timeNowMonth - 10
+																				quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																				min := quarter1
+																				for _, v := range quarterList {
+																					if v < min {
+																						min = v
+																					}
+																				}
+																				endPoint = timex.GetUnixToOldYearTime(0, -(intervalNumber*3 - min)).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetUnixToOldYearTime(0, min).Format("2006-01-02 15:04:05")
+																			}
+																		case "时":
+																			if fromNow {
+																				endPoint = timex.GetFutureHourTimeSpecific(timeNow, intervalNumber, timeNow.Minute(), timeNow.Second()).Format("2006-01-02 15:04:05")
+																				startPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																			}
+																		case "分":
+																			if fromNow {
+																				endPoint = timex.GetFutureMinuteTimeSpecific(timeNow, intervalNumber, timeNow.Second()).Format("2006-01-02 15:04:05")
+																				startPoint = timeNow.Format("2006-01-02 15:04:05")
+																			} else {
+																				endPoint = timex.GetLastServeralHoursFromZero(-intervalNumber).Format("2006-01-02 15:04:05")
+																				startPoint = timex.GetLastServeralHoursFromZero(0).Format("2006-01-02 15:04:05")
+																			}
+																		case "秒":
+																			endPoint = time.Unix(timeNow.Unix()+int64(intervalNumber), 0).Format("2006-01-02 15:04:05")
+																			startPoint = timeNow.Format("2006-01-02 15:04:05")
+																		}
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	} else if strings.HasPrefix(originTime, "当前") {
+																		interval := strings.ReplaceAll(originTime, "当前", "")
+																		switch interval {
+																		case "天":
+																			startPoint = timex.GetFutureDayTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureDayTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																		case "周":
+																			weekDay := int(timeNow.Weekday())
+																			if weekDay == 0 {
+																				weekDay = 7
+																			}
+																			startPoint = timex.GetFutureDayTime(timeNow, -weekDay+1).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureDayTime(timeNow, 7-weekDay+1).Format("2006-01-02 15:04:05")
+																		case "月":
+																			startPoint = timex.GetFutureMonthTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureMonthTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																		case "年":
+																			startPoint = timex.GetFutureYearTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureYearTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																		case "季度":
+																			timeNowMonth := int(timeNow.Month())
+																			quarter1 := timeNowMonth - 1
+																			quarter2 := timeNowMonth - 4
+																			quarter3 := timeNowMonth - 7
+																			quarter4 := timeNowMonth - 10
+																			quarterList := []int{quarter1, quarter2, quarter3, quarter4}
+																			min := quarter1
+																			for _, v := range quarterList {
+																				if v < min {
+																					min = v
+																				}
+																			}
+																			startPoint = timex.GetFutureMonthTime(timeNow, -min).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureMonthTime(timeNow, 3-min).Format("2006-01-02 15:04:05")
+																		case "时":
+																			startPoint = timex.GetFutureHourTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureHourTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																		case "分":
+																			startPoint = timex.GetFutureMinuteTime(timeNow, 0).Format("2006-01-02 15:04:05")
+																			endPoint = timex.GetFutureMinuteTime(timeNow, 1).Format("2006-01-02 15:04:05")
+																		case "秒":
+																			endPoint = time.Unix(timeNow.Unix()+int64(1), 0).Format("2006-01-02 15:04:05")
+																			startPoint = timeNow.Format("2006-01-02 15:04:05")
+																		}
+																		timeMap = map[string]interface{}{
+																			"$gte": startPoint,
+																			"$lt":  endPoint,
+																		}
+																	} else {
+																		eleTime, err := timex.ConvertStringToTime(timex.FormatTimeFormat(originTime), originTime, time.Local)
+																		if err != nil {
+																			continue
+																		}
+																		queryTime = eleTime.Format("2006-01-02 15:04:05")
+																	}
+																}
+															}
+															if len(timeMap) != 0 {
+																orEleMap[orKey] = timeMap
+															} else {
+																orEleMap[orKey] = queryTime
+															}
+														}
 													}
 												}
 											}
