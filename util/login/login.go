@@ -25,6 +25,12 @@ func GetByDB(ctx context.Context, cli redisdb.Client, project, id string) ([]byt
 	model, err := cli.HGet(ctx, fmt.Sprintf("%s/%s", project, "loginIPCache"), id).Result()
 	if err != nil && err != redis.Nil {
 		return nil, err
+	} else if err == redis.Nil {
+		b,err := json.Marshal([]string{})
+		if err != nil {
+			return nil, err
+		}
+		return b, nil
 	}
 	return []byte(model), nil
 }
