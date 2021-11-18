@@ -26,7 +26,7 @@ func GetByDB(ctx context.Context, cli redisdb.Client, project, id string) ([]byt
 	if err != nil && err != redis.Nil {
 		return nil, err
 	} else if err == redis.Nil {
-		b,err := json.Marshal([]string{})
+		b,err := json.Marshal(map[string]int64{})
 		if err != nil {
 			return nil, err
 		}
@@ -38,4 +38,35 @@ func GetByDB(ctx context.Context, cli redisdb.Client, project, id string) ([]byt
 // TriggerUpdate 更新redis资产数据,并发送消息通知
 func TriggerUpdate(ctx context.Context, redisClient redisdb.Client, project,id string, data interface{}) error {
 	return cache.Update(ctx, redisClient, project, "loginIPCache", id, data)
+}
+
+// Get 根据项目ID和资产ID查询数据
+func GetAdmin(ctx context.Context, redisClient redisdb.Client, project, id string, result interface{}) (err error) {
+	nodeBytes, err := GetByDBAdmin(ctx, redisClient, project,  id)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal(nodeBytes, result); err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetByDBAdmin(ctx context.Context, cli redisdb.Client, project, id string) ([]byte, error) {
+	model, err := cli.HGet(ctx, fmt.Sprintf("%s/%s", project, "loginIPCacheAdmin"), id).Result()
+	if err != nil && err != redis.Nil {
+		return nil, err
+	} else if err == redis.Nil {
+		b,err := json.Marshal(map[string]int64{})
+		if err != nil {
+			return nil, err
+		}
+		return b, nil
+	}
+	return []byte(model), nil
+}
+
+// TriggerUpdate 更新redis资产数据,并发送消息通知
+func TriggerUpdateAdmin(ctx context.Context, redisClient redisdb.Client, project,id string, data interface{}) error {
+	return cache.Update(ctx, redisClient, project, "loginIPCacheAdmin", id, data)
 }
