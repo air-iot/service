@@ -76,6 +76,8 @@ type Rule struct {
 	ListType          string                 `json:"listType"`
 	BlackList         []ExtraTagForRule      `json:"blackList"`
 	WhiteList         []ExtraTagForRule      `json:"whiteList"`
+	Audio             string                 `json:"audio"`
+	TimesOfPlay       interface{}            `json:"timesOfPlay"`
 }
 
 type WarningMongo struct {
@@ -102,6 +104,8 @@ type RuleMongo struct {
 	ListType          string                 `json:"listType" bson:"listType"`
 	BlackList         []ExtraTagForRuleMongo `json:"blackList" bson:"blackList"`
 	WhiteList         []ExtraTagForRuleMongo `json:"whiteList" bson:"whiteList"`
+	Audio             string                 `json:"audio" bson:"audio"`
+	TimesOfPlay       interface{}            `json:"timesOfPlay" bson:"timesOfPlay"`
 }
 
 type ComputedMongo struct {
