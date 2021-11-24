@@ -395,7 +395,7 @@ eventloop:
 											data["time"] = tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
 											switch modifyTypeAfterMapping {
-											case "编辑资产画面", "删除资产画面":
+											case "编辑资产画面", "删除资产画面","新增资产画面":
 												dashboardInfo, ok := data["dashboard"].(map[string]interface{})
 												if !ok {
 													logger.Errorf(eventDeviceModifyLog, "数据消息中dashboard字段不存在或类型错误")
@@ -539,7 +539,7 @@ eventloop:
 					data["time"] = tools.GetLocalTimeNow(time.Now()).Format("2006-01-02 15:04:05")
 
 					switch modifyTypeAfterMapping {
-					case "编辑资产画面", "删除资产画面":
+					case "编辑资产画面", "删除资产画面","新增资产画面":
 						dashboardInfo, ok := data["dashboard"].(map[string]interface{})
 						if !ok {
 							logger.Errorf(eventDeviceModifyLog, "数据消息中dashboard字段不存在或类型错误")
