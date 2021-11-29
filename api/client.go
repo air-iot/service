@@ -834,21 +834,21 @@ func (p *client) DelSettingById(headers map[string]string, id string, result int
 	return p.Delete(u, headers, result)
 }
 
-func (p *client) UpdateSettingById(headers map[string]string, id string, data, result interface{}) error {
+func (p *client) UpdateSettingById(headers map[string]string,  data, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
 		host = "core:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/setting/%s", id)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "core/setting"}
 	return p.Patch(u, headers, data, result)
 }
 
-func (p *client) ReplaceSettingById(headers map[string]string, id string, data, result interface{}) error {
+func (p *client) ReplaceSettingById(headers map[string]string, data, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
 		host = "core:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/setting/%s", id)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "core/setting"}
 	return p.Put(u, headers, data, result)
 }
 

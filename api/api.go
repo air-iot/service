@@ -84,8 +84,8 @@ type Client interface {
 	FindSettingById(headers map[string]string, id string, result interface{}) error
 	SaveSetting(headers map[string]string, data, result interface{}) error
 	DelSettingById(headers map[string]string, id string, result interface{}) error
-	UpdateSettingById(headers map[string]string, id string, data, result interface{}) error
-	ReplaceSettingById(headers map[string]string, id string, data, result interface{}) error
+	UpdateSettingById(headers map[string]string,  data, result interface{}) error
+	ReplaceSettingById(headers map[string]string, data, result interface{}) error
 
 	FindTableQuery(headers map[string]string, query, result interface{}) error
 	FindTableById(headers map[string]string, id string, result interface{}) error
