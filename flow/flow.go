@@ -3,20 +3,35 @@ package flow
 import (
 	"context"
 	"fmt"
+	"github.com/air-iot/service/flow/js"
+	"io/ioutil"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/camunda-cloud/zeebe/clients/go/pkg/entities"
+	"github.com/camunda-cloud/zeebe/clients/go/pkg/worker"
+	"github.com/dop251/goja"
+	"github.com/dop251/goja_nodejs/require"
+	"github.com/tidwall/gjson"
+
 	"github.com/air-iot/service/api"
 	"github.com/air-iot/service/gin/ginx"
 	"github.com/air-iot/service/init/mongodb"
 	"github.com/air-iot/service/init/zeebe"
 	"github.com/air-iot/service/logger"
 	"github.com/air-iot/service/util/json"
-	"github.com/camunda-cloud/zeebe/clients/go/pkg/entities"
-	"github.com/camunda-cloud/zeebe/clients/go/pkg/worker"
-	"github.com/tidwall/gjson"
-	"regexp"
-	"strconv"
-	"strings"
-	"time"
 )
+
+func init() {
+	if err := ioutil.WriteFile("./moment.js", []byte(js.Moment), 0755); err != nil {
+		logger.Errorf("生成moment js错误: %v", err)
+	}
+	if err := ioutil.WriteFile("./lodash.min.js", []byte(js.Lodash), 0755); err != nil {
+		logger.Errorf("生成lodash js错误: %v", err)
+	}
+}
 
 var Reg, _ = regexp.Compile("\\${(.+?)}")
 
@@ -189,7 +204,12 @@ func TemplateVariableFlowBytes(ctx context.Context, apiClient api.Client, templa
 	//识别变量,两边带${}
 	//匹配出变量数组
 	params := Reg.FindAllString(templateModelString, -1)
-
+	registry := new(require.Registry) // this can be shared by multiple runtimes
+	vm := goja.New()
+	registry.Enable(vm)
+	formatJs := `let moment = require("./moment.js");
+let _ = require("./lodash.min.js");
+`
 	if len(params) == 1 {
 		paramTmp := TrimSymbol(params[0])
 		result := gjson.GetBytes(variablesBytes, paramTmp)
@@ -201,13 +221,20 @@ func TemplateVariableFlowBytes(ctx context.Context, apiClient api.Client, templa
 				}
 				result = *val
 			} else {
-				return nil, fmt.Errorf("执行运算的变量不存在")
+				return nil, fmt.Errorf("变量值不存在")
 			}
 		}
 		if templateModelString == params[0] {
 			return result.Value(), nil
 		} else {
-			return strings.ReplaceAll(templateModelString, params[0], result.String()), nil
+			val := strings.ReplaceAll(templateModelString, params[0], result.String())
+
+			runVal, err := vm.RunString(fmt.Sprintf(`%s%s`, formatJs, val))
+			if err != nil {
+				logger.Warnf("执行js错误: %s", err.Error())
+				return val, nil
+			}
+			return runVal.Export(), nil
 		}
 	} else if len(params) > 1 {
 		for _, v := range params {
@@ -233,7 +260,13 @@ func TemplateVariableFlowBytes(ctx context.Context, apiClient api.Client, templa
 			//templateModelString = strings.ReplaceAll(templateModelString, v, formatx.InterfaceTypeToString(mappingData))
 		}
 	}
-	return templateModelString, nil
+	runVal, err := vm.RunString(fmt.Sprintf(`%s
+%s`, formatJs, templateModelString))
+	if err != nil {
+		logger.Warnf("执行js错误: %s", err.Error())
+		return templateModelString, nil
+	}
+	return runVal.Export(), nil
 }
 
 type Handler func(projectID string, data interface{}) (map[string]interface{}, error)
