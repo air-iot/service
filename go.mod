@@ -5,13 +5,15 @@ go 1.16
 require (
 	github.com/camunda-cloud/zeebe/clients/go v1.1.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/dop251/goja v0.0.0-20211121151210-cc28e89bfc81
+	github.com/dop251/goja_nodejs v0.0.0-20211022123610-8dd9abb0616d
 	github.com/eclipse/paho.mqtt.golang v1.3.3
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-gonic/gin v1.7.4
 	github.com/go-redis/redis/v8 v8.8.2
 	github.com/go-resty/resty/v2 v2.6.0
 	github.com/google/uuid v1.2.0
-	github.com/influxdata/influxdb-client-go/v2 v2.5.1 // indirect
+	github.com/influxdata/influxdb-client-go/v2 v2.5.1
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jinzhu/copier v0.3.0
 	github.com/jmoiron/sqlx v1.3.3
