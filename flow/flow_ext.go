@@ -12208,12 +12208,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 						}
 					}
 				}
-			}else{
+			} else {
 				switch settings.SelectTyp {
 				case "记录选择":
 					deleteID, ok := data["id"].(string)
 					if !ok {
-						logger.Errorf("不存在ID:%+v",data)
+						logger.Errorf("不存在ID:%+v", data)
 						continue
 					}
 					canDelete := false
@@ -16274,7 +16274,6 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			}
 		}
 
-		fmt.Println("data:",data)
 		err = apiClient.SaveExt(headerMap, tempTableName, data, &result)
 		if err != nil {
 			logger.Errorf("存储临时工作表记录失败:%s", err.Error())
@@ -16290,10 +16289,12 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 						if extRaw.RelateField != "" {
 							if relateVal, ok := eleRaw[extRaw.RelateField]; ok {
 								data[key] = relateVal
+								data[key+"Id"] = eleRaw["id"]
 							}
 						} else if extRaw.RelateTo != "" {
 							if relateVal, ok := eleRaw[extRaw.RelateName]; ok {
 								data[key] = relateVal
+								data[key+"Id"] = eleRaw["id"]
 							}
 						}
 					} else {
@@ -16315,7 +16316,6 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 		}
 
 		////fmt.Println("settings.Query:",settings.Query)
-		fmt.Println("settings.Query:",settings.Query)
 		queryResult := make([]interface{}, 0)
 		err = apiClient.FindExtQuery(headerMap, tempTableName, settings.Query, &queryResult)
 		if err != nil {
@@ -16323,7 +16323,6 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			continue
 		}
 		////fmt.Println("queryResult:",queryResult)
-		fmt.Println("len(queryResult):",len(queryResult))
 		if len(queryResult) != 0 {
 			isValid = true
 		}
@@ -16425,12 +16424,12 @@ func getTableSchemaColsNameMap(ctx context.Context, redisClient redisdb.Client, 
 								if fieldType, ok := propertyMap["fieldType"].(string); ok {
 									excelColNameTypeExt.FieldType = fieldType
 									if fieldType == "select" {
-										if enum1Raw,ok := propertyMap["enum1"];ok{
+										if enum1Raw, ok := propertyMap["enum1"]; ok {
 											if enum1List, ok := enum1Raw.([]interface{}); ok {
 												excelColNameTypeExt.Enum1 = formatx.InterfaceListToStringList(enum1List)
 											}
 										}
-										if enumTitle1Raw,ok := propertyMap["enum_title1"];ok{
+										if enumTitle1Raw, ok := propertyMap["enum_title1"]; ok {
 											if enumTitle1List, ok := enumTitle1Raw.([]interface{}); ok {
 												excelColNameTypeExt.Enum_title1 = formatx.InterfaceListToStringList(enumTitle1List)
 											}
@@ -16447,12 +16446,12 @@ func getTableSchemaColsNameMap(ctx context.Context, redisClient redisdb.Client, 
 										tableInfo := entity.Table{}
 										err = table.Get(ctx, redisClient, mongoClient, projectName, relateToID, &tableInfo)
 										if err != nil {
-											logger.Errorf("获取工作表(%s)缓存失败:%s",relateToID,err.Error())
+											logger.Errorf("获取工作表(%s)缓存失败:%s", relateToID, err.Error())
 											if relateTo, ok := relateMap["name"].(string); ok {
 												excelColNameTypeExt.RelateTo = "ext_" + relateTo
 												excelColNameTypeExt.FieldType = relateTo
 											}
-										}else{
+										} else {
 											excelColNameTypeExt.RelateTo = "ext_" + tableInfo.Name
 											excelColNameTypeExt.FieldType = tableInfo.Name
 										}

@@ -1479,3 +1479,64 @@ func (p *client) ReplaceFlowTaskById(headers map[string]string, id string, data,
 	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("flow/flowTask/%s", id)}
 	return p.Put(u, headers, data, result)
 }
+
+//func (p *client) FindMessageQuery(headers map[string]string, query, result interface{}) error {
+//	b, err := json.Marshal(query)
+//	if err != nil {
+//		return err
+//	}
+//	host := p.cfg.Host
+//	if host == "" {
+//		host = "core:9000"
+//	}
+//	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "core/systemVariable"}
+//	v := url.Values{}
+//	v.Set("query", string(b))
+//	u.RawQuery = v.Encode()
+//	return p.Get(u, headers, result)
+//}
+//
+//func (p *client) FindMessageById(headers map[string]string, id string, result interface{}) error {
+//	host := p.cfg.Host
+//	if host == "" {
+//		host = "core:9000"
+//	}
+//	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/systemVariable/%s", id)}
+//	return p.Get(u, headers, result)
+//}
+//
+//func (p *client) SaveMessage(headers map[string]string, data, result interface{}) error {
+//	host := p.cfg.Host
+//	if host == "" {
+//		host = "core:9000"
+//	}
+//	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "core/systemVariable"}
+//	return p.Post(u, headers, data, result)
+//}
+//
+//func (p *client) DelMessageById(headers map[string]string, id string, result interface{}) error {
+//	host := p.cfg.Host
+//	if host == "" {
+//		host = "core:9000"
+//	}
+//	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/systemVariable/%s", id)}
+//	return p.Delete(u, headers, result)
+//}
+//
+//func (p *client) UpdateMessageById(headers map[string]string, id string, data, result interface{}) error {
+//	host := p.cfg.Host
+//	if host == "" {
+//		host = "core:9000"
+//	}
+//	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/systemVariable/%s", id)}
+//	return p.Patch(u, headers, data, result)
+//}
+//
+//func (p *client) ReplaceMessageById(headers map[string]string, id string, data, result interface{}) error {
+//	host := p.cfg.Host
+//	if host == "" {
+//		host = "core:9000"
+//	}
+//	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/systemVariable/%s", id)}
+//	return p.Put(u, headers, data, result)
+//}
