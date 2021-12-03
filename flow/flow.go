@@ -3,7 +3,7 @@ package flow
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"github.com/air-iot/service/flow/js"
 	"regexp"
 	"strconv"
 	"strings"
@@ -16,29 +16,12 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/air-iot/service/api"
-	"github.com/air-iot/service/flow/js"
 	"github.com/air-iot/service/gin/ginx"
 	"github.com/air-iot/service/init/mongodb"
 	"github.com/air-iot/service/init/zeebe"
 	"github.com/air-iot/service/logger"
-	"github.com/air-iot/service/util/file"
 	"github.com/air-iot/service/util/json"
 )
-
-func init() {
-	momentJS := "./moment.js"
-	if !file.Exists(momentJS) {
-		if err := ioutil.WriteFile(momentJS, []byte(js.Moment), 0755); err != nil {
-			logger.Errorf("生成moment js错误: %v", err)
-		}
-	}
-	lodashJS := "./lodash.min.js"
-	if !file.Exists(lodashJS) {
-		if err := ioutil.WriteFile(lodashJS, []byte(js.Lodash), 0755); err != nil {
-			logger.Errorf("生成lodash js错误: %v", err)
-		}
-	}
-}
 
 var Reg, _ = regexp.Compile("\\${(.+?)}")
 
@@ -214,9 +197,9 @@ func TemplateVariableFlowBytes(ctx context.Context, apiClient api.Client, templa
 	registry := new(require.Registry) // this can be shared by multiple runtimes
 	vm := goja.New()
 	registry.Enable(vm)
-	formatJs := `let moment = require("./moment.js");
-let _ = require("./lodash.min.js");
-`
+	//	formatJs := `let moment = require("./moment.js");
+	//let _ = require("./lodash.min.js");
+	//`
 	if len(params) == 1 {
 		paramTmp := TrimSymbol(params[0])
 		result := gjson.GetBytes(variablesBytes, paramTmp)
@@ -236,7 +219,9 @@ let _ = require("./lodash.min.js");
 		} else {
 			val := strings.ReplaceAll(templateModelString, params[0], result.String())
 
-			runVal, err := vm.RunString(fmt.Sprintf(`%s%s`, formatJs, val))
+			runVal, err := vm.RunString(fmt.Sprintf(`%s;
+%s;
+%s`, js.Moment, js.Lodash, val))
 			if err != nil {
 				logger.Warnf("执行js错误: %s", err.Error())
 				return val, nil
@@ -267,8 +252,9 @@ let _ = require("./lodash.min.js");
 			//templateModelString = strings.ReplaceAll(templateModelString, v, formatx.InterfaceTypeToString(mappingData))
 		}
 	}
-	runVal, err := vm.RunString(fmt.Sprintf(`%s
-%s`, formatJs, templateModelString))
+	runVal, err := vm.RunString(fmt.Sprintf(`%s;
+%s;
+%s`, js.Moment, js.Lodash, templateModelString))
 	if err != nil {
 		logger.Warnf("执行js错误: %s", err.Error())
 		return templateModelString, nil
