@@ -3,7 +3,6 @@ package flow
 import (
 	"context"
 	"fmt"
-	"github.com/air-iot/service/flow/js"
 	"io/ioutil"
 	"regexp"
 	"strconv"
@@ -17,19 +16,27 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/air-iot/service/api"
+	"github.com/air-iot/service/flow/js"
 	"github.com/air-iot/service/gin/ginx"
 	"github.com/air-iot/service/init/mongodb"
 	"github.com/air-iot/service/init/zeebe"
 	"github.com/air-iot/service/logger"
+	"github.com/air-iot/service/util/file"
 	"github.com/air-iot/service/util/json"
 )
 
 func init() {
-	if err := ioutil.WriteFile("./moment.js", []byte(js.Moment), 0755); err != nil {
-		logger.Errorf("生成moment js错误: %v", err)
+	momentJS := "./moment.js"
+	if !file.Exists(momentJS) {
+		if err := ioutil.WriteFile(momentJS, []byte(js.Moment), 0755); err != nil {
+			logger.Errorf("生成moment js错误: %v", err)
+		}
 	}
-	if err := ioutil.WriteFile("./lodash.min.js", []byte(js.Lodash), 0755); err != nil {
-		logger.Errorf("生成lodash js错误: %v", err)
+	lodashJS := "./lodash.min.js"
+	if !file.Exists(lodashJS) {
+		if err := ioutil.WriteFile(lodashJS, []byte(js.Lodash), 0755); err != nil {
+			logger.Errorf("生成lodash js错误: %v", err)
+		}
 	}
 }
 
