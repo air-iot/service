@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/air-iot/service/init/cache/entity"
 	"github.com/air-iot/service/init/cache/table"
+	"github.com/air-iot/service/init/cache/user"
 	"github.com/air-iot/service/logger"
 	"github.com/air-iot/service/util/flowx"
 	"github.com/air-iot/service/util/formatx"
@@ -16310,6 +16311,18 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 								}
 							}
 						}
+					}
+				}
+				switch key {
+				case "creator", "modifyUser":
+					if valString,ok := val.(string);ok{
+						userInfo := entity.User{}
+						err = user.Get(ctx,redisClient,mongoClient,projectName,valString,&userInfo)
+						if err != nil {
+							logger.Errorf("处理用户字段时获取用户缓存失败:%s", err.Error())
+							continue
+						}
+						data[key+"Name"] = userInfo.Name
 					}
 				}
 			}
