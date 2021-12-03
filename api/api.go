@@ -145,4 +145,14 @@ type Client interface {
 	DelFlowTaskById(headers map[string]string, id string, result interface{}) error
 	UpdateFlowTaskById(headers map[string]string, id string, data, result interface{}) error
 	ReplaceFlowTaskById(headers map[string]string, id string, data, result interface{}) error
+
+	//FindMessageQuery(headers map[string]string, query, result interface{}) error
+	//FindMessageById(headers map[string]string, id string, result interface{}) error
+	//SaveMessage(headers map[string]string, data, result interface{}) error
+	//DelMessageById(headers map[string]string, id string, result interface{}) error
+	//UpdateMessageById(headers map[string]string, id string, data, result interface{}) error
+	//ReplaceMessageById(headers map[string]string, id string, data, result interface{}) error
+	//ReadMessageBatch(headers map[string]string, data, result interface{}) error
+	//ReadMessageById(headers map[string]string, id string, data, result interface{}) error
+	//ResotreMessageById(headers map[string]string, id string, data, result interface{}) error
 }
