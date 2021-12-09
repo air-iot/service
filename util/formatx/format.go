@@ -41,6 +41,20 @@ func AddNonRepByLoop(slc []string, addEle string) []string {
 }
 
 // AddNonRepByLoop 通过循环添加非重复元素
+func AddNonRepByLoopInterface(slc []interface{}, addEle interface{}) []interface{} {
+	flag := true
+	for i := range slc {
+		if slc[i] == addEle {
+			flag = false // 存在重复元素，标识为false
+		}
+	}
+	if flag { // 标识为false，不添加进结果
+		slc = append(slc, addEle)
+	}
+	return slc
+}
+
+// AddNonRepByLoop 通过循环添加非重复元素
 func AddNonRepPrimitiveAByLoop(slc primitive.A, addEle primitive.M) primitive.A {
 	flag := true
 	for i := range slc {
