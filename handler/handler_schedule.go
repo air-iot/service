@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/air-iot/service/logger"
 	"github.com/air-iot/service/util/numberx"
+	"sync"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -24,7 +25,7 @@ import (
 
 var eventScheduleLog = map[string]interface{}{"name": "计划事件触发"}
 
-func TriggerAddSchedule(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, data map[string]interface{}, c *cron.Cron) error {
+func TriggerAddSchedule(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, data map[string]interface{}, c *cron.Cron, configMap *sync.Map) error {
 	//headerMap := map[string]string{ginx.XRequestProject: projectName}
 	eventID, ok := data["id"].(string)
 	if !ok {
@@ -84,7 +85,7 @@ func TriggerAddSchedule(ctx context.Context, redisClient redisdb.Client, mongoCl
 	if cronExpression == "" {
 		return fmt.Errorf("事件(%s)的定时表达式解析失败", eventID)
 	}
-	_, _ = c.AddFunc(cronExpression, func() {
+	entryID, _ := c.AddFunc(cronExpression, func() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30)*time.Second)
 		defer cancel()
 		scheduleType := ""
@@ -195,6 +196,23 @@ func TriggerAddSchedule(ctx context.Context, redisClient redisdb.Client, mongoCl
 		}
 	})
 
+	entryIDList := make([]cron.EntryID, 0)
+	entryIDListRaw, ok := configMap.Load(projectName)
+	if !ok {
+		logger.Debugf("未获取到定时任务缓存:%s", projectName)
+		entryIDList = append(entryIDList, entryID)
+		configMap.Store(projectName, entryIDList)
+	} else {
+		if ele, ok := entryIDListRaw.([]cron.EntryID); !ok {
+			logger.Debugf("获取到的定时任务缓存格式错误:%s", projectName)
+			entryIDList = append(entryIDList, entryID)
+			configMap.Store(projectName, entryIDList)
+		} else {
+			ele = append(ele, entryID)
+			configMap.Store(projectName, ele)
+		}
+	}
+
 	c.Start()
 
 	////logger.Debugf(eventScheduleLog, "计划事件触发器（添加计划事件）执行结束")
@@ -202,7 +220,7 @@ func TriggerAddSchedule(ctx context.Context, redisClient redisdb.Client, mongoCl
 	return nil
 }
 
-func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, data map[string]interface{}, c *cron.Cron) error {
+func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, projectName string, data map[string]interface{}, c *cron.Cron, configMap *sync.Map) error {
 	//headerMap := map[string]string{ginx.XRequestProject: projectName}
 
 	pipeline := mongo.Pipeline{}
@@ -228,12 +246,25 @@ func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client
 	if len(eventInfoList) == 0 {
 		return nil
 	}
-	c.Stop()
-
-	testBefore := c.Entries()
-	for _, v := range testBefore {
-		c.Remove(v.ID)
+	entryIDList := make([]cron.EntryID, 0)
+	entryIDListRaw, ok := configMap.Load(projectName)
+	if !ok {
+		logger.Errorf("未获取到定时任务缓存:%s", projectName)
+		//return
+	} else {
+		if ele, ok := entryIDListRaw.([]cron.EntryID); !ok {
+			logger.Errorf("获取到的定时任务缓存格式错误:%s", projectName)
+			//return
+		} else {
+			entryIDList = ele
+		}
 	}
+	//刷新定时任务
+	c.Stop()
+	for _, v := range entryIDList {
+		c.Remove(v)
+	}
+	entryIDList = make([]cron.EntryID, 0)
 	for i, eventInfo := range eventInfoList {
 		j := i
 		eventInfo = eventInfoList[j]
@@ -309,7 +340,7 @@ func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client
 
 		eventInfoCron := eventInfo
 		eventIDCron := eventID
-		_, _ = c.AddFunc(cronExpression, func() {
+		entryID, _ := c.AddFunc(cronExpression, func() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30)*time.Second)
 			defer cancel()
 			scheduleType := ""
@@ -427,6 +458,7 @@ func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client
 				}
 			}
 		})
+		entryIDList = append(entryIDList, entryID)
 		//if err != nil{
 		//	fmt.Println("AddFunc err:",err.Error())
 		//}
@@ -434,6 +466,7 @@ func TriggerEditOrDeleteSchedule(ctx context.Context, redisClient redisdb.Client
 		//fmt.Println("AddFunc entryID:",entryID,"eventIDCron:",eventIDCron)
 	}
 
+	configMap.Store(projectName, entryIDList)
 	c.Start()
 
 	//test := c.Entries()
