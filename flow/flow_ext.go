@@ -31,7 +31,7 @@ import (
 
 var flowExtModifyLog = map[string]interface{}{"name": "工作表流程触发"}
 
-func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, zbClient zbc.Client, projectName, tableName string, data map[string]interface{}, oldInfoRaw bson.M, operateType string) error {
+func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongoClient *mongo.Client, mq mq.MQ, apiClient api.Client, zbClient zbc.Client, projectName, tableName string, data map[string]interface{}, oldInfoRaw bson.M, operateType,userID string) error {
 	////logger.Debugf(eventDeviceModifyLog, "开始执行资产修改流程触发器")
 	////logger.Debugf(eventDeviceModifyLog, "传入参数为:%+v", data)
 	//ctx, cancel := context.WithTimeout(context.Background(), time.Duration(30)*time.Second)
@@ -16345,7 +16345,7 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			//	"table": settings.Table,
 			//	"data":  data,
 			//}
-
+			data["flowTriggerUser"] = userID
 			err = flowx.StartFlow(mongoClient, zbClient, flowInfo.FlowXml, projectName, string(ExtTrigger), flowID, data, settings)
 			if err != nil {
 				logger.Errorf("流程推进到下一阶段失败:%s", err.Error())
