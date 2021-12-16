@@ -16323,6 +16323,8 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 							continue
 						}
 						data[key+"Name"] = userInfo.Name
+					}else if valMap,ok := val.(map[string]interface{});ok{
+						delete(valMap,"pageSetting")
 					}
 				}
 			}
