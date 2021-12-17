@@ -465,7 +465,16 @@ func cacheSystemVariable() error {
 		}
 		for _, n := range resultMap.SystemVariable {
 			SystemVariableLogic.systemVariableCache.Store(n.ID, n)
-			SystemVariableLogic.systemVariableNameValueMapCache.Store(n.Uid, n.Value)
+			valueByte,err := json.Marshal(n.Value)
+			if err != nil {
+				return fmt.Errorf("序列化系统变量的值错误:%s", err.Error())
+			}
+			var valueMap interface{}
+			err = json.Unmarshal(valueByte,&valueMap)
+			if err != nil {
+				return fmt.Errorf("解序列化系统变量的值错误:%s", err.Error())
+			}
+			SystemVariableLogic.systemVariableNameValueMapCache.Store(n.Uid, valueMap)
 		}
 	}
 	return nil
