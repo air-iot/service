@@ -434,9 +434,9 @@ func (p *client) FindExtQuery(headers map[string]string, tableName string, query
 	}
 	host := p.cfg.Host
 	if host == "" {
-		host = "core:9000"
+		host = "ext:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/ext/%s", tableName)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("ext/ext/%s", tableName)}
 	v := url.Values{}
 	v.Set("query", string(b))
 	u.RawQuery = v.Encode()
@@ -446,54 +446,54 @@ func (p *client) FindExtQuery(headers map[string]string, tableName string, query
 func (p *client) SaveExt(headers map[string]string, tableName string, data, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
-		host = "core:9000"
+		host = "ext:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/ext/%s", tableName)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("ext/ext/%s", tableName)}
 	return p.Post(u, headers, data, result)
 }
 
 func (p *client) SaveManyExt(headers map[string]string, tableName string, data, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
-		host = "core:9000"
+		host = "ext:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/ext/%s/many", tableName)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("ext/ext/%s/many", tableName)}
 	return p.Post(u, headers, data, result)
 }
 
 func (p *client) FindExtById(headers map[string]string, tableName, id string, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
-		host = "core:9000"
+		host = "ext:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/ext/%s/%s", tableName, id)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("ext/ext/%s/%s", tableName, id)}
 	return p.Get(u, headers, result)
 }
 
 func (p *client) DelExtById(headers map[string]string, tableName, id string, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
-		host = "core:9000"
+		host = "ext:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/ext/%s/%s", tableName, id)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("ext/ext/%s/%s", tableName, id)}
 	return p.Delete(u, headers, result)
 }
 
 func (p *client) DelExtAll(headers map[string]string, tableName, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
-		host = "core:9000"
+		host = "ext:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/ext/%s", tableName)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("ext/ext/%s", tableName)}
 	return p.Delete(u, headers, result)
 }
 
 func (p *client) UpdateExtById(headers map[string]string, tableName, id string, data, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
-		host = "core:9000"
+		host = "ext:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/ext/%s/%s", tableName, id)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("ext/ext/%s/%s", tableName, id)}
 	return p.Patch(u, headers, data, result)
 }
 
@@ -504,9 +504,9 @@ func (p *client) UpdateManyExt(headers map[string]string, tableName string, quer
 	}
 	host := p.cfg.Host
 	if host == "" {
-		host = "core:9000"
+		host = "ext:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/ext/many/%s", tableName)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("ext/ext/many/%s", tableName)}
 	v := url.Values{}
 	v.Set("query", string(b))
 	u.RawQuery = v.Encode()
@@ -520,9 +520,9 @@ func (p *client) DelManyExt(headers map[string]string, tableName string, query, 
 	}
 	host := p.cfg.Host
 	if host == "" {
-		host = "core:9000"
+		host = "ext:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/ext/many/%s", tableName)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("ext/ext/many/%s", tableName)}
 	v := url.Values{}
 	v.Set("query", string(b))
 	u.RawQuery = v.Encode()
@@ -532,9 +532,9 @@ func (p *client) DelManyExt(headers map[string]string, tableName string, query, 
 func (p *client) ReplaceExtById(headers map[string]string, tableName, id string, data, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
-		host = "core:9000"
+		host = "ext:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/ext/%s/%s", tableName, id)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("ext/ext/%s/%s", tableName, id)}
 	return p.Put(u, headers, data, result)
 }
 
@@ -859,9 +859,9 @@ func (p *client) FindTableQuery(headers map[string]string, query, result interfa
 	}
 	host := p.cfg.Host
 	if host == "" {
-		host = "core:9000"
+		host = "ext:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "core/table"}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "ext/table"}
 	v := url.Values{}
 	v.Set("query", string(b))
 	u.RawQuery = v.Encode()
@@ -871,45 +871,45 @@ func (p *client) FindTableQuery(headers map[string]string, query, result interfa
 func (p *client) FindTableById(headers map[string]string, id string, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
-		host = "core:9000"
+		host = "ext:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/table/%s", id)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("ext/table/%s", id)}
 	return p.Get(u, headers, result)
 }
 
 func (p *client) SaveTable(headers map[string]string, data, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
-		host = "core:9000"
+		host = "ext:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "core/table"}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "ext/table"}
 	return p.Post(u, headers, data, result)
 }
 
 func (p *client) DelTableById(headers map[string]string, id string, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
-		host = "core:9000"
+		host = "ext:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/table/%s", id)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("ext/table/%s", id)}
 	return p.Delete(u, headers, result)
 }
 
 func (p *client) UpdateTableById(headers map[string]string, id string, data, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
-		host = "core:9000"
+		host = "ext:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/table/%s", id)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("ext/table/%s", id)}
 	return p.Patch(u, headers, data, result)
 }
 
 func (p *client) ReplaceTableById(headers map[string]string, id string, data, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
-		host = "core:9000"
+		host = "ext:9000"
 	}
-	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("core/table/%s", id)}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: fmt.Sprintf("ext/table/%s", id)}
 	return p.Put(u, headers, data, result)
 }
 
