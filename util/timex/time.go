@@ -59,14 +59,16 @@ func ConvertStringToTime(layout, value string, location *time.Location) (*time.T
 
 // GetLocalTime 获取本地时区的时间（东八）
 func GetLocalTime(data time.Time, format string) string {
-	cstZone := time.FixedZone("CST", 8*3600) // 东八
-	return data.In(cstZone).Format(format)
+	//cstZone := time.FixedZone("CST", 8*3600) // 东八
+	//return data.In(cstZone).Format(format)
+	return data.Format(format)
 }
 
 // GetLocalTime 获取本地时区的时间（东八）
 func GetLocalTimeNow(data time.Time) time.Time {
-	cstZone := time.FixedZone("CST", 8*3600) // 东八
-	return data.In(cstZone)
+	//cstZone := time.FixedZone("CST", 8*3600) // 东八
+	//return data.In(cstZone)
+	return data
 }
 
 // GetLocalTime 获取本地时区的时间（东八）
