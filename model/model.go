@@ -94,7 +94,7 @@ type Tag struct {
 	Total     float64 `json:"total"`
 	TimeBase  float64 `json:"timeBase"`
 	Filter    float64 `json:"filter"`
-	Fixed     float64 `json:"fixed"`
+	Fixed     interface{} `json:"fixed"`
 }
 
 type TagRules struct {

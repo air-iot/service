@@ -461,6 +461,7 @@ func cacheSystemVariable() error {
 		for _, n := range resultMap.SystemVariableMap {
 			if id, ok := n["id"]; ok {
 				SystemVariableLogic.systemVariableMapCache.Store(id, n)
+				SystemVariableLogic.systemVariableMapCache.Store(n["uid"], n)
 			}
 		}
 		for _, n := range resultMap.SystemVariable {
