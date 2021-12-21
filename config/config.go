@@ -409,5 +409,5 @@ type LixDataAnalysis struct {
 
 // LixFlow 流程管理
 type LixFlow struct {
-	ReportCount *int `json:"reportCount"`
+	FlowCount *int `json:"flowCount"`
 }
