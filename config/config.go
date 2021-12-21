@@ -376,3 +376,38 @@ type Minio struct {
 	UseSSl          bool
 	ExpireIn        int
 }
+
+type LixFileContent struct {
+	MacAddr        []string          `json:"macAddr"`
+	Type           *string           `json:"type"` //
+	CreateTime     *int64            `json:"createTime"`
+	ValidityPeriod *int              `json:"validityPeriod"`
+	UserCount      *int              `json:"userCount"`
+	DataGathering  *LixDataGathering `json:"dataGathering"`
+	Visual         *LixVisual        `json:"visual"`
+	DataAnalysis   *LixDataAnalysis  `json:"dataAnalysis"`
+	Flow           *LixFlow          `json:"flow"`
+}
+
+// LixDataGathering 数据采集
+type LixDataGathering struct {
+	Point             *int `json:"point"`
+	EventCount        *int `json:"eventCount"`
+	EventHandlerCount *int `json:"eventHandlerCount"`
+}
+
+// LixVisual 可视化
+type LixVisual struct {
+	DashboardCount *int  `json:"dashboardCount"`
+	Gis            *bool `json:"gis"`
+}
+
+// LixDataAnalysis 数据分析
+type LixDataAnalysis struct {
+	ReportCount *int `json:"reportCount"`
+}
+
+// LixFlow 流程管理
+type LixFlow struct {
+	ReportCount *int `json:"reportCount"`
+}
