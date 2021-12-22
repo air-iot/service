@@ -381,35 +381,43 @@ type LixFileContent struct {
 	MacAddr        []string          `json:"macAddr"`
 	Type           *string           `json:"type"` //
 	CreateTime     *int64            `json:"createTime"`
-	RemainingTime  *int64            `json:"remainingTime"`
 	ValidityPeriod *int              `json:"validityPeriod"`
 	UserCount      *int              `json:"userCount"`
 	DataGathering  *LixDataGathering `json:"dataGathering"`
 	Visual         *LixVisual        `json:"visual"`
 	DataAnalysis   *LixDataAnalysis  `json:"dataAnalysis"`
 	Flow           *LixFlow          `json:"flow"`
-	Version        string            `json:"version"`
+
+	RemainingTime *int64  `json:"remainingTime"`
+	RealUserCount *int    `json:"RealUserCount"`
+	Version       *string `json:"version"`
 }
 
 // LixDataGathering 数据采集
 type LixDataGathering struct {
-	Point             *int `json:"point"`
-	EventCount        *int `json:"eventCount"`
-	EventHandlerCount *int `json:"eventHandlerCount"`
+	Point                 *int `json:"point"`
+	EventCount            *int `json:"eventCount"`
+	EventHandlerCount     *int `json:"eventHandlerCount"`
+	RealPoint             *int `json:"realPoint"`
+	RealEventCount        *int `json:"realEventCount"`
+	RealEventHandlerCount *int `json:"realEventHandlerCount"`
 }
 
 // LixVisual 可视化
 type LixVisual struct {
-	DashboardCount *int  `json:"dashboardCount"`
-	Gis            *bool `json:"gis"`
+	DashboardCount     *int  `json:"dashboardCount"`
+	Gis                *bool `json:"gis"`
+	RealDashboardCount *int  `json:"realDashboardCount"`
 }
 
 // LixDataAnalysis 数据分析
 type LixDataAnalysis struct {
-	ReportCount *int `json:"reportCount"`
+	ReportCount     *int `json:"reportCount"`
+	RealReportCount *int `json:"realReportCount"`
 }
 
 // LixFlow 流程管理
 type LixFlow struct {
-	FlowCount *int `json:"flowCount"`
+	FlowCount     *int `json:"flowCount"`
+	RealFlowCount *int `json:"realFlowCount"`
 }
