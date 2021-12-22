@@ -381,6 +381,7 @@ type LixFileContent struct {
 	MacAddr        []string          `json:"macAddr"`
 	Type           *string           `json:"type"` //
 	CreateTime     *int64            `json:"createTime"`
+	RemainingTime  *int64            `json:"remainingTime"`
 	ValidityPeriod *int              `json:"validityPeriod"`
 	UserCount      *int              `json:"userCount"`
 	DataGathering  *LixDataGathering `json:"dataGathering"`
