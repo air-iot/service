@@ -387,6 +387,8 @@ type LixFileContent struct {
 	Visual         *LixVisual        `json:"visual"`
 	DataAnalysis   *LixDataAnalysis  `json:"dataAnalysis"`
 	Flow           *LixFlow          `json:"flow"`
+	RemainingTime  *int64            `json:"remainingTime"`
+	Version        *string           `json:"version"`
 }
 
 // LixDataGathering 数据采集
