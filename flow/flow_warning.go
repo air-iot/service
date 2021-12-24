@@ -370,7 +370,8 @@ flowloop:
 
 					var sendMap interface{}
 					if !isNode {
-						sendMap = bson.M{nodeID: sendMapInner}
+						sendMap = sendMapInner
+						//sendMap = bson.M{nodeID: sendMapInner}
 					} else {
 						sendMap = sendMapInner
 					}
