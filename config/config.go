@@ -394,6 +394,7 @@ type LixFileContent struct {
 // LixDataGathering 数据采集
 type LixDataGathering struct {
 	Point             *int `json:"point"`
+	CalcPoint         *int `json:"calcPoint"`
 	EventCount        *int `json:"eventCount"`
 	EventHandlerCount *int `json:"eventHandlerCount"`
 }
