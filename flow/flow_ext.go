@@ -75,6 +75,8 @@ func TriggerExtModifyFlow(ctx context.Context, redisClient redisdb.Client, mongo
 			"invalid":  1,
 			"flowXml":  1,
 			"disable":  1,
+			"startTime":1,
+			"endTime":1,
 		},
 	}
 	err := apiClient.FindFlowQuery(headerMap, query, &flowInfoList)
