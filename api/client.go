@@ -1,20 +1,25 @@
 package api
 
 import (
+	"github.com/air-iot/service/init/redisdb"
+	"sync"
+)
+
+import (
 	"context"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
-	"sync"
 	"time"
 
-	"github.com/air-iot/service/errors"
-	"github.com/air-iot/service/gin/ginx"
-	"github.com/air-iot/service/init/redisdb"
-	"github.com/air-iot/service/util/json"
 	"github.com/go-redis/redis/v8"
 	"github.com/go-resty/resty/v2"
+
+	"github.com/air-iot/service/config"
+	"github.com/air-iot/service/errors"
+	"github.com/air-iot/service/gin/ginx"
+	"github.com/air-iot/service/util/json"
 )
 
 type client struct {
@@ -1262,14 +1267,14 @@ func (p *client) CheckDriver(headers map[string]string, licenseName string, sign
 
 }
 
-func (p *client) CheckEngine(headers map[string]string, engineName string, signature interface{}) error {
+func (p *client) CheckEngine(headers map[string]string, engineName config.EngineName, signature interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
 		host = "core:9000"
 	}
 	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "core/license/engine"}
 	v := url.Values{}
-	v.Set("engineName", engineName)
+	v.Set("engineName", string(engineName))
 	u.RawQuery = v.Encode()
 	return p.Get(u, headers, signature)
 

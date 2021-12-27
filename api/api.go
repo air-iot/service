@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+
+	"github.com/air-iot/service/config"
 )
 
 type AuthToken struct {
@@ -113,7 +115,7 @@ type Client interface {
 	ReplaceGatewayById(headers map[string]string, id string, data, result interface{}) error
 
 	CheckDriver(headers map[string]string, licenseName string, signature interface{}) error
-	CheckEngine(headers map[string]string, engineName string, signature interface{}) error
+	CheckEngine(headers map[string]string, engineName config.EngineName, signature interface{}) error
 
 	FindLogQuery(headers map[string]string, query, result interface{}) error
 	FindLogById(headers map[string]string, id string, result interface{}) error
