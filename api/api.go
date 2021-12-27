@@ -84,7 +84,7 @@ type Client interface {
 	FindSettingById(headers map[string]string, id string, result interface{}) error
 	SaveSetting(headers map[string]string, data, result interface{}) error
 	DelSettingById(headers map[string]string, id string, result interface{}) error
-	UpdateSettingById(headers map[string]string,  data, result interface{}) error
+	UpdateSettingById(headers map[string]string, data, result interface{}) error
 	ReplaceSettingById(headers map[string]string, data, result interface{}) error
 
 	FindTableQuery(headers map[string]string, query, result interface{}) error
@@ -113,6 +113,7 @@ type Client interface {
 	ReplaceGatewayById(headers map[string]string, id string, data, result interface{}) error
 
 	CheckDriver(headers map[string]string, licenseName string, signature interface{}) error
+	CheckEngine(headers map[string]string, engineName string, signature interface{}) error
 
 	FindLogQuery(headers map[string]string, query, result interface{}) error
 	FindLogById(headers map[string]string, id string, result interface{}) error

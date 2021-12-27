@@ -834,7 +834,7 @@ func (p *client) DelSettingById(headers map[string]string, id string, result int
 	return p.Delete(u, headers, result)
 }
 
-func (p *client) UpdateSettingById(headers map[string]string,  data, result interface{}) error {
+func (p *client) UpdateSettingById(headers map[string]string, data, result interface{}) error {
 	host := p.cfg.Host
 	if host == "" {
 		host = "core:9000"
@@ -1257,6 +1257,19 @@ func (p *client) CheckDriver(headers map[string]string, licenseName string, sign
 	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "core/license/driver"}
 	v := url.Values{}
 	v.Set("licenseName", licenseName)
+	u.RawQuery = v.Encode()
+	return p.Get(u, headers, signature)
+
+}
+
+func (p *client) CheckEngine(headers map[string]string, engineName string, signature interface{}) error {
+	host := p.cfg.Host
+	if host == "" {
+		host = "core:9000"
+	}
+	u := url.URL{Scheme: p.cfg.Schema, Host: host, Path: "core/license/engine"}
+	v := url.Values{}
+	v.Set("engineName", engineName)
 	u.RawQuery = v.Encode()
 	return p.Get(u, headers, signature)
 
