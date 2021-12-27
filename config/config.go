@@ -377,40 +377,50 @@ type Minio struct {
 	ExpireIn        int
 }
 
-type LixFileContent struct {
-	MacAddr        []string          `json:"macAddr"`
-	Type           *string           `json:"type"` //
-	CreateTime     *int64            `json:"createTime"`
-	ValidityPeriod *int              `json:"validityPeriod"`
-	UserCount      *int              `json:"userCount"`
-	DataGathering  *LixDataGathering `json:"dataGathering"`
-	Visual         *LixVisual        `json:"visual"`
-	DataAnalysis   *LixDataAnalysis  `json:"dataAnalysis"`
-	Flow           *LixFlow          `json:"flow"`
-	RemainingTime  *int64            `json:"remainingTime"`
-	Version        *string           `json:"version"`
-}
+type EngineName string
 
-// LixDataGathering 数据采集
-type LixDataGathering struct {
-	Point             *int `json:"point"`
-	CalcPoint         *int `json:"calcPoint"`
-	EventCount        *int `json:"eventCount"`
-	EventHandlerCount *int `json:"eventHandlerCount"`
-}
+const (
+	DataGathering EngineName = "dataGathering"
+	Visual        EngineName = "visual"
+	DataAnalysis  EngineName = "dataAnalysis"
+	Flow          EngineName = "flow"
+)
 
-// LixVisual 可视化
-type LixVisual struct {
-	DashboardCount *int  `json:"dashboardCount"`
-	Gis            *bool `json:"gis"`
-}
+type (
+	LixFileContent struct {
+		MacAddr        []string          `json:"macAddr"`
+		Type           *string           `json:"type"` //
+		CreateTime     *int64            `json:"createTime"`
+		ValidityPeriod *int              `json:"validityPeriod"`
+		UserCount      *int              `json:"userCount"`
+		DataGathering  *LixDataGathering `json:"dataGathering"`
+		Visual         *LixVisual        `json:"visual"`
+		DataAnalysis   *LixDataAnalysis  `json:"dataAnalysis"`
+		Flow           *LixFlow          `json:"flow"`
+		RemainingTime  *int64            `json:"remainingTime"`
+		Version        *string           `json:"version"`
+	}
+	// LixDataGathering 数据采集
+	LixDataGathering struct {
+		Point             *int `json:"point"`
+		CalcPoint         *int `json:"calcPoint"`
+		EventCount        *int `json:"eventCount"`
+		EventHandlerCount *int `json:"eventHandlerCount"`
+	}
 
-// LixDataAnalysis 数据分析
-type LixDataAnalysis struct {
-	ReportCount *int `json:"reportCount"`
-}
+	// LixVisual 可视化
+	LixVisual struct {
+		DashboardCount *int  `json:"dashboardCount"`
+		Gis            *bool `json:"gis"`
+	}
 
-// LixFlow 流程管理
-type LixFlow struct {
-	FlowCount *int `json:"flowCount"`
-}
+	// LixDataAnalysis 数据分析
+	LixDataAnalysis struct {
+		ReportCount *int `json:"reportCount"`
+	}
+
+	// LixFlow 流程管理
+	LixFlow struct {
+		FlowCount *int `json:"flowCount"`
+	}
+)
